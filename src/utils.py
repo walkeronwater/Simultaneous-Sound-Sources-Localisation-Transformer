@@ -26,28 +26,6 @@ def audioSliceGenerator(audioSeq, sampleRate, lenSliceInSec, isDebug=False):
     else:
         return audioSliceList
 
-# visualise
-def showSpectrogram(Zxx, fs, figTitle, isLog=True):
-    fig, ax = plt.subplots()
-    print("Spectrogram shape: ", Zxx.shape)
-
-    if isLog:
-        img = librosa.display.specshow(librosa.amplitude_to_db(np.abs(Zxx),ref=np.max),
-                                    sr=fs, hop_length=512, fmax=fs/2,
-                                    y_axis='linear', x_axis='time', ax=ax)
-    else:
-        img = librosa.display.specshow(np.abs(Zxx),
-                                    sr=fs, hop_length=512, fmax=fs/2,
-                                    y_axis='linear', x_axis='time', ax=ax)
-    ax.set_title(figTitle)
-    if isLog:
-        fig.colorbar(img, ax=ax, format="%+2.0f dB")
-    else:
-        fig.colorbar(img, ax=ax, format="%+2.0f")
-    # fig.set_figheight(5)
-    # fig.set_figwidth(5)
-    plt.show()
-
 def noiseGenerator(sigSeq, valSNR):
     # assert debug
     # assert (
@@ -86,12 +64,17 @@ def calIPD(seqL, seqR):
 def calILD(seqL, seqR):
     ild = 20*np.log10(np.divide(np.absolute(seqL), np.absolute(seqR), out=np.zeros_like(seqL), where=np.absolute(seqR)!=0))
     return ild
-    
+
 # [TODO]
 # method to normalise a sequence which can be broadcasted to a sequence of sequence
 def normalise(seq):
     # return (seq - np.mean(seq))/(np.std(seq))
     return seq/np.linalg.norm(seq)
+
+
+def calSpectrogram(seq):
+    Zxx = librosa.stft(seq, 1023, hop_length=512)
+    return Zxx
 
 def binauralCues(sigPair, fs, valSNR):
     if len(sigPair.shape) == 4:

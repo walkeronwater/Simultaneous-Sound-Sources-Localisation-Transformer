@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import librosa
 import librosa.display
 
+# visualise
 def showSpectrogram(Zxx, fs, figTitle, isLog=True):
     fig, ax = plt.subplots()
     print("Spectrogram shape: ", Zxx.shape)
