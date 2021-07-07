@@ -1,4 +1,9 @@
-def audioSliceGenerator(audioSeq, sampleRate, lenSliceInSec):
+import numpy as np
+from scipy import signal
+
+# method to generate audio slices for a given length requirement
+# with a hardcoded power threshold
+def audioSliceGenerator(audioSeq, sampleRate, lenSliceInSec, isDebug=False):
     lenAudio = audioSeq.size
     lenSlice = round(sampleRate * lenSliceInSec)
     # audioSliceList = [range(lenSlice*i, lenSlice *(i+1)) for i in range(lenAudio//lenSlice)]
@@ -6,15 +11,42 @@ def audioSliceGenerator(audioSeq, sampleRate, lenSliceInSec):
     # print(lenAudio//lenSlice)
 
     audioSliceList = []
+    if isDebug:
+        powerList = []
     # threshold for spectrum power
     for i in range(lenAudio//lenSlice):
         sliced = audioSeq[lenSlice*i:lenSlice *(i+1)]
         # print("slice power", np.mean(np.power(sliced, 2)))
+        if isDebug:
+            powerList.append(np.mean(np.power(sliced, 2)))
         if np.mean(np.power(sliced, 2)) > 0.01:
             audioSliceList.append(range(lenSlice*i, lenSlice *(i+1)))
+    if isDebug:
+        return audioSliceList, powerList
+    else:
+        return audioSliceList
 
-    return audioSliceList
+# visualise
+def showSpectrogram(Zxx, fs, figTitle, isLog=True):
+    fig, ax = plt.subplots()
+    print("Spectrogram shape: ", Zxx.shape)
 
+    if isLog:
+        img = librosa.display.specshow(librosa.amplitude_to_db(np.abs(Zxx),ref=np.max),
+                                    sr=fs, hop_length=512, fmax=fs/2,
+                                    y_axis='linear', x_axis='time', ax=ax)
+    else:
+        img = librosa.display.specshow(np.abs(Zxx),
+                                    sr=fs, hop_length=512, fmax=fs/2,
+                                    y_axis='linear', x_axis='time', ax=ax)
+    ax.set_title(figTitle)
+    if isLog:
+        fig.colorbar(img, ax=ax, format="%+2.0f dB")
+    else:
+        fig.colorbar(img, ax=ax, format="%+2.0f")
+    # fig.set_figheight(5)
+    # fig.set_figwidth(5)
+    plt.show()
 
 def noiseGenerator(sigSeq, valSNR):
     # assert debug
@@ -45,18 +77,21 @@ def cartesian2euler(val):
     # else:
     #     theta = np.pi/2
         
-    return normalise(r), normalise(theta)
+    return r, theta
 
 def calIPD(seqL, seqR):
-    temp = np.divide(seqL, seqR, out=np.zeros_like(seqL), where=seqR!=0)
-    ipd = np.arctan(np.divide(np.imag(temp), np.real(temp), out=np.zeros_like(np.real(temp)), where=np.real(temp)!=0))
-    del temp
-    return normalise(ipd)
+    ipd = np.angle(np.divide(seqL, seqR, out=np.zeros_like(seqL), where=np.absolute(seqR)!=0))
+    return ipd
 
-
-# method to normalise a sequence which can be broadcasted to a sequence of sequence [TODO]
+def calILD(seqL, seqR):
+    ild = 20*np.log10(np.divide(np.absolute(seqL), np.absolute(seqR), out=np.zeros_like(seqL), where=np.absolute(seqR)!=0))
+    return ild
+    
+# [TODO]
+# method to normalise a sequence which can be broadcasted to a sequence of sequence
 def normalise(seq):
-    return (seq - np.mean(seq))/(np.std(seq))
+    # return (seq - np.mean(seq))/(np.std(seq))
+    return seq/np.linalg.norm(seq)
 
 def binauralCues(sigPair, fs, valSNR):
     if len(sigPair.shape) == 4:
