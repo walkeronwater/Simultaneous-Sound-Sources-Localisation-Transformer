@@ -26,15 +26,25 @@ if __name__ == "__main__":
     Nfreq = 512
     Ntime = 45
     Ncues = 5
-    Nloc = 24
-    Nsample = Nloc * 2000
+    Nloc = 187
+    Nsample = Nloc * 500
+
+    '''
     if "cues_" in globals() or "cues_" in locals():
         del cues_
     if "labels_" in globals() or "labels_" in locals():
         del labels_
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
     labels_ = torch.zeros((Nsample, 1))
+    '''
+
     valSNRList = [-20,-15,-10,-5,0,5,10,15,20,100]
+
+    dirName = '/content/saved_cues/'
+
+    if not os.path.isdir(dirName):
+        os.mkdir(dirName)
+
     for audioIndex in range(len(path)):
         if fileCount == Nsample:
             break
@@ -52,8 +62,8 @@ if __name__ == "__main__":
             for locIndex in range(Nloc):
                 if fileCount == Nsample:
                     break
-                sigLeft = np.convolve(audioSlice, hrirSet[24*3+locIndex, 0])
-                sigRight = np.convolve(audioSlice, hrirSet[24*3+locIndex, 1])
+                sigLeft = np.convolve(audioSlice, hrirSet[locIndex, 0])
+                sigRight = np.convolve(audioSlice, hrirSet[locIndex, 1])
 
                 # print("Location index: ", locIndex)
                 # showSpectrogram(sigLeft, fs_HRIR)
@@ -92,25 +102,42 @@ if __name__ == "__main__":
                                         np.expand_dims(r_l, axis=-1),
                                         np.expand_dims(theta_l, axis=-1),
                                         np.expand_dims(r_r, axis=-1),
-                                        np.expand_dims(theta_r, axis=-1),
+                                        np.expand_dims(theta_r, axis=-1)
                                         ),axis=-1)
                     )
                     labels = torch.tensor([locIndex])
-
+                    
+                    '''
                     cues_[fileCount] = cues
                     labels_[fileCount] = labels
+                    '''
 
-                    # if fileCount == 0 :
-                    #     cues_ = cues.unsqueeze(0)
-                    #     labels_ = labels.unsqueeze(0)
-                    # else:
-                    #     cues_ = torch.cat([cues_, cues.unsqueeze_(0)])
-                    #     labels_ = torch.cat([labels_, labels.unsqueeze_(0)])
+                    # save cues onto disk
+                    if True:
+                        torch.save(cues, dirName+str(fileCount)+'.pt')
+
+                        if fileCount == 0:
+                            # assert debug
+                            # assert (
+                            #     not os.path.isfile(dirName+'dataLabels.csv')
+                            # ), "Directory exists."
+                            # shutil.rmtree('/content/saved_cues/')
+                            with open(dirName+'dataLabels.csv', 'w') as csvFile:
+                                csvFile.write(str(fileCount))
+                                csvFile.write(',')
+                                csvFile.write(str(locIndex))
+                                csvFile.write('\n')
+                        else:
+                            with open(dirName+'dataLabels.csv', 'a') as csvFile:
+                                csvFile.write(str(fileCount))
+                                csvFile.write(',')
+                                csvFile.write(str(locIndex))
+                                csvFile.write('\n')
+
+                    '''if fileCount == 23:
+                        raise SystemExit("Debugging")'''
 
                     fileCount += 1
                     if fileCount % (Nloc*len(valSNRList)) == 0:
                         print("# location set ("+str(Nloc*len(valSNRList))+" samples per set): ",
                             fileCount // (Nloc*len(valSNRList)))
-            
-    print("fileCount: ", fileCount)
-    print(cues[-1])
