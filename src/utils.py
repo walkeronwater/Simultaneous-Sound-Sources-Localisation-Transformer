@@ -149,3 +149,22 @@ def binauralCues(sigPair, fs, valSNR):
         del Zxx_l, Zxx_r
         return cues
 
+def saveCues(cues, labels, dirName, fileCount, Nsample):
+    assert (
+        not os.path.isfile(dirName+'dataLabels.csv')
+    ), "Directory exists."
+
+    torch.save(cues, dirName+str(fileCount)+'.pt')
+
+    if fileCount == 0:       
+        with open(dirName+'dataLabels.csv', 'w') as csvFile:
+            csvFile.write(str(fileCount))
+            csvFile.write(',')
+            csvFile.write(str(labels))
+            csvFile.write('\n')
+    else:
+        with open(dirName+'dataLabels.csv', 'a') as csvFile:
+            csvFile.write(str(fileCount))
+            csvFile.write(',')
+            csvFile.write(str(labels))
+            csvFile.write('\n')
