@@ -1,5 +1,24 @@
-import numpy as np
+import soundfile as sf
 from scipy import signal
+import random
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import h5py
+import csv
+import pandas as pd
+from glob import glob
+import librosa
+import librosa.display
+import torch
+import torch.nn as nn
+from torch import optim
+from torch.utils.data import DataLoader, TensorDataset
+import torch.utils.data
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from sklearn.utils import class_weight
+from torch.autograd import Variable
+import torch.nn.functional as F
 
 # method to generate audio slices for a given length requirement
 # with a hardcoded power threshold
@@ -25,7 +44,7 @@ def audioSliceGenerator(audioSeq, sampleRate, lenSliceInSec, isDebug=False):
         return audioSliceList, powerList
     else:
         return audioSliceList
-
+# method to generate a sequence of noise for a given SNR
 def noiseGenerator(sigSeq, valSNR):
     # assert debug
     # assert (
@@ -41,12 +60,21 @@ def noiseGenerator(sigSeq, valSNR):
     else:
         return 0
 
-def cartesian2euler(val):
-    x = val.real
-    y = val.imag
-    
-    r = np.sqrt(x**2+y**2)
+'''def addNoise(sigPair):
+    valSNR = 1
+    # loop through all training examples
+    for i in range(sigPairList[0].shape[0]):
+        # loop through all locations
+        for locIndex in range(sigPairList[0].shape[1]):
+            noiseLeft = noiseGenerator(np.expand_dims(sigPairList[0][i,locIndex,0], axis=0), valSNR)
+            noiseRight = noiseGenerator(np.expand_dims(sigPairList[0][i,locIndex,1], axis=0), valSNR)'''
 
+# utility methods for binaural cue extraction
+def cartesian2euler(seq):
+    x = seq.real
+    y = seq.imag
+
+    r = np.sqrt(x**2+y**2)
     theta = np.arctan(
         np.divide(y, x, where=x!=0)
     )
@@ -65,98 +93,43 @@ def calILD(seqL, seqR):
     ild = 20*np.log10(np.divide(np.absolute(seqL), np.absolute(seqR), out=np.zeros_like(seqL), where=np.absolute(seqR)!=0))
     return ild
 
-# [TODO]
 # method to normalise a sequence which can be broadcasted to a sequence of sequence
 def normalise(seq):
     # return (seq - np.mean(seq))/(np.std(seq))
     return seq/np.linalg.norm(seq)
 
+# [todo] method to log IPD cues and spectral cues
+'''def cuesLog():'''
 
 def calSpectrogram(seq):
     Zxx = librosa.stft(seq, 1023, hop_length=512)
     return Zxx
 
-def binauralCues(sigPair, fs, valSNR):
-    if len(sigPair.shape) == 4:
-        print("Warning: high memory requirement in binauralCues()")
-        f, t, Zxx = signal.stft(sigPair[0, 0, 0], fs, nperseg=1023)
-        # spectralCues = np.zeros(sigPair.shape[:-2] + (Zxx.shape[1], Zxx.shape[0]) + (4,), dtype='float')
-        # ipdCues = np.zeros(sigPair.shape[:-2] + (Zxx.shape[1], Zxx.shape[0]), dtype='float')
-        cues = np.zeros(sigPair.shape[:-2] + (Zxx.shape[1], Zxx.shape[0]) + (5,), dtype='float')
+def concatCues(cuesList: list, cuesShape: tuple):
+    lastDim = len(cuesList)
+    cues = torch.zeros(cuesShape+(lastDim,), dtype=torch.float)
 
-        del f, t, Zxx
+    for i in range(lastDim):
+        cues[:,:,i] = torch.from_numpy(cuesList[i])
 
-        for i in range(sigPair.shape[0]):
-            for locIndex in range(sigPair.shape[1]):
-                
-                _, _, Zxx_l = signal.stft(
-                    sigPair[i, locIndex, 0] 
-                    + noiseGenerator(sigPair[i, locIndex, 0], valSNR) # noise added
-                    , fs, nperseg = 1023
-                )              
-                                            
-                _, _, Zxx_r = signal.stft(
-                    sigPair[i, locIndex, 1] 
-                    + noiseGenerator(sigPair[i, locIndex, 1], valSNR) # noise added
-                    , fs, nperseg = 1023
-                )
-                # print(Zxx_l.shape)
-                # print(Zxx_r.shape)
+    return cues
 
-                r_l, theta_l = cartesian2euler(Zxx_l)
-                r_r, theta_r = cartesian2euler(Zxx_r)
+def saveCues(cues, locIndex, dirName, fileCount, locLabel, task="all"):
+    if task == "elev":
+        labels = int(((locLabel[locIndex, 0]+45) % 150)/15)
+    elif task == "azim":
+        labels = int((locLabel[locIndex, 1] % 360)/15)
+    else:
+        labels = locIndex
 
-                # ipdCues[i, locIndex] = normalise(np.transpose(calIPD(Zxx_l, Zxx_r), (1, 0)))
-                # spectralCues[i, locIndex] = np.transpose(np.array([r_l, theta_l, r_r, theta_r]), (2, 1 ,0))
-                cues[i, locIndex] = np.concatenate(
-                    (
-                        np.expand_dims(np.transpose(calIPD(Zxx_l, Zxx_r), (1, 0)), axis=-1),
-                        np.transpose(np.array([r_l, theta_l, r_r, theta_r]), (2, 1 ,0))
-                    ),
-                    axis=-1
-                )
+    if fileCount == 0:
+        if os.path.isfile(dirName+'dataLabels.csv'):
+            print("Directory exists.")
+            if input('Delete saved_cues? ') == 'y':
+                print('ok')
+                shutil.rmtree(dirName)
+                os.mkdir(dirName)
         
-        del Zxx_l, Zxx_r
-        return cues
-    elif len(sigPair.shape) == 2:
-        _, _, Zxx_l = signal.stft(
-            sigPair[0] 
-            + noiseGenerator(sigPair[0], valSNR) # noise added
-            , fs, nperseg = 1023
-        )              
-                                    
-        _, _, Zxx_r = signal.stft(
-            sigPair[1] 
-            + noiseGenerator(sigPair[1], valSNR) # noise added
-            , fs, nperseg = 1023
-        )
-        # print(Zxx_l.shape)
-        # print(Zxx_r.shape)
-
-        r_l, theta_l = cartesian2euler(Zxx_l)
-        r_r, theta_r = cartesian2euler(Zxx_r)
-        
-        # ipdCues[i, locIndex] = normalise(np.transpose(calIPD(Zxx_l, Zxx_r), (1, 0)))
-        # spectralCues[i, locIndex] = np.transpose(np.array([r_l, theta_l, r_r, theta_r]), (2, 1 ,0))
-        cues = np.concatenate(
-            (
-                np.expand_dims(np.transpose(calIPD(Zxx_l, Zxx_r), (1, 0)), axis=-1),
-                np.transpose(np.array([r_l, theta_l, r_r, theta_r]), (2, 1 ,0))
-            ),
-            axis=-1
-        )
-    
-        del Zxx_l, Zxx_r
-        return cues
-
-def saveCues(cues, labels, dirName, fileCount, Nsample):
-    assert (
-        not os.path.isfile(dirName+'dataLabels.csv')
-    ), "Directory exists."
-
-    torch.save(cues, dirName+str(fileCount)+'.pt')
-
-    if fileCount == 0:       
         with open(dirName+'dataLabels.csv', 'w') as csvFile:
             csvFile.write(str(fileCount))
             csvFile.write(',')
@@ -168,3 +141,9 @@ def saveCues(cues, labels, dirName, fileCount, Nsample):
             csvFile.write(',')
             csvFile.write(str(labels))
             csvFile.write('\n')
+    torch.save(cues, dirName+str(fileCount)+'.pt')
+
+if False:
+    temp = torch.tensor([1,2,3])
+    tempIndex = 96
+    saveCues(temp, tempIndex, "/content/temp_data/", 0, locLabel, task="elev")
