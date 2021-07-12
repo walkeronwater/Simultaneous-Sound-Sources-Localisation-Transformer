@@ -90,7 +90,7 @@ def calIPD(seqL, seqR):
     return ipd
 
 def calILD(seqL, seqR):
-    ild = 20*np.log10(np.divide(np.absolute(seqL), np.absolute(seqR), out=np.zeros_like(seqL), where=np.absolute(seqR)!=0))
+    ild = 20*np.log10(np.divide(np.absolute(seqL), np.absolute(seqR), out=np.zeros_like(np.absolute(seqL)), where=np.absolute(seqR)!=0))
     return ild
 
 # method to normalise a sequence which can be broadcasted to a sequence of sequence
