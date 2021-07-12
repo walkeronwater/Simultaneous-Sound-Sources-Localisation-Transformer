@@ -1,3 +1,26 @@
+import soundfile as sf
+from scipy import signal
+import random
+import numpy as np
+import matplotlib.pyplot as plt
+import os
+import h5py
+import csv
+import pandas as pd
+from glob import glob
+import librosa
+import librosa.display
+import torch
+import torch.nn as nn
+from torch import optim
+from torch.utils.data import DataLoader, TensorDataset
+import torch.utils.data
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from sklearn.utils import class_weight
+from torch.autograd import Variable
+import torch.nn.functional as F
+from torchsummary import summary
+
 class SelfAttention(nn.Module):
     def __init__(self, Nfreq, heads):
         super(SelfAttention, self).__init__()
@@ -144,7 +167,7 @@ class Encoder(nn.Module):
 
         return out
 
-class SSSL(nn.Module):
+class FC3(nn.Module):
     def __init__(
         self,
         Nloc,
@@ -158,7 +181,7 @@ class SSSL(nn.Module):
         dropout,
         isDebug
     ):
-        super(SSSL, self).__init__()
+        super(FC3, self).__init__()
         self.encoder = Encoder(           
             Nfreq, # frequency bins
             num_layers,
@@ -170,14 +193,16 @@ class SSSL(nn.Module):
         # self.attention = Attention(Ncues, Nloc)
         self.fc_freq = nn.Linear(Nfreq*Ncues, Nloc)
         self.fc_time = nn.Linear(Ntime, 1)
-        self.fc_time_freq = nn.Linear(Ntime*Nfreq*Ncues, Nloc)
-        self.fc2 = nn.Linear(Nloc, Nloc)
+        self.fc_time_freq = nn.Linear(Ntime*Nfreq*Ncues, Nloc*4)
+        self.fc2 = nn.Linear(Nloc*4, Nloc*2)
+        self.fc3 = nn.Linear(Nloc*2, Nloc)
         self.dropout = nn.Dropout(dropout)
+        self.bn = nn.BatchNorm1d(Nloc*4)
         # self.softmaxLayer = nn.Softmax(dim = -1)
         self.isDebug = isDebug
     def forward(self, cues):
         encList = []
-        for i in range(Ncues):
+        for i in range(cues.shape[-1]):
             enc = self.encoder(cues[:,:,:,0].permute(0,2,1))
             encList.append(enc)
 
@@ -192,6 +217,7 @@ class SSSL(nn.Module):
             print("Encoder output shape: ", out.shape)
 
         out = self.fc_time_freq(out)
+        out = self.bn(out)
         # out = out.squeeze(-1)
         out = self.dropout(out)
 
@@ -206,51 +232,31 @@ class SSSL(nn.Module):
 
         # out = torch.mean(out, -2)
         # out = out.squeeze(-2)
-
+        
         out = self.fc2(out)
+        out = self.fc3(out)
         if self.isDebug:
             print("FC time shape: ",out.shape)
 
         # out = self.softmaxLayer(out)
         return out
 
-def saveParam(epoch, model, optimizer, savePath):
-    torch.save({
-        'epoch': epoch,
-        'state_dict': model.state_dict(),
-        'optimizer': optimizer.state_dict()
-    }, savePath)
-
-def saveCurves(epoch, tl, ta, vl, va, savePath):
-    torch.save({
-        'epoch': epoch,
-        'train_loss': tl,
-        'train_acc': ta,
-        'valid_loss': vl,
-        'valid_acc': va
-    }, savePath)
-    
-def loadCheckpoint(model, optimizer, load_path):
-    checkpoint = torch.load(load_path)
-    epoch = checkpoint['epoch']
-    model.load_state_dict(checkpoint['state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer'])
-    
-    return model, optimizer, epoch
-
-def get_lr(optimizer):
-    for param_group in optimizer.param_groups:
-        return param_group['lr']
-
-if False:
+if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    num_layers = 1
-    model = SSSL(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, 0, True).to(device)
-    testInput = x[0].unsqueeze(0).to(device)
-    testLabel = x[1].to(device)
+    numLayers = 6
+    Nloc = 24
+    Ntime = 44
+    Nfreq = 512
+    Ncues = 5
+    model = FC3(Nloc, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
+
+    testInput = torch.rand(2, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
+    # testInput = x[0].unsqueeze(0).to(device)
+    # testLabel = x[1].to(device)
     print("testInput shape: ", testInput.shape)
     # print(testLabel)
-    testOutput = model(testInput.float())
+    testOutput = model(testInput)
     # print(torch.max(testOutput, 1))
 
-    summary(model, (Nfreq, Ntime, Ncues))
+    # summary(model, (Nfreq, Ntime, Ncues))
+    

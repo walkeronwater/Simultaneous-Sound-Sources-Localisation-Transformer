@@ -19,12 +19,14 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
+from torchsummary import summary
 
-from .utils import *
-from .model_transformer import *
+from utils import *
+from model_transformer import *
 
 
 # create dataset from disk
+isDisk = True
 if isDisk:
     class MyDataset(torch.utils.data.Dataset):
         def __init__(self, filePath, isDebug=False):
@@ -70,6 +72,7 @@ if isDisk:
 
             return data, labels
 
+dirName = './saved_cues/'
 if os.path.isdir(dirName):
     dataset = MyDataset(dirName)
     
@@ -86,23 +89,32 @@ if os.path.isdir(dirName):
     print("Dataset separation: ",Ntrain, Nvalid, Ntest)
 
     train, valid, test = torch.utils.data.random_split(dataset, [Ntrain, Nvalid, Ntest], generator=torch.Generator().manual_seed(24))
-    train_loader = DataLoader(dataset=train, batch_size=32, shuffle=True, num_workers=4)
-    valid_loader = DataLoader(dataset=valid, batch_size=32, shuffle=True, num_workers=4)
-    test_loader = DataLoader(dataset=test, batch_size=32, shuffle=True, num_workers=4)
+    train_loader = DataLoader(dataset=train, batch_size=32, shuffle=True, num_workers=0)
+    valid_loader = DataLoader(dataset=valid, batch_size=32, shuffle=True, num_workers=0)
+    test_loader = DataLoader(dataset=test, batch_size=32, shuffle=True, num_workers=0)
 
+
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
 
 
 valDropoutList = []
 num_layersList = [6]
 
-rootDir = "/content/drive/MyDrive/SSSL/model/2FC/"
+rootDir = "./model/"
 if not os.path.isdir(rootDir):
     os.mkdir(rootDir)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 for num_layers in num_layersList:
+    Nsample = dataset.__len__()
+    Nloc = 24
+    Ntime = 44
+    Nfreq = 512
+    Ncues = 5
     valDropout = 0.3
-    model = SSSL(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, valDropout, False).to(device)
+    model = FC3(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, valDropout, False).to(device)
     model.isDebug = False
     dataset.isDebug = False
 
@@ -130,7 +142,7 @@ for num_layers in num_layersList:
 
     print("Data volume: ", Nsample)
     print("Nloc: ", Nloc)
-    print("SNR: ", valSNRList)
+    # print("SNR: ", valSNRList)
     print("Number of layers: ", num_layers)
     print("Dropout: ", valDropout)
     expName = "vol_"+str(Nsample)+"_loc_"+str(Nloc)+"_layer_"+str(num_layers)+"/"
