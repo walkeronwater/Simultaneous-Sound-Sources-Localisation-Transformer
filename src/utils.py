@@ -4,6 +4,7 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import shutil
 import h5py
 import csv
 import pandas as pd
@@ -114,21 +115,25 @@ def concatCues(cuesList: list, cuesShape: tuple):
 
     return cues
 
-def saveCues(cues, locIndex, dirName, fileCount, locLabel, task="all"):
+def locIndex2Label(locLabel, locIndex, task="all"):
     if task == "elev":
         labels = int(((locLabel[locIndex, 0]+45) % 150)/15)
     elif task == "azim":
         labels = int((locLabel[locIndex, 1] % 360)/15)
     else:
-        labels = locIndex
+        labels = int(locIndex)
+    return labels
+
+def saveCues(cues, locIndex, dirName, fileCount, locLabel, task="all"):
+    labels = locIndex2Label(locLabel, locIndex, task=task)
 
     if fileCount == 0:
         if os.path.isfile(dirName+'dataLabels.csv'):
-            print("Directory exists.")
-            if input('Delete saved_cues? ') == 'y':
-                print('ok')
-                shutil.rmtree(dirName)
-                os.mkdir(dirName)
+            print("Directory exists -- overwriting")
+            # if input('Delete saved_cues? ') == 'y':
+            #     print('ok')
+            shutil.rmtree(dirName)
+            os.mkdir(dirName)
         
         with open(dirName+'dataLabels.csv', 'w') as csvFile:
             csvFile.write(str(fileCount))

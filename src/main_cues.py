@@ -36,7 +36,7 @@ if __name__ == "__main__":
     Ntime = 44
     Ncues = 5
     Nloc = 24
-    Nsample = Nloc * 6000
+    Nsample = Nloc * 30000
 
     isDisk = True
     # allocate tensors cues and labels in RAM
@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     valSNRList = [-10,-5,0,5,10,15,20,100]
 
-    dirName = './saved_cues/'
+    dirName = './saved_cues_large/'
 
     if not os.path.isdir(dirName):
         os.mkdir(dirName)
