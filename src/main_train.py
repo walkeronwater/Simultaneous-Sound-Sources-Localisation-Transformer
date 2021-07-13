@@ -25,85 +25,105 @@ from torchsummary import summary
 from utils import *
 from model_transformer import *
 
+parser = argparse.ArgumentParser(description='Training hyperparamters')
+parser.add_argument('dataDir', type=str, help='Directory of saved cues')
+parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
+parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
+parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
+parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
+parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
+parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
+parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
 
-# create dataset from disk
-isDisk = True
-if isDisk:
-    class MyDataset(torch.utils.data.Dataset):
-        def __init__(self, filePath, isDebug=False):
-            super(MyDataset, self).__init__()
-            self.filePath = filePath
-            self.ptFilePath = glob(os.path.join(self.filePath, '*.pt'))
-            self.csvFilePath = glob(os.path.join(self.filePath, '*.csv'))
-            self.annotation = pd.read_csv(self.csvFilePath[0], header=None)
-            
-            self.isDebug = isDebug
-            # self.data = None
-            # self.filePath = "/content/data/music_loc24_SNR10.h5"
-            # with h5py.File(self.filePath, 'r') as hf:
-            #     self.lenDataset = len(hf["data"])
+args = parser.parse_args()
+print(args.dataDir)
+print(args.modelDir)
+trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
+print(trainValidSplit)
+print(args.numEnc)
+print(args.numFC)
+print(args.valDropout)
+print(args.numEpoch)
+print(args.batchSize)
 
-        # def __getindex__(self, idx):
-        #     return load_file(self.data_files[idx])
-
-        def __len__(self):
-            return len(self.ptFilePath)
+class MyDataset(torch.utils.data.Dataset):
+    def __init__(self, filePath, isDebug=False):
+        super(MyDataset, self).__init__()
+        self.filePath = filePath
+        self.ptFilePath = glob(os.path.join(self.filePath, '*.pt'))
+        self.csvFilePath = glob(os.path.join(self.filePath, '*.csv'))
+        self.annotation = pd.read_csv(self.csvFilePath[0], header=None)
         
-        def __getitem__(self, pathIndex):
-            # if self.data is None:
-                # self.data = h5py.File(self.filePath, 'r')["data"]
-                # self.labels = h5py.File(self.filePath, 'r')["labels"]
-                # self.data, self.labels = np.array(self.data[idx]), np.array(self.labels[idx])
-                # self.data = torch.from_numpy(data.astype(np.float32))
-                # self.labels = torch.from_numpy(labels.astype(np.long))
+        self.isDebug = isDebug
+        # self.data = None
+        # self.filePath = "/content/data/music_loc24_SNR10.h5"
+        # with h5py.File(self.filePath, 'r') as hf:
+        #     self.lenDataset = len(hf["data"])
 
-                # print(self.data[idx].shape)
-                # print(self.labels[idx])
-            data = torch.load(self.ptFilePath[pathIndex])
-            dataIndex = int(os.path.basename(self.ptFilePath[pathIndex])[0:-3])
-            labels = torch.tensor(int(self.annotation.iloc[dataIndex, 1])) # classification
-            # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
-            # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
-            # labels = torch.tensor(int((locLabel[self.annotation.iloc[dataIndex, 1], 1] % 360)/15)) # classify azimuth only
+    # def __getindex__(self, idx):
+    #     return load_file(self.data_files[idx])
 
-            if self.isDebug:
-                print("pathIndex: ", pathIndex)
-                print("Data path: ", os.path.basename(self.ptFilePath[pathIndex]))
-                print("dataIndex: ", dataIndex)
-
-            return data, labels
-
-dirName = './saved_cues/'
-if os.path.isdir(dirName):
-    dataset = MyDataset(dirName)
+    def __len__(self):
+        return len(self.ptFilePath)
     
-    batch_size = 32
-    Ntrain = round(0.6*dataset.__len__())
-    if Ntrain % batch_size == 1:
-        Ntrain -=1
-    Nvalid = round(0.2*dataset.__len__())
-    if Nvalid % batch_size == 1:
-        Nvalid -=1
-    Ntest = dataset.__len__() - Ntrain - Nvalid
-    if Ntest % batch_size == 1:
-        Ntest -=1
-    print("Dataset separation: ",Ntrain, Nvalid, Ntest)
+    def __getitem__(self, pathIndex):
+        # if self.data is None:
+            # self.data = h5py.File(self.filePath, 'r')["data"]
+            # self.labels = h5py.File(self.filePath, 'r')["labels"]
+            # self.data, self.labels = np.array(self.data[idx]), np.array(self.labels[idx])
+            # self.data = torch.from_numpy(data.astype(np.float32))
+            # self.labels = torch.from_numpy(labels.astype(np.long))
 
-    train, valid, test = torch.utils.data.random_split(dataset, [Ntrain, Nvalid, Ntest], generator=torch.Generator().manual_seed(24))
-    train_loader = DataLoader(dataset=train, batch_size=32, shuffle=True, num_workers=0)
-    valid_loader = DataLoader(dataset=valid, batch_size=32, shuffle=True, num_workers=0)
-    test_loader = DataLoader(dataset=test, batch_size=32, shuffle=True, num_workers=0)
+            # print(self.data[idx].shape)
+            # print(self.labels[idx])
+        data = torch.load(self.ptFilePath[pathIndex])
+        dataIndex = int(os.path.basename(self.ptFilePath[pathIndex])[0:-3])
+        labels = torch.tensor(int(self.annotation.iloc[dataIndex, 1])) # classification
+        # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
+        # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
+        # labels = torch.tensor(int((locLabel[self.annotation.iloc[dataIndex, 1], 1] % 360)/15)) # classify azimuth only
+
+        if self.isDebug:
+            print("pathIndex: ", pathIndex)
+            print("Data path: ", os.path.basename(self.ptFilePath[pathIndex]))
+            print("dataIndex: ", dataIndex)
+
+        return data, labels
+
+# dirName = './saved_cues/'
+dirName = arg.dataDir
+assert (
+    os.path.isdir(dirName)
+), "Data directory doesn't exist."
+dataset = MyDataset(dirName)
+
+# batch_size = 32
+batch_size = args.batchSize
+Ntrain = round(trainValidSplit[0]*dataset.__len__())
+if Ntrain % batch_size == 1:
+    Ntrain -=1
+Nvalid = round(trainValidSplit[1]*dataset.__len__())
+if Nvalid % batch_size == 1:
+    Nvalid -=1
+# Ntest = dataset.__len__() - Ntrain - Nvalid
+# if Ntest % batch_size == 1:
+#     Ntest -=1
+print("Dataset separation: ", Ntrain, Nvalid)
+
+train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
+train_loader = DataLoader(dataset=train, batch_size=batch_size, shuffle=True, num_workers=4)
+valid_loader = DataLoader(dataset=valid, batch_size=batch_size, shuffle=True, num_workers=4)
 
 
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-
 valDropoutList = []
 num_layersList = [6]
 
-rootDir = "./model/"
+# rootDir = "./model/"
+rootDir = args.modelDir
 if not os.path.isdir(rootDir):
     os.mkdir(rootDir)
 
@@ -114,12 +134,14 @@ for num_layers in num_layersList:
     Ntime = 44
     Nfreq = 512
     Ncues = 5
-    valDropout = 0.3
+    # valDropout = 0.3
+    valDropout = args.valDropout
     model = FC3(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, valDropout, False).to(device)
     model.isDebug = False
     dataset.isDebug = False
 
-    num_epochs = 30
+    # num_epochs = 30
+    num_epochs = args.numEpoch
     learning_rate = 1e-4
     early_epoch = 10
     early_epoch_count = 0
