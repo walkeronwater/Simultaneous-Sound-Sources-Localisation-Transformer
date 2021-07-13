@@ -91,7 +91,7 @@ class MyDataset(torch.utils.data.Dataset):
         return data, labels
 
 # dirName = './saved_cues/'
-dirName = arg.dataDir
+dirName = args.dataDir
 assert (
     os.path.isdir(dirName)
 ), "Data directory doesn't exist."
