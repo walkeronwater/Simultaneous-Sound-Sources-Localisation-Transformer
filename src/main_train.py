@@ -125,8 +125,8 @@ if Nvalid % batch_size == 1:
 print("Dataset separation: ", Ntrain, Nvalid)
 
 train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
-train_loader = DataLoader(dataset=train, batch_size=batch_size, shuffle=True, num_workers=4)
-valid_loader = DataLoader(dataset=valid, batch_size=batch_size, shuffle=True, num_workers=4)
+train_loader = DataLoader(dataset=train, batch_size=batch_size, shuffle=True, num_workers=args.numWorker)
+valid_loader = DataLoader(dataset=valid, batch_size=batch_size, shuffle=True, num_workers=args.numWorker)
 
 
 def get_lr(optimizer):
@@ -217,7 +217,7 @@ for num_layers in num_layersList:
             _, predicted = torch.max(outputs.data, 1)
             train_total += labels.size(0)
             train_correct += predicted.eq(labels.data).sum().item()
-            print("One batch elapse: ", time.Time()-startTime)
+            print("One batch elapse: ", round(time.time()-startTime, 2))
         train_loss = train_sum_loss / (i+1)
         train_acc = round(100.0 * train_correct / train_total, 2)
         print('Training Loss: %.04f | Training Acc: %.4f%% '
