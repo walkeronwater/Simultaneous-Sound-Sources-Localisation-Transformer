@@ -41,6 +41,7 @@ parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 args = parser.parse_args()
 print(args.dataDir)
 print(args.modelDir)
+print(args.numWorker)
 trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
 print(trainValidSplit)
 print(args.numEnc)
