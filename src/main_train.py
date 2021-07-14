@@ -1,4 +1,5 @@
 import argparse
+import time
 import soundfile as sf
 from scipy import signal
 import random
@@ -28,12 +29,14 @@ from model_transformer import *
 parser = argparse.ArgumentParser(description='Training hyperparamters')
 parser.add_argument('dataDir', type=str, help='Directory of saved cues')
 parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
+parser.add_argument('numWorker', type=int, help='Number of workers')
 parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
 parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
 parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
 parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
 parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
 parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
+parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
 args = parser.parse_args()
 print(args.dataDir)
@@ -45,6 +48,16 @@ print(args.numFC)
 print(args.valDropout)
 print(args.numEpoch)
 print(args.batchSize)
+
+'''
+def recordTime(start: float, end: float, processName: str):
+    if start == 0:
+        startTime = time.time()
+    else:
+        elapseTime = time.time() - startTime
+        print(processName, ": ", elapseTime)
+        startTime = 0.0
+'''
 
 class MyDataset(torch.utils.data.Dataset):
     def __init__(self, filePath, isDebug=False):
@@ -183,6 +196,7 @@ for num_layers in num_layersList:
         train_acc = 0.0
         model.train()
         for i, data in enumerate(train_loader, 0):
+            startTime = time.time()
             num_batches = len(train_loader)
             inputs, labels = data
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
@@ -202,6 +216,7 @@ for num_layers in num_layersList:
             _, predicted = torch.max(outputs.data, 1)
             train_total += labels.size(0)
             train_correct += predicted.eq(labels.data).sum().item()
+            print("One batch elapse: ", time.Time()-startTime)
         train_loss = train_sum_loss / (i+1)
         train_acc = round(100.0 * train_correct / train_total, 2)
         print('Training Loss: %.04f | Training Acc: %.4f%% '
