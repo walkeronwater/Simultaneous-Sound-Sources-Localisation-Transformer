@@ -198,6 +198,7 @@ class FC3(nn.Module):
         self.fc3 = nn.Linear(Nloc*2, Nloc)
         self.dropout = nn.Dropout(dropout)
         self.bn = nn.BatchNorm1d(Nloc*4)
+        self.activation = nn.ReLU()
         # self.softmaxLayer = nn.Softmax(dim = -1)
         self.isDebug = isDebug
     def forward(self, cues):
@@ -218,6 +219,7 @@ class FC3(nn.Module):
 
         out = self.fc_time_freq(out)
         out = self.bn(out)
+        out = self.activation(out)
         # out = out.squeeze(-1)
         out = self.dropout(out)
 
@@ -234,6 +236,7 @@ class FC3(nn.Module):
         # out = out.squeeze(-2)
         
         out = self.fc2(out)
+        out = self.activation(out)
         out = self.fc3(out)
         if self.isDebug:
             print("FC time shape: ",out.shape)
