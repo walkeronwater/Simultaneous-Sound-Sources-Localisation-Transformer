@@ -21,6 +21,8 @@ from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
 
+from load_data import *
+
 # method to generate audio slices for a given length requirement
 # with a hardcoded power threshold
 def audioSliceGenerator(audioSeq, sampleRate, lenSliceInSec, isDebug=False):
@@ -45,6 +47,7 @@ def audioSliceGenerator(audioSeq, sampleRate, lenSliceInSec, isDebug=False):
         return audioSliceList, powerList
     else:
         return audioSliceList
+
 # method to generate a sequence of noise for a given SNR
 def noiseGenerator(sigSeq, valSNR):
     # assert debug
@@ -115,18 +118,16 @@ def concatCues(cuesList: list, cuesShape: tuple):
 
     return cues
 
-def locIndex2Label(locLabel, locIndex, task="all"):
+def locIndex2Label(locLabel, locIndex, task):
     if task == "elev":
         labels = int(((locLabel[locIndex, 0]+45) % 150)/15)
     elif task == "azim":
         labels = int((locLabel[locIndex, 1] % 360)/15)
-    else:
+    elif task == "all":
         labels = int(locIndex)
     return labels
 
-def saveCues(cues, locIndex, dirName, fileCount, locLabel, task="all"):
-    labels = locIndex2Label(locLabel, locIndex, task=task)
-
+def saveCues(cues, locIndex, dirName, fileCount, locLabel):
     if fileCount == 0:
         if os.path.isfile(dirName+'dataLabels.csv'):
             print("Directory exists -- overwriting")
@@ -138,13 +139,21 @@ def saveCues(cues, locIndex, dirName, fileCount, locLabel, task="all"):
         with open(dirName+'dataLabels.csv', 'w') as csvFile:
             csvFile.write(str(fileCount))
             csvFile.write(',')
-            csvFile.write(str(labels))
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "all")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "elev")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "azim")))
             csvFile.write('\n')
     else:
         with open(dirName+'dataLabels.csv', 'a') as csvFile:
             csvFile.write(str(fileCount))
             csvFile.write(',')
-            csvFile.write(str(labels))
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, task="all")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, task="elev")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, task="azim")))
             csvFile.write('\n')
     torch.save(cues, dirName+str(fileCount)+'.pt')
 
@@ -152,3 +161,11 @@ if False:
     temp = torch.tensor([1,2,3])
     tempIndex = 96
     saveCues(temp, tempIndex, "/content/temp_data/", 0, locLabel, task="elev")
+
+if __name__ == "__main__":
+    temp = torch.tensor([1,2,3])
+    tempIndex = 96
+    
+    path = "./HRTF/IRC*"
+    hrirSet, locLabel, fs_HRIR = load_hrir(path)
+    saveCues(temp, tempIndex, "./", 0, locLabel)

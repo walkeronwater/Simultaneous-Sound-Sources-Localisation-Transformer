@@ -55,5 +55,5 @@ def load_hrir(path):
 
 
 if __name__ == "__main__":
-    path = "./HRTF/IRC_*"
-    load_hrir(path)
+    path = "./HRTF/IRC*"
+    hrirSet, locLabel, fs_HRIR = load_hrir(path)
