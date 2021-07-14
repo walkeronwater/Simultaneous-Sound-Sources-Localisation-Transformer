@@ -1,6 +1,10 @@
 import matplotlib.pyplot as plt
 import librosa
 import librosa.display
+from glob import glob
+import os
+import torch
+import torch.nn as nn
 
 # visualise
 def showSpectrogram(Zxx, fs, figTitle, isLog=True):
@@ -23,3 +27,40 @@ def showSpectrogram(Zxx, fs, figTitle, isLog=True):
     # fig.set_figheight(5)
     # fig.set_figwidth(5)
     plt.show()
+
+def plotHistory(checkptPath):
+    checkptPath = glob(os.path.join(checkptPath, "curve*"))
+    print("Number of epochs: ",len(checkptPath))
+
+    
+    history = {
+        'train_acc': [],
+        'train_loss': [],
+        'valid_acc': [],
+        'valid_loss': []
+    }
+    for i in range(len(checkptPath)):
+        checkpt = torch.load(checkptPath[i])
+        for idx in history.keys():
+            history[idx].append(checkpt[idx])
+    print(history['train_acc'])
+
+    plt.plot(history['train_acc'])
+    plt.plot(history['valid_acc'])
+    plt.xlabel('epoch')
+    plt.ylabel('Accuracy (%)')
+    plt.title('Accuracy curve')
+    plt.legend(['Train', 'Valid'])
+    plt.grid()
+    plt.show()
+
+    plt.plot(history['train_loss'])
+    plt.plot(history['valid_loss'])
+    plt.ylabel('Loss')
+    plt.title('Loss curve')
+    plt.legend(['Train', 'Valid'])
+    plt.grid()
+    plt.show()
+
+if __name__ == "__main__":
+    plotHistory("D:/SSSL/model/Azim_221376_L6_D0.3")
