@@ -205,6 +205,7 @@ for num_layers in num_layersList:
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
             # print("Input shape: ",inputs.shape)
 
+            print("One batch elapse: ", round(time.time()-startTime, 2))
             outputs = model(inputs)
 
             # print("Ouput shape: ", outputs.shape)
@@ -219,7 +220,6 @@ for num_layers in num_layersList:
             _, predicted = torch.max(outputs.data, 1)
             train_total += labels.size(0)
             train_correct += predicted.eq(labels.data).sum().item()
-            print("One batch elapse: ", round(time.time()-startTime, 2))
         train_loss = train_sum_loss / (i+1)
         train_acc = round(100.0 * train_correct / train_total, 2)
         print('Training Loss: %.04f | Training Acc: %.4f%% '
