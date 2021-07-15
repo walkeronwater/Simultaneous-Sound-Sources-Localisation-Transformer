@@ -90,17 +90,19 @@ class MyDataset(torch.utils.data.Dataset):
 
             # print(self.data[idx].shape)
             # print(self.labels[idx])
-        data = torch.load(self.ptFilePath[pathIndex])
-        dataIndex = int(os.path.basename(self.ptFilePath[pathIndex])[0:-3])
-        labels = torch.tensor(int(self.annotation.iloc[dataIndex, 1])) # classification
+        data = torch.load(
+            self.filePath+str(pathIndex)+".pt"
+        )
+        # dataIndex = int(os.path.basename(self.ptFilePath[pathIndex])[0:-3])
+        labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1])) # classification
         # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
         # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
         # labels = torch.tensor(int((locLabel[self.annotation.iloc[dataIndex, 1], 1] % 360)/15)) # classify azimuth only
 
         if self.isDebug:
             print("pathIndex: ", pathIndex)
-            print("Data path: ", os.path.basename(self.ptFilePath[pathIndex]))
-            print("dataIndex: ", dataIndex)
+            # print("Data path: ", os.path.basename(self.ptFilePath[pathIndex]))
+            # print("dataIndex: ", dataIndex)
 
         return data, labels
 
