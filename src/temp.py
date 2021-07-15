@@ -217,12 +217,12 @@ if __name__ == "__main__":
         print('Training Loss: %.04f | Training Acc: %.4f%% '
             % (train_loss, train_acc))
         
+'''
         val_correct = 0.0
         val_total = 0.0
         val_sum_loss = 0.0
         val_loss = 0.0
         val_acc = 0.0
-
         # validation phase
         model.eval()
         with torch.no_grad():
@@ -278,4 +278,4 @@ if __name__ == "__main__":
             )
         if (early_epoch_count >= early_epoch):
             break
-    
+'''
