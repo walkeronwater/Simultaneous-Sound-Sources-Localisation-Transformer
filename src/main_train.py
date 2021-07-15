@@ -64,7 +64,6 @@ class MyDataset(torch.utils.data.Dataset):
     def __init__(self, filePath, isDebug=False):
         super(MyDataset, self).__init__()
         self.filePath = filePath
-        self.ptFilePath = glob(os.path.join(self.filePath, '*.pt'))
         self.csvFilePath = glob(os.path.join(self.filePath, '*.csv'))
         self.annotation = pd.read_csv(self.csvFilePath[0], header=None)
         
@@ -78,7 +77,7 @@ class MyDataset(torch.utils.data.Dataset):
     #     return load_file(self.data_files[idx])
 
     def __len__(self):
-        return len(self.ptFilePath)
+        return int(self.annotation.iloc[-1, 0]+1)
     
     def __getitem__(self, pathIndex):
         # if self.data is None:
@@ -112,6 +111,7 @@ assert (
     os.path.isdir(dirName)
 ), "Data directory doesn't exist."
 dataset = MyDataset(dirName)
+print("Dataset length: ",dataset.__len__())
 
 # batch_size = 32
 batch_size = args.batchSize
@@ -197,15 +197,18 @@ for num_layers in num_layersList:
         train_sum_loss = 0.0
         train_loss = 0.0
         train_acc = 0.0
+        startTime_1 = time.time()
         model.train()
         for i, data in enumerate(train_loader, 0):
+            print("Pre loading: ", round(time.time()-startTime_1, 5))
+            
             startTime = time.time()
             num_batches = len(train_loader)
             inputs, labels = data
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
             # print("Input shape: ",inputs.shape)
 
-            print("One batch elapse: ", round(time.time()-startTime, 5))
+            print("Loading one batch: ", round(time.time()-startTime, 5))
             outputs = model(inputs)
 
             # print("Ouput shape: ", outputs.shape)
@@ -220,6 +223,7 @@ for num_layers in num_layersList:
             _, predicted = torch.max(outputs.data, 1)
             train_total += labels.size(0)
             train_correct += predicted.eq(labels.data).sum().item()
+            startTime_1 = time.time()
         train_loss = train_sum_loss / (i+1)
         train_acc = round(100.0 * train_correct / train_total, 2)
         print('Training Loss: %.04f | Training Acc: %.4f%% '
