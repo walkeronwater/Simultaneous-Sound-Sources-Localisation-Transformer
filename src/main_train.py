@@ -65,8 +65,8 @@ if __name__ == "__main__":
         def __init__(self, filePath, isDebug=False):
             super(MyDataset, self).__init__()
             self.filePath = filePath
-            self.csvFilePath = glob(os.path.join(self.filePath, '*.csv'))
-            self.annotation = pd.read_csv(self.csvFilePath[0], header=None)
+            # self.csvFilePath = glob(os.path.join(self.filePath, '*.csv'))
+            self.annotation = pd.read_csv(filePath+"dataLabels.csv", header=None)
             
             self.isDebug = isDebug
             # self.data = None
@@ -101,8 +101,6 @@ if __name__ == "__main__":
 
             if self.isDebug:
                 print("pathIndex: ", pathIndex)
-                # print("Data path: ", os.path.basename(self.ptFilePath[pathIndex]))
-                # print("dataIndex: ", dataIndex)
 
             return data, labels
 
