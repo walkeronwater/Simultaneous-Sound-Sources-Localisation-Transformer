@@ -155,25 +155,24 @@ if __name__ == "__main__":
     numWorker = args.numWorker
 
     start_time_dset = time.time()
-    train_loader, valid_loader = splitDataset(batchSize, trainValidSplit, numWorker, dataset)
-    print("Dataset split time: ", round(time.time() - start_time_dset, 5))
+    # train_loader, valid_loader = splitDataset(batchSize, trainValidSplit, numWorker, dataset)
 
-    '''
     Ntrain = round(trainValidSplit[0]*dataset.__len__())
-    if Ntrain % batch_size == 1:
+    if Ntrain % batchSize == 1:
         Ntrain -=1
     Nvalid = round(trainValidSplit[1]*dataset.__len__())
-    if Nvalid % batch_size == 1:
+    if Nvalid % batchSize == 1:
         Nvalid -=1
     # Ntest = dataset.__len__() - Ntrain - Nvalid
-    # if Ntest % batch_size == 1:
+    # if Ntest % batchSize == 1:
     #     Ntest -=1
     print("Dataset separation: ", Ntrain, Nvalid)
 
     train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
-    train_loader = DataLoader(dataset=train, batch_size=batch_size, shuffle=True, num_workers=args.numWorker)
-    valid_loader = DataLoader(dataset=valid, batch_size=batch_size, shuffle=True, num_workers=args.numWorker)
-    '''
+    train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker)
+    valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker)
+    
+    print("Dataset split time: ", round(time.time() - start_time_dset, 5))
 
     # rootDir = "./model/"
     rootDir = args.modelDir
