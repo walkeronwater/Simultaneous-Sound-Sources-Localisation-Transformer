@@ -182,8 +182,11 @@ if __name__ == "__main__":
         train_sum_loss = 0.0
         train_loss = 0.0
         train_acc = 0.0
-        start_time_enum = time.time()
         model.train()
+
+        print("Before entering the first batch - time elapse: ", round(time.time() - check_time, 5))
+        check_time = time.time()
+        start_time_enum = time.time()
         for i, data in enumerate(train_loader, 0):
             print("Pre loading time: ", round(time.time() - start_time_enum, 5))
             
