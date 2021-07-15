@@ -26,6 +26,65 @@ from torchsummary import summary
 from utils import *
 from model_transformer import *
 
+
+class MyDataset(torch.utils.data.Dataset):
+    def __init__(self, filePath, isDebug=False):
+        super(MyDataset, self).__init__()
+        self.filePath = filePath
+        # self.csvFilePath = glob(os.path.join(self.filePath, '*.csv'))
+        self.annotation = pd.read_csv(filePath+"dataLabels.csv", header=None)
+        
+        self.isDebug = isDebug
+
+    def __len__(self):
+        return int(self.annotation.iloc[-1, 0]+1)
+    
+    def __getitem__(self, pathIndex):
+        data = torch.load(
+            self.filePath+str(pathIndex)+".pt"
+        )
+        labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1])) # classification
+        # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
+        # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
+        # labels = torch.tensor(int((locLabel[self.annotation.iloc[dataIndex, 1], 1] % 360)/15)) # classify azimuth only
+
+        if self.isDebug:
+            print("pathIndex: ", pathIndex)
+
+        return data, labels
+
+def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
+    Ntrain = round(trainValidSplit[0]*dataset.__len__())
+    if Ntrain % batchSize == 1:
+        Ntrain -=1
+    Nvalid = round(trainValidSplit[1]*dataset.__len__())
+    if Nvalid % batchSize == 1:
+        Nvalid -=1
+    # Ntest = dataset.__len__() - Ntrain - Nvalid
+    # if Ntest % batchSize == 1:
+    #     Ntest -=1
+    print("Dataset separation: ", Ntrain, Nvalid)
+
+    train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
+    train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=True)
+    valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=True)
+
+    return train_loader, valid_loader
+
+'''
+def recordTime(start: float, end: float, processName: str):
+    if start == 0:
+        startTime = time.time()
+    else:
+        elapseTime = time.time() - startTime
+        print(processName, ": ", elapseTime)
+        startTime = 0.0
+'''
+
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training hyperparamters')
     parser.add_argument('dataDir', type=str, help='Directory of saved cues')
@@ -51,59 +110,6 @@ if __name__ == "__main__":
     print(args.numEpoch)
     print(args.batchSize)
 
-    '''
-    def recordTime(start: float, end: float, processName: str):
-        if start == 0:
-            startTime = time.time()
-        else:
-            elapseTime = time.time() - startTime
-            print(processName, ": ", elapseTime)
-            startTime = 0.0
-    '''
-
-    class MyDataset(torch.utils.data.Dataset):
-        def __init__(self, filePath, isDebug=False):
-            super(MyDataset, self).__init__()
-            self.filePath = filePath
-            # self.csvFilePath = glob(os.path.join(self.filePath, '*.csv'))
-            self.annotation = pd.read_csv(filePath+"dataLabels.csv", header=None)
-            
-            self.isDebug = isDebug
-            # self.data = None
-            # self.filePath = "/content/data/music_loc24_SNR10.h5"
-            # with h5py.File(self.filePath, 'r') as hf:
-            #     self.lenDataset = len(hf["data"])
-
-        # def __getindex__(self, idx):
-        #     return load_file(self.data_files[idx])
-
-        def __len__(self):
-            return int(self.annotation.iloc[-1, 0]+1)
-        
-        def __getitem__(self, pathIndex):
-            # if self.data is None:
-                # self.data = h5py.File(self.filePath, 'r')["data"]
-                # self.labels = h5py.File(self.filePath, 'r')["labels"]
-                # self.data, self.labels = np.array(self.data[idx]), np.array(self.labels[idx])
-                # self.data = torch.from_numpy(data.astype(np.float32))
-                # self.labels = torch.from_numpy(labels.astype(np.long))
-
-                # print(self.data[idx].shape)
-                # print(self.labels[idx])
-            data = torch.load(
-                self.filePath+str(pathIndex)+".pt"
-            )
-            # dataIndex = int(os.path.basename(self.ptFilePath[pathIndex])[0:-3])
-            labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1])) # classification
-            # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
-            # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
-            # labels = torch.tensor(int((locLabel[self.annotation.iloc[dataIndex, 1], 1] % 360)/15)) # classify azimuth only
-
-            if self.isDebug:
-                print("pathIndex: ", pathIndex)
-
-            return data, labels
-
     # dirName = './saved_cues/'
     dirName = args.dataDir
     assert (
@@ -113,7 +119,11 @@ if __name__ == "__main__":
     print("Dataset length: ",dataset.__len__())
 
     # batch_size = 32
-    batch_size = args.batchSize
+    batchSize = args.batchSize
+    numWorker = args.numWorker
+
+    train_loader, valid_loader = splitDataset(batchSize, trainValidSplit, numWorker, dataset)
+    '''
     Ntrain = round(trainValidSplit[0]*dataset.__len__())
     if Ntrain % batch_size == 1:
         Ntrain -=1
@@ -128,11 +138,7 @@ if __name__ == "__main__":
     train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
     train_loader = DataLoader(dataset=train, batch_size=batch_size, shuffle=True, num_workers=args.numWorker)
     valid_loader = DataLoader(dataset=valid, batch_size=batch_size, shuffle=True, num_workers=args.numWorker)
-
-
-    def get_lr(optimizer):
-        for param_group in optimizer.param_groups:
-            return param_group['lr']
+    '''
 
     valDropoutList = []
     num_layersList = [6]
