@@ -68,15 +68,14 @@ class MyDataset(torch.utils.data.Dataset):
         return int(self.annotation.iloc[-1, 0] + 1)
     
     def __getitem__(self, pathIndex):
-        dataList=[]
-        labelsList=[]
-        for i in range(len(pathIndex)):
-            data = torch.load(self.filePath+str(pathIndex[i])+".pt")
-            labels = torch.tensor(int(self.annotation.iloc[pathIndex[i], 1])) # classification
-            dataList.append(data)
-            labelsList.append(labels)
-            data = torch.stack(dataList)
-            labels = torch.stack(labelsList)
+        data = torch.load(self.filePath+str(pathIndex)+".pt")
+        labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1])) # classification
+        # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
+        # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
+        # labels = torch.tensor(int((locLabel[self.annotation.iloc[dataIndex, 1], 1] % 360)/15)) # classify azimuth only
+
+        if self.isDebug:
+            print("pathIndex: ", pathIndex)
 
         return data, labels
 
@@ -139,22 +138,10 @@ if __name__ == "__main__":
     ), "Data directory doesn't exist."
 
     dataset = MyDataset(dirName)
-    sampler = torch.utils.data.sampler.BatchSampler(
-        torch.utils.data.sampler.RandomSampler(dataset),
-        batch_size=args.batchSize,
-        drop_last=False
-    )
-    
-    train_loader = DataLoader(
-        dataset,
-        sampler=sampler
-    )
-
     # train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
-    # train_loader = DataLoader(dataset=dataset, batch_size=args.batchSize, shuffle=False, num_workers=args.numWorker)
+    train_loader = DataLoader(dataset=dataset, batch_size=args.batchSize, shuffle=False, num_workers=args.numWorker)
 
     print("Dataset instantialised - time elapse: ", round(time.time() - check_time, 5))
-    check_time = time.time()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     Nsample = dataset.__len__()
@@ -167,7 +154,6 @@ if __name__ == "__main__":
     model = FC3(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, valDropout, False).to(device)
 
     print("Model instantialised - time elapse: ", round(time.time() - check_time, 5))
-    check_time = time.time()
 
     num_epochs = args.numEpoch
     learning_rate = 1e-4
@@ -186,9 +172,9 @@ if __name__ == "__main__":
 
     
     print("Before entering training - time elapse: ", round(time.time() - check_time, 5))
-    check_time = time.time()
     for epoch in range(num_epochs):
         print("\nEpoch %d, lr = %f" % ((epoch + 1), get_lr(optimizer)))
+        num_batches = len(train_loader)
         
         train_correct = 0.0
         train_total = 0.0
@@ -198,23 +184,13 @@ if __name__ == "__main__":
         model.train()
 
         print("Before entering the first batch - time elapse: ", round(time.time() - check_time, 5))
-        check_time = time.time()
-        start_time_enum = time.time()
-
-        # for data in train_loader:
-        #     print(data[0].squeeze_(0).shape)
 
         for i, (inputs, labels) in enumerate(train_loader, 0):
-            print("Pre loading time: ", round(time.time() - start_time_enum, 5))
-            
-            start_time_load = time.time()
-            num_batches = len(train_loader)
-            inputs = inputs.squeeze_(0).to(device) 
-            labels = labels.squeeze_(0).to(device)
+            print("Batch %d, Before copy to device time: %f" % (i+1, round(time.time() - check_time, 5)))
+            inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
             # print("Input shape: ",inputs.shape)
 
-            print("Loading one batch time: ", round(time.time() - start_time_load, 5))
-            start_time_model = time.time()
+            print("Batch %d, Loading data time: %f" % (i+1, round(time.time() - check_time, 5)))
             outputs = model(inputs)
             
             # print("Ouput shape: ", outputs.shape)
@@ -226,12 +202,11 @@ if __name__ == "__main__":
             optimizer.step()
             train_sum_loss += loss.item()
 
-            print("Model prediction time: ", round(time.time()-start_time_model, 5))
+            print("Batch %d, Model prediction time: %f" % (i+1, round(time.time() - check_time, 5)))
 
             _, predicted = torch.max(outputs.data, 1)
             train_total += labels.size(0)
             train_correct += predicted.eq(labels.data).sum().item()
-            start_time_enum = time.time()
         train_loss = train_sum_loss / (i+1)
         train_acc = round(100.0 * train_correct / train_total, 2)
         print('Training Loss: %.04f | Training Acc: %.4f%% '
