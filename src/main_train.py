@@ -128,16 +128,16 @@ if __name__ == "__main__":
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
-    print(args.dataDir)
-    print(args.modelDir)
-    print(args.numWorker)
+    print("Data directory", args.dataDir)
+    print("Model directory", args.modelDir)
+    print("Number of workers", args.numWorker)
     trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
-    print(trainValidSplit)
-    print(args.numEnc)
-    print(args.numFC)
-    print(args.valDropout)
-    print(args.numEpoch)
-    print(args.batchSize)
+    print("Train validation split", trainValidSplit)
+    print("Number of encoder layers", args.numEnc)
+    print("Number of FC layers", args.numFC)
+    print("Dropout value", args.valDropout)
+    print("Number of epochs", args.numEpoch)
+    print("Batch size", args.batchSize)
 
     # dirName = './saved_cues/'
     dirName = args.dataDir
@@ -152,6 +152,7 @@ if __name__ == "__main__":
     numWorker = args.numWorker
 
     train_loader, valid_loader = splitDataset(batchSize, trainValidSplit, numWorker, dataset)
+    print("Dataset initliased.")
     '''
     Ntrain = round(trainValidSplit[0]*dataset.__len__())
     if Ntrain % batch_size == 1:
