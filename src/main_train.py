@@ -27,22 +27,48 @@ from utils import *
 from model_transformer import *
 
 
+class MultiEpochsDataLoader(torch.utils.data.DataLoader):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._DataLoader__initialized = False
+        self.batch_sampler = _RepeatSampler(self.batch_sampler)
+        self._DataLoader__initialized = True
+        self.iterator = super().__iter__()
+
+    def __len__(self):
+        return len(self.batch_sampler.sampler)
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield next(self.iterator)
+
+class _RepeatSampler(object):
+    """ Sampler that repeats forever.
+    Args:
+        sampler (Sampler)
+    """
+
+    def __init__(self, sampler):
+        self.sampler = sampler
+
+    def __iter__(self):
+        while True:
+            yield from iter(self.sampler)
+
+
 class MyDataset(torch.utils.data.Dataset):
     def __init__(self, filePath, isDebug=False):
         super(MyDataset, self).__init__()
         self.filePath = filePath
-        # self.csvFilePath = glob(os.path.join(self.filePath, '*.csv'))
         self.annotation = pd.read_csv(filePath+"dataLabels.csv", header=None)
-        
         self.isDebug = isDebug
 
     def __len__(self):
-        return int(self.annotation.iloc[-1, 0]+1)
+        return int(self.annotation.iloc[-1, 0] + 1)
     
     def __getitem__(self, pathIndex):
-        data = torch.load(
-            self.filePath+str(pathIndex)+".pt"
-        )
+        data = torch.load(self.filePath+str(pathIndex)+".pt")
         labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1])) # classification
         # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
         # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
@@ -66,8 +92,11 @@ def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
     print("Dataset separation: ", Ntrain, Nvalid)
 
     train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
-    train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=True)
-    valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=True)
+    # train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
+    # valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
+
+    train_loader = MultiEpochsDataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
+    valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
 
     return train_loader, valid_loader
 
@@ -202,18 +231,18 @@ if __name__ == "__main__":
             train_sum_loss = 0.0
             train_loss = 0.0
             train_acc = 0.0
-            startTime_1 = time.time()
+            start_time_enum = time.time()
             model.train()
             for i, data in enumerate(train_loader, 0):
-                print("Pre loading: ", round(time.time()-startTime_1, 5))
+                print("Pre loading: ", round(time.time()-start_time_enum, 5))
                 
-                startTime = time.time()
+                start_time_load = time.time()
                 num_batches = len(train_loader)
                 inputs, labels = data
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 # print("Input shape: ",inputs.shape)
 
-                print("Loading one batch: ", round(time.time()-startTime, 5))
+                print("Loading one batch: ", round(time.time() - start_time_load, 5))
                 outputs = model(inputs)
 
                 # print("Ouput shape: ", outputs.shape)
@@ -228,7 +257,7 @@ if __name__ == "__main__":
                 _, predicted = torch.max(outputs.data, 1)
                 train_total += labels.size(0)
                 train_correct += predicted.eq(labels.data).sum().item()
-                startTime_1 = time.time()
+                start_time_enum = time.time()
             train_loss = train_sum_loss / (i+1)
             train_acc = round(100.0 * train_correct / train_total, 2)
             print('Training Loss: %.04f | Training Acc: %.4f%% '
