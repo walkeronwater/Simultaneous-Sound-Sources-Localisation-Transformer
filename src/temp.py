@@ -1,5 +1,6 @@
 import argparse
 import time
+import timeit
 import soundfile as sf
 from scipy import signal
 import random
@@ -138,7 +139,7 @@ if __name__ == "__main__":
 
     dataset = MyDataset(dirName)
     # train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
-    train_loader = DataLoader(dataset=dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorker)
+    train_loader = DataLoader(dataset=dataset, batch_size=args.batchSize, shuffle=False, num_workers=args.numWorker)
 
     print("Dataset instantialised - time elapse: ", round(time.time() - check_time, 5))
     check_time = time.time()
