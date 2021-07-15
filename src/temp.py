@@ -188,13 +188,13 @@ if __name__ == "__main__":
         print("Before entering the first batch - time elapse: ", round(time.time() - check_time, 5))
         check_time = time.time()
         start_time_enum = time.time()
-        for i, data in enumerate(train_loader, 0):
+        for i, (inputs, labels) in enumerate(train_loader, 0):
             print("Pre loading time: ", round(time.time() - start_time_enum, 5))
             
             start_time_load = time.time()
             num_batches = len(train_loader)
-            inputs, labels = data
-            inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
+            inputs = inputs.to(device) 
+            labels = labels.to(device)
             # print("Input shape: ",inputs.shape)
 
             print("Loading one batch time: ", round(time.time() - start_time_load, 5))
