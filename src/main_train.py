@@ -144,8 +144,11 @@ if __name__ == "__main__":
     assert (
         os.path.isdir(dirName)
     ), "Data directory doesn't exist."
+
+    start_time_dset = time.time()
     dataset = MyDataset(dirName)
-    print("Dataset length: ",dataset.__len__())
+    print("Dataset length: ", dataset.__len__())
+    print("Dataset init time: ", round(time.time() - start_time_dset, 5))
 
     # batch_size = 32
     batchSize = args.batchSize
@@ -153,7 +156,8 @@ if __name__ == "__main__":
 
     start_time_dset = time.time()
     train_loader, valid_loader = splitDataset(batchSize, trainValidSplit, numWorker, dataset)
-    print("Dataset init time: ", round(time.time() - start_time_dset, 5))
+    print("Dataset split time: ", round(time.time() - start_time_dset, 5))
+
     '''
     Ntrain = round(trainValidSplit[0]*dataset.__len__())
     if Ntrain % batch_size == 1:
