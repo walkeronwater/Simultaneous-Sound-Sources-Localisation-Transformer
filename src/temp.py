@@ -95,8 +95,8 @@ def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
     # train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
     # valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
 
-    train_loader = MultiEpochsDataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
-    valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
+    train_loader = MultiEpochsDataLoader(dataset=train, batch_size=batchSize, shuffle=False, num_workers=numWorker, persistent_workers=False)
+    valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=False, num_workers=numWorker, persistent_workers=False)
 
     return train_loader, valid_loader
 
