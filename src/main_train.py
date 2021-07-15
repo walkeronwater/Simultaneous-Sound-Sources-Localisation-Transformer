@@ -205,7 +205,7 @@ for num_layers in num_layersList:
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
             # print("Input shape: ",inputs.shape)
 
-            print("One batch elapse: ", round(time.time()-startTime, 2))
+            print("One batch elapse: ", round(time.time()-startTime, 5))
             outputs = model(inputs)
 
             # print("Ouput shape: ", outputs.shape)
