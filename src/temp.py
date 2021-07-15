@@ -129,7 +129,7 @@ if __name__ == "__main__":
     print("Number of epochs", args.numEpoch)
     print("Batch size", args.batchSize)
 
-    start_time = time.time()
+    check_time = time.time()
     # dirName = './saved_cues/'
     dirName = args.dataDir
     assert (
@@ -137,9 +137,11 @@ if __name__ == "__main__":
     ), "Data directory doesn't exist."
 
     dataset = MyDataset(dirName)
-    train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
+    # train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
+    train_loader = DataLoader(dataset=dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorker)
 
-    print("Done - time elapse: ", round(time.time() - start_time, 5))
+    print("Dataset instantialised - time elapse: ", round(time.time() - check_time, 5))
+    check_time = time.time()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     Nsample = dataset.__len__()
@@ -150,6 +152,9 @@ if __name__ == "__main__":
     valDropout = args.valDropout
     num_layers = args.numEnc
     model = FC3(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, valDropout, False).to(device)
+
+    print("Model instantialised - time elapse: ", round(time.time() - check_time, 5))
+    check_time = time.time()
 
     num_epochs = args.numEpoch
     learning_rate = 1e-4
@@ -166,6 +171,9 @@ if __name__ == "__main__":
     if not os.path.isdir(checkpointPath):
         os.mkdir(checkpointPath)
 
+    
+    print("Before entering training - time elapse: ", round(time.time() - check_time, 5))
+    check_time = time.time()
     for epoch in range(num_epochs):
         print("\nEpoch %d, lr = %f" % ((epoch + 1), get_lr(optimizer)))
         
