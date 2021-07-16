@@ -11,7 +11,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import torch.utils.data
 
-def load_hrir(path):
+def loadHRIR(path):
     names = []
     names += glob(path)
     print(names[0])
@@ -58,7 +58,34 @@ def load_hrir(path):
 
     return hrirSet, locLabel, fs_HRIR
 
+class MultiEpochsDataLoader(torch.utils.data.DataLoader):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._DataLoader__initialized = False
+        self.batch_sampler = _RepeatSampler(self.batch_sampler)
+        self._DataLoader__initialized = True
+        self.iterator = super().__iter__()
+
+    def __len__(self):
+        return len(self.batch_sampler.sampler)
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield next(self.iterator)
+
+class _RepeatSampler(object):
+    """ Sampler that repeats forever.
+    Args:
+        sampler (Sampler)
+    """
+
+    def __init__(self, sampler):
+        self.sampler = sampler
+
+    def __iter__(self):
+        while True:
+            yield from iter(self.sampler)
 class MyDataset(torch.utils.data.Dataset):
     def __init__(self, filePath, isDebug=False):
         super(MyDataset, self).__init__()
@@ -81,7 +108,6 @@ class MyDataset(torch.utils.data.Dataset):
 
         return data, labels
 
-
 def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
     Ntrain = round(trainValidSplit[0]*dataset.__len__())
     if Ntrain % batchSize == 1:
@@ -98,12 +124,12 @@ def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
     # train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
     # valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
 
-    train_loader = MultiEpochsDataLoader(dataset=train, batch_size=batchSize, shuffle=False, num_workers=numWorker, persistent_workers=False)
-    valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=False, num_workers=numWorker, persistent_workers=False)
+    train_loader = MultiEpochsDataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
+    valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
 
     return train_loader, valid_loader
 
 
 if __name__ == "__main__":
     path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = load_hrir(path)
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path)

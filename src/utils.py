@@ -167,5 +167,5 @@ if __name__ == "__main__":
     tempIndex = 96
     
     path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = load_hrir(path)
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
     saveCues(temp, tempIndex, "./", 0, locLabel)

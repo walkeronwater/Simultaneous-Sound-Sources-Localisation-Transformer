@@ -28,46 +28,48 @@ from utils import *
 from model_transformer import *
 
 
-class MultiEpochsDataLoader(torch.utils.data.DataLoader):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._DataLoader__initialized = False
-        self.batch_sampler = _RepeatSampler(self.batch_sampler)
-        self._DataLoader__initialized = True
-        self.iterator = super().__iter__()
+def saveParam(epoch, model, optimizer, savePath):
+    torch.save({
+        'epoch': epoch+1,
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict()
+    }, savePath)
 
-    def __len__(self):
-        return len(self.batch_sampler.sampler)
+def saveCurves(epoch, tl, ta, vl, va, savePath):
+    torch.save({
+        'epoch': epoch+1,
+        'train_loss': tl,
+        'train_acc': ta,
+        'valid_loss': vl,
+        'valid_acc': va
+    }, savePath)
 
-    def __iter__(self):
-        for i in range(len(self)):
-            yield next(self.iterator)
+def loadCheckpoint(model, optimizer, loadPath):
+    checkpoint = torch.load(loadPath+"param.pth.tar")
+    epoch = checkpoint['epoch']
+    model.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
 
-class _RepeatSampler(object):
-    """ Sampler that repeats forever.
-    Args:
-        sampler (Sampler)
-    """
+    trainHistory = glob(os.path.join(loadPath, "curve*"))
+    val_acc_optim = 0.0
 
-    def __init__(self, sampler):
-        self.sampler = sampler
+    history = {
+        'train_acc': [],
+        'train_loss': [],
+        'valid_acc': [],
+        'valid_loss': []
+    }
+    for i in range(len(trainHistory)):
+        checkpt = torch.load(trainHistory[i])
+        for idx in history.keys():
+            history[idx].append(checkpt[idx])
+    val_acc_optim = max(history['valid_acc'])
+    print("val_acc_optim: ", val_acc_optim)
 
-    def __iter__(self):
-        while True:
-            yield from iter(self.sampler)
+    return model, optimizer, epoch, val_acc_optim
 
-'''
-def recordTime(start: float, end: float, processName: str):
-    if start == 0:
-        startTime = time.time()
-    else:
-        elapseTime = time.time() - startTime
-        print(processName, ": ", elapseTime)
-        startTime = 0.0
-'''
-
-def get_lr(optimizer):
+def getLR(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
@@ -95,6 +97,10 @@ if __name__ == "__main__":
     print("Dropout value", args.valDropout)
     print("Number of epochs", args.numEpoch)
     print("Batch size", args.batchSize)
+    if args.isDebug == "True":
+        args.isDebug = True
+    else:
+        args.isDebug = False
 
     # dirName = './saved_cues/'
     dirName = args.dataDir
@@ -102,17 +108,14 @@ if __name__ == "__main__":
         os.path.isdir(dirName)
     ), "Data directory doesn't exist."
 
-    start_time_dset = time.time()
     dataset = MyDataset(dirName)
     print("Dataset length: ", dataset.__len__())
-    print("Dataset init time: ", round(time.time() - start_time_dset, 5))
 
     # batch_size = 32
     batchSize = args.batchSize
     numWorker = args.numWorker
 
-    start_time_dset = time.time()
-    # train_loader, valid_loader = splitDataset(batchSize, trainValidSplit, numWorker, dataset)
+    train_loader, valid_loader = splitDataset(batchSize, trainValidSplit, numWorker, dataset)
 
     Ntrain = round(trainValidSplit[0]*dataset.__len__())
     if Ntrain % batchSize == 1:
@@ -128,13 +131,6 @@ if __name__ == "__main__":
     train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
     train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker)
     valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker)
-    
-    print("Dataset split time: ", round(time.time() - start_time_dset, 5))
-
-    # rootDir = "./model/"
-    rootDir = args.modelDir
-    if not os.path.isdir(rootDir):
-        os.mkdir(rootDir)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     Nsample = dataset.__len__()
@@ -142,7 +138,6 @@ if __name__ == "__main__":
     Ntime = 44
     Nfreq = 512
     Ncues = 5
-    # valDropout = 0.3
     valDropout = args.valDropout
     num_layers = args.numEnc
     model = FC3(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, valDropout, False).to(device)
@@ -151,6 +146,7 @@ if __name__ == "__main__":
 
     # num_epochs = 30
     num_epochs = args.numEpoch
+    pretrainEpoch = 0
     learning_rate = 1e-4
     early_epoch = 10
     early_epoch_count = 0
@@ -172,17 +168,21 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     # criterion = nn.MSELoss()
 
-    # print("Data volume: ", Nsample)
-    # print("Nloc: ", Nloc)
-    # print("Number of layers: ", num_layers)
-    # print("Dropout: ", valDropout)
-    expName = "vol_"+str(Nsample)+"_loc_"+str(Nloc)+"_layer_"+str(num_layers)+"/"
-    checkpointPath = rootDir+expName
-    if not os.path.isdir(checkpointPath):
-        os.mkdir(checkpointPath)
+    if not os.path.isdir(args.modelDir):
+        os.mkdir(args.modelDir)
 
-    for epoch in range(num_epochs):
-        print("\nEpoch %d, lr = %f" % ((epoch + 1), get_lr(optimizer)))
+    checkpointPath = args.modelDir
+    if os.path.isdir(args.modelDir):
+        try:
+            learning_rate = 1e-4
+            optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+            model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, args.modelDir)
+            print("Found a pre-trained model in directory", args.modelDir)
+        except:
+            print("Not found any pre-trained model in directory", args.modelDir)
+
+    for epoch in range(pretrainEpoch, pretrainEpoch + num_epochs):
+        print("\nEpoch %d, lr = %f" % ((epoch + 1), getLR(optimizer)))
         
         train_correct = 0.0
         train_total = 0.0
@@ -190,9 +190,8 @@ if __name__ == "__main__":
         train_loss = 0.0
         train_acc = 0.0
         model.train()
-        for i, data in enumerate(train_loader, 0):
+        for i, (inputs, labels) in enumerate(train_loader, 0):
             num_batches = len(train_loader)
-            inputs, labels = data
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
             # print("Input shape: ",inputs.shape)
             outputs = model(inputs)
@@ -223,8 +222,7 @@ if __name__ == "__main__":
         # validation phase
         model.eval()
         with torch.no_grad():
-            for i, data in enumerate(valid_loader, 0):
-                inputs, labels = data
+            for i, (inputs, labels) in enumerate(valid_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 
                 outputs = model(inputs)
@@ -241,20 +239,15 @@ if __name__ == "__main__":
         print('Val_Loss: %.04f | Val_Acc: %.4f%% '
             % (val_loss, val_acc))
         
-        checkpoint_curve = {
-            "epoch": epoch+1,
-            "train_loss": train_loss,
-            "train_acc": train_acc,
-            "valid_loss": val_loss,
-            "valid_acc": val_acc
-        }
-        
-        torch.save(
-            checkpoint_curve,
-            checkpointPath + "curve_epoch_"+str(epoch+1)+".pth.tar"
-        )
 
-        
+        saveCurves(
+            epoch, 
+            train_loss, 
+            train_acc, 
+            val_loss, 
+            val_acc,
+            args.modelDir + "curve_epoch_" + str(epoch+1) + ".pth.tar"
+        )
 
         # early stopping
         if (val_acc <= val_acc_optim):
@@ -263,15 +256,12 @@ if __name__ == "__main__":
             val_acc_optim = val_acc
             early_epoch_count = 0
 
-            checkpoint_param = {
-                "epoch": epoch+1,
-                "state_dict": model.state_dict(),
-                "optimizer": optimizer.state_dict()
-            }
-
-            torch.save(
-                checkpoint_param,
-                checkpointPath + "param.pth.tar"
+            saveParam(
+                epoch,
+                model,
+                optimizer,
+                args.modelDir + "param.pth.tar"
             )
+            
         if (early_epoch_count >= early_epoch):
             break
