@@ -29,6 +29,7 @@ if __name__ == "__main__":
     parser.add_argument('audioDir', type=str, help='Directory of audio files')
     parser.add_argument('hrirDir', type=str, help='Directory of HRIR files')
     parser.add_argument('cuesDir', type=str, help='Directory of cues to be saved')
+    parser.add_argument('Nsample', type=int, help='Number of samples?')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     Ntime = 44
     Ncues = 5
     Nloc = 187
-    Nsample = Nloc * 2
+    Nsample = args.Nsample
 
     isDisk = True
     # allocate tensors cues and labels in RAM
