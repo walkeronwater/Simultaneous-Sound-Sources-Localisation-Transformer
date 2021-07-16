@@ -1,3 +1,4 @@
+import argparse
 import soundfile as sf
 from scipy import signal
 import random
@@ -24,9 +25,20 @@ from load_data import load_hrir
 from utils import *
 
 if __name__ == "__main__":
-    path = "./HRTF/IRC*"
+    parser = argparse.ArgumentParser(description='Create cues')
+    parser.add_argument('audioDir', type=str, help='Directory of audio files')
+    parser.add_argument('hrirDir', type=str, help='Directory of HRIR files')
+    parser.add_argument('cuesDir', type=str, help='Directory of cues to be saved')
+    parser.add_argument('Nsample', type=int, help='Number of samples?')
+    parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
+
+    args = parser.parse_args()
+    print("Audio files directory: ", args.audioDir)
+    print("HRIR files directory: ", args.hrirDir)
+
+    path = args.hrirDir + "/IRC*"
     hrirSet, locLabel, fs_HRIR = load_hrir(path)
-    path = glob(os.path.join("./audio/*"))
+    path = glob(os.path.join(args.audioDir+"/*"))
     Naudio = len(path)
     print("# audio files: ", Naudio)
 
@@ -35,8 +47,8 @@ if __name__ == "__main__":
     Nfreq = 512
     Ntime = 44
     Ncues = 5
-    Nloc = 24
-    Nsample = Nloc * 30000
+    Nloc = 187
+    Nsample = args.Nsample
 
     isDisk = True
     # allocate tensors cues and labels in RAM
@@ -50,7 +62,7 @@ if __name__ == "__main__":
 
     valSNRList = [-10,-5,0,5,10,15,20,100]
 
-    dirName = './saved_cues_large/'
+    dirName = args.cuesDir
 
     if not os.path.isdir(dirName):
         os.mkdir(dirName)
@@ -99,7 +111,7 @@ if __name__ == "__main__":
 
                     # save cues onto disk
                     if isDisk:
-                        saveCues(cues, locIndex, dirName, fileCount, locLabel, task="azim")
+                        saveCues(cues, locIndex, dirName, fileCount, locLabel)
                     else:
                         cues_[fileCount] = cues
                         labels_[fileCount] = labels
