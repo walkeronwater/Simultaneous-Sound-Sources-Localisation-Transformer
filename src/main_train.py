@@ -26,6 +26,7 @@ from torchsummary import summary
 from load_data import *
 from utils import *
 from model_transformer import *
+from loss import DoALoss
 
 def saveParam(epoch, model, optimizer, savePath, task):
     torch.save({
@@ -183,20 +184,32 @@ if __name__ == "__main__":
             
             # print("Ouput shape: ", outputs.shape)
             # print("Label shape: ", labels.shape)
-            loss = criterion(outputs, labels) # .unsqueeze_(1)
+            if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
+                loss = DoALoss(outputs, labels)
+            else:
+                loss = criterion(outputs, labels)
+            if args.isDebug:
+                print("Loss", loss.shape)
+            train_sum_loss += loss.item()
             optimizer.zero_grad()
             loss.backward()
             # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
             optimizer.step()
-            train_sum_loss += loss.item()
 
-            _, predicted = torch.max(outputs.data, 1)
-            train_total += labels.size(0)
-            train_correct += predicted.eq(labels.data).sum().item()
+            if not (args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression"):
+                _, predicted = torch.max(outputs.data, 1)
+                # print(predicted.shape)
+                train_total += labels.size(0)
+                train_correct += predicted.eq(labels.data).sum().item()
         train_loss = train_sum_loss / (i+1)
-        train_acc = round(100.0 * train_correct / train_total, 2)
-        print('Training Loss: %.04f | Training Acc: %.4f%% '
-            % (train_loss, train_acc))
+        if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
+            train_acc = train_loss
+            print('Training Loss: %.04f | Training Acc: %.04f '
+                % (train_loss, train_acc))
+        else:
+            train_acc = round(100.0 * train_correct / train_total, 2)
+            print('Training Loss: %.04f | Training Acc: %.4f%% '
+                % (train_loss, train_acc))
         
         val_correct = 0.0
         val_total = 0.0
@@ -211,18 +224,26 @@ if __name__ == "__main__":
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 
                 outputs = model(inputs)
-                val_loss = criterion(outputs, labels) # .unsqueeze_(1)
+                if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
+                    val_loss = DoALoss(outputs, labels)
+                else:
+                    val_loss = criterion(outputs, labels) # .unsqueeze_(1)
                 val_sum_loss += val_loss.item()
 
-                _, predicted = torch.max(outputs.data, 1)
-                val_total += labels.size(0)
-                val_correct += predicted.eq(labels.data).sum().item()
+                if not (args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression"):
+                    _, predicted = torch.max(outputs.data, 1)
+                    val_total += labels.size(0)
+                    val_correct += predicted.eq(labels.data).sum().item()
             val_loss = val_sum_loss / (i+1)
-            val_acc = round(100.0 * val_correct / val_total, 2)
+            if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
+                val_acc = val_loss
+                print('Val_Loss: %.04f | Val_Acc: %.04f '
+                    % (val_loss, val_acc))
+            else:
+                val_acc = round(100.0 * val_correct / val_total, 2)
+                print('Val_Loss: %.04f | Val_Acc: %.4f%% '
+                    % (val_loss, val_acc))
             scheduler.step(val_loss)
-
-        print('Val_Loss: %.04f | Val_Acc: %.4f%% '
-            % (val_loss, val_acc))
 
         saveCurves(
             epoch, 

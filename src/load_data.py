@@ -111,9 +111,9 @@ class MyDataset(torch.utils.data.Dataset):
         elif self.task == "azimRegression":
             labels = torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)
         elif self.task == "allRegression":
-            labels = (
+            labels = torch.stack([
                 torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32),
-                torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)
+                torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)]
             )
 
         if self.isDebug:
@@ -148,6 +148,6 @@ if __name__ == "__main__":
     # path = "./HRTF/IRC*"
     # hrirSet, locLabel, fs_HRIR = loadHRIR(path)
 
-    dataset = MyDataset("./saved_cues_temptemp/", "elevClass")
+    dataset = MyDataset("./saved_cues_temptemp/", "allRegression")
     for i in range(25):
-        print(dataset[i][1])
+        print(dataset[i][1].shape)

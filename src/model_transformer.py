@@ -202,7 +202,7 @@ class FC3(nn.Module):
             dropout,
         )
         Nloc = predNeuron(task)
-        print(Nloc)
+        print("Number of neurons in the final layer: ", Nloc)
         # self.attention = Attention(Ncues)
         # self.fc_freq = nn.Linear(Nfreq*Ncues, Nloc)
         # self.fc_time = nn.Linear(Ntime, 1)
@@ -260,7 +260,7 @@ class FC3(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     numLayers = 6
-    task = "elevRegression"
+    task = "allRegression"
     Ntime = 44
     Nfreq = 512
     Ncues = 5
