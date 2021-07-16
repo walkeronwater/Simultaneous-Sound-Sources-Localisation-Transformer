@@ -146,8 +146,8 @@ if __name__ == "__main__":
     valDropout = args.valDropout
     num_layers = args.numEnc
     model = FC3(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, valDropout, False).to(device)
-    model.isDebug = False
-    dataset.isDebug = False
+    model.isDebug = args.isDebug
+    dataset.isDebug = args.isDebug
 
     # num_epochs = 30
     num_epochs = args.numEpoch
