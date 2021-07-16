@@ -57,50 +57,6 @@ class _RepeatSampler(object):
         while True:
             yield from iter(self.sampler)
 
-
-class MyDataset(torch.utils.data.Dataset):
-    def __init__(self, filePath, isDebug=False):
-        super(MyDataset, self).__init__()
-        self.filePath = filePath
-        self.annotation = pd.read_csv(filePath+"dataLabels.csv", header=None)
-        self.isDebug = isDebug
-
-    def __len__(self):
-        return int(self.annotation.iloc[-1, 0] + 1)
-    
-    def __getitem__(self, pathIndex):
-        data = torch.load(self.filePath+str(pathIndex)+".pt")
-        labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1])) # classification
-        # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
-        # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
-        # labels = torch.tensor(int((locLabel[self.annotation.iloc[dataIndex, 1], 1] % 360)/15)) # classify azimuth only
-
-        if self.isDebug:
-            print("pathIndex: ", pathIndex)
-
-        return data, labels
-
-def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
-    Ntrain = round(trainValidSplit[0]*dataset.__len__())
-    if Ntrain % batchSize == 1:
-        Ntrain -=1
-    Nvalid = round(trainValidSplit[1]*dataset.__len__())
-    if Nvalid % batchSize == 1:
-        Nvalid -=1
-    # Ntest = dataset.__len__() - Ntrain - Nvalid
-    # if Ntest % batchSize == 1:
-    #     Ntest -=1
-    print("Dataset separation: ", Ntrain, Nvalid)
-
-    train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
-    # train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
-    # valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
-
-    train_loader = MultiEpochsDataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
-    valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
-
-    return train_loader, valid_loader
-
 '''
 def recordTime(start: float, end: float, processName: str):
     if start == 0:
@@ -233,19 +189,12 @@ if __name__ == "__main__":
         train_sum_loss = 0.0
         train_loss = 0.0
         train_acc = 0.0
-        start_time_enum = time.time()
         model.train()
         for i, data in enumerate(train_loader, 0):
-            print("Pre loading time: ", round(time.time() - start_time_enum, 5))
-            
-            start_time_load = time.time()
             num_batches = len(train_loader)
             inputs, labels = data
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
             # print("Input shape: ",inputs.shape)
-
-            print("Loading one batch time: ", round(time.time() - start_time_load, 5))
-            start_time_model = time.time()
             outputs = model(inputs)
             
             # print("Ouput shape: ", outputs.shape)
@@ -257,12 +206,9 @@ if __name__ == "__main__":
             optimizer.step()
             train_sum_loss += loss.item()
 
-            print("Model prediction time: ", round(time.time()-start_time_model, 5))
-
             _, predicted = torch.max(outputs.data, 1)
             train_total += labels.size(0)
             train_correct += predicted.eq(labels.data).sum().item()
-            start_time_enum = time.time()
         train_loss = train_sum_loss / (i+1)
         train_acc = round(100.0 * train_correct / train_total, 2)
         print('Training Loss: %.04f | Training Acc: %.4f%% '
