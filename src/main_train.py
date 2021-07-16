@@ -27,47 +27,50 @@ from load_data import *
 from utils import *
 from model_transformer import *
 
-def saveParam(epoch, model, optimizer, savePath):
+def saveParam(epoch, model, optimizer, savePath, task):
     torch.save({
         'epoch': epoch+1,
         'state_dict': model.state_dict(),
-        'optimizer': optimizer.state_dict()
+        'optimizer': optimizer.state_dict(),
+        'task': task
     }, savePath)
 
-def saveCurves(epoch, tl, ta, vl, va, savePath):
+def saveCurves(epoch, tl, ta, vl, va, savePath, task):
     torch.save({
         'epoch': epoch+1,
         'train_loss': tl,
         'train_acc': ta,
         'valid_loss': vl,
-        'valid_acc': va
+        'valid_acc': va,
+        'task': task
     }, savePath)
 
-def loadCheckpoint(model, optimizer, loadPath):
+def loadCheckpoint(model, optimizer, loadPath, task):
     checkpoint = torch.load(loadPath+"param.pth.tar")
-    # epoch = checkpoint['epoch']
-    model.load_state_dict(checkpoint['state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer'])
+    if checkpoint['task'] == task:
+        # epoch = checkpoint['epoch']
+        model.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
 
-    trainHistory = glob(os.path.join(loadPath, "curve*"))
-    val_acc_optim = 0.0
+        trainHistory = glob(os.path.join(loadPath, "curve*"))
+        val_acc_optim = 0.0
 
-    history = {
-        'train_acc': [],
-        'train_loss': [],
-        'valid_acc': [],
-        'valid_loss': []
-    }
-    for i in range(len(trainHistory)):
-        checkpt = torch.load(trainHistory[i])
-        for idx in history.keys():
-            history[idx].append(checkpt[idx])
-    val_acc_optim = max(history['valid_acc'])
-    print("val_acc_optim: ", val_acc_optim)
-    epoch = len(trainHistory)
-    print("Training will start from epoch", epoch+1)
+        history = {
+            'train_acc': [],
+            'train_loss': [],
+            'valid_acc': [],
+            'valid_loss': []
+        }
+        for i in range(len(trainHistory)):
+            checkpt = torch.load(trainHistory[i])
+            for idx in history.keys():
+                history[idx].append(checkpt[idx])
+        val_acc_optim = max(history['valid_acc'])
+        print("val_acc_optim: ", val_acc_optim)
+        epoch = len(trainHistory)
+        print("Training will start from epoch", epoch+1)
 
-    return model, optimizer, epoch, val_acc_optim
+        return model, optimizer, epoch, val_acc_optim
 
 def getLR(optimizer):
     for param_group in optimizer.param_groups:
@@ -78,6 +81,7 @@ if __name__ == "__main__":
     parser.add_argument('dataDir', type=str, help='Directory of saved cues')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
     parser.add_argument('numWorker', type=int, help='Number of workers')
+    parser.add_argument('task', type=str, help='Task')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
@@ -90,6 +94,7 @@ if __name__ == "__main__":
     print("Data directory", args.dataDir)
     print("Model directory", args.modelDir)
     print("Number of workers", args.numWorker)
+    print("Task", args.task)
     trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
     print("Train validation split", trainValidSplit)
     print("Number of encoder layers", args.numEnc)
@@ -108,14 +113,10 @@ if __name__ == "__main__":
         os.path.isdir(dirName)
     ), "Data directory doesn't exist."
 
-    dataset = MyDataset(dirName)
+    dataset = MyDataset(dirName, args.task, args.isDebug)
     print("Dataset length: ", dataset.__len__())
 
-    # batch_size = 32
-    batchSize = args.batchSize
-    numWorker = args.numWorker
-
-    train_loader, valid_loader = splitDataset(batchSize, trainValidSplit, numWorker, dataset)
+    train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     Nsample = dataset.__len__()
@@ -123,11 +124,7 @@ if __name__ == "__main__":
     Ntime = 44
     Nfreq = 512
     Ncues = 5
-    valDropout = args.valDropout
-    num_layers = args.numEnc
-    model = FC3(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, valDropout, False).to(device)
-    model.isDebug = args.isDebug
-    dataset.isDebug = args.isDebug
+    model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
 
     # num_epochs = 30
     num_epochs = args.numEpoch
@@ -155,13 +152,11 @@ if __name__ == "__main__":
 
     if not os.path.isdir(args.modelDir):
         os.mkdir(args.modelDir)
-
-    checkpointPath = args.modelDir
-    if os.path.isdir(args.modelDir):
+    else:
         try:
             learning_rate = 1e-4
             optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-            model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, args.modelDir)
+            model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, args.modelDir, args.task)
             print("Found a pre-trained model in directory", args.modelDir)
         except:
             print("Not found any pre-trained model in directory", args.modelDir)
@@ -223,7 +218,6 @@ if __name__ == "__main__":
 
         print('Val_Loss: %.04f | Val_Acc: %.4f%% '
             % (val_loss, val_acc))
-        
 
         saveCurves(
             epoch, 
@@ -231,7 +225,8 @@ if __name__ == "__main__":
             train_acc, 
             val_loss, 
             val_acc,
-            args.modelDir + "curve_epoch_" + str(epoch+1) + ".pth.tar"
+            args.modelDir + "curve_epoch_" + str(epoch+1) + ".pth.tar",
+            args.task
         )
 
         # early stopping
@@ -245,7 +240,8 @@ if __name__ == "__main__":
                 epoch,
                 model,
                 optimizer,
-                args.modelDir + "param.pth.tar"
+                args.modelDir + "param.pth.tar",
+                args.task
             )
             
         if (early_epoch_count >= early_epoch):
