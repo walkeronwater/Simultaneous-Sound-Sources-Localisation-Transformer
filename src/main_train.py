@@ -91,6 +91,11 @@ if __name__ == "__main__":
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
+    if args.dataDir[-1] != "/":
+        args.dataDir += "/"
+    if args.modelDir[-1] != "/":
+        args.modelDir += "/"
+    
     print("Data directory", args.dataDir)
     print("Model directory", args.modelDir)
     print("Number of workers", args.numWorker)
