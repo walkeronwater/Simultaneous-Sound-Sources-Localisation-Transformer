@@ -27,8 +27,6 @@ from load_data import *
 from utils import *
 from model_transformer import *
 
-
-
 def saveParam(epoch, model, optimizer, savePath):
     torch.save({
         'epoch': epoch+1,
@@ -47,7 +45,7 @@ def saveCurves(epoch, tl, ta, vl, va, savePath):
 
 def loadCheckpoint(model, optimizer, loadPath):
     checkpoint = torch.load(loadPath+"param.pth.tar")
-    epoch = checkpoint['epoch']
+    # epoch = checkpoint['epoch']
     model.load_state_dict(checkpoint['state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer'])
 
@@ -66,6 +64,8 @@ def loadCheckpoint(model, optimizer, loadPath):
             history[idx].append(checkpt[idx])
     val_acc_optim = max(history['valid_acc'])
     print("val_acc_optim: ", val_acc_optim)
+    epoch = len(trainHistory)
+    print("Training will start from epoch", epoch+1)
 
     return model, optimizer, epoch, val_acc_optim
 
@@ -116,21 +116,6 @@ if __name__ == "__main__":
     numWorker = args.numWorker
 
     train_loader, valid_loader = splitDataset(batchSize, trainValidSplit, numWorker, dataset)
-
-    Ntrain = round(trainValidSplit[0]*dataset.__len__())
-    if Ntrain % batchSize == 1:
-        Ntrain -=1
-    Nvalid = round(trainValidSplit[1]*dataset.__len__())
-    if Nvalid % batchSize == 1:
-        Nvalid -=1
-    # Ntest = dataset.__len__() - Ntrain - Nvalid
-    # if Ntest % batchSize == 1:
-    #     Ntest -=1
-    print("Dataset separation: ", Ntrain, Nvalid)
-
-    train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
-    train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker)
-    valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     Nsample = dataset.__len__()
