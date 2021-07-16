@@ -69,7 +69,7 @@ class MyDataset(torch.utils.data.Dataset):
     
     def __getitem__(self, pathIndex):
         data = torch.load(self.filePath+str(pathIndex)+".pt")
-        labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1])) # classification
+        labels = torch.tensor(int(self.annotation.iloc[pathIndex, 3])) # classification
         # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
         # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
         # labels = torch.tensor(int((locLabel[self.annotation.iloc[dataIndex, 1], 1] % 360)/15)) # classify azimuth only
