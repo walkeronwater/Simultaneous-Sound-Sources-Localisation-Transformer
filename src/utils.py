@@ -1,3 +1,4 @@
+from math import pi
 import soundfile as sf
 from scipy import signal
 import random
@@ -143,21 +144,29 @@ def saveCues(cues, locIndex, dirName, fileCount, locLabel):
         with open(dirName+'dataLabels.csv', 'w') as csvFile:
             csvFile.write(str(fileCount))
             csvFile.write(',')
-            csvFile.write(str(locIndex2Label(locLabel, locIndex, "all")))
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "allClass")))
             csvFile.write(',')
-            csvFile.write(str(locIndex2Label(locLabel, locIndex, "elev")))
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "elevClass")))
             csvFile.write(',')
-            csvFile.write(str(locIndex2Label(locLabel, locIndex, "azim")))
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "azimClass")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "elevRegression")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "azimRegression")))
             csvFile.write('\n')
     else:
         with open(dirName+'dataLabels.csv', 'a') as csvFile:
             csvFile.write(str(fileCount))
             csvFile.write(',')
-            csvFile.write(str(locIndex2Label(locLabel, locIndex, task="all")))
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "allClass")))
             csvFile.write(',')
-            csvFile.write(str(locIndex2Label(locLabel, locIndex, task="elev")))
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "elevClass")))
             csvFile.write(',')
-            csvFile.write(str(locIndex2Label(locLabel, locIndex, task="azim")))
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "azimClass")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "elevRegression")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex, "azimRegression")))
             csvFile.write('\n')
     torch.save(cues, dirName+str(fileCount)+'.pt')
 
