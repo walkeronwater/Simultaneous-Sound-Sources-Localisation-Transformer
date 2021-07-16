@@ -119,12 +119,16 @@ def concatCues(cuesList: list, cuesShape: tuple):
     return cues
 
 def locIndex2Label(locLabel, locIndex, task):
-    if task == "elev":
+    if task == "elevClass":
         labels = int(((locLabel[locIndex, 0]+45) % 150)/15)
-    elif task == "azim":
+    elif task == "azimClass":
         labels = int((locLabel[locIndex, 1] % 360)/15)
-    elif task == "all":
+    elif task == "allClass":
         labels = int(locIndex)
+    elif task == "elevRegression":
+        labels = locLabel[locIndex, 0]/180.0*pi
+    elif task == "azimRegression":
+        labels = locLabel[locIndex, 1]/180.0*pi
     return labels
 
 def saveCues(cues, locIndex, dirName, fileCount, locLabel):
@@ -163,9 +167,7 @@ if False:
     saveCues(temp, tempIndex, "/content/temp_data/", 0, locLabel, task="elev")
 
 if __name__ == "__main__":
-    temp = torch.tensor([1,2,3])
-    tempIndex = 96
-    
     path = "./HRTF/IRC*"
     hrirSet, locLabel, fs_HRIR = loadHRIR(path)
-    saveCues(temp, tempIndex, "./", 0, locLabel)
+    print(locLabel/180.0*pi)
+    print(locIndex2Label(locLabel, 23, "azimRegression"))

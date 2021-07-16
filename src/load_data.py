@@ -1,3 +1,4 @@
+from math import pi
 import numpy as np
 import matplotlib.pyplot as plt 
 from scipy.io import loadmat
@@ -133,3 +134,5 @@ def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
 if __name__ == "__main__":
     path = "./HRTF/IRC*"
     hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+    print(locLabel/180.0*pi)
+    print(locIndex2Label(locLabel, 0, "elevRegression"))
