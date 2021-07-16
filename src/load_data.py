@@ -4,6 +4,12 @@ from scipy.io import loadmat
 import os
 import re
 from glob import glob
+import csv
+import pandas as pd
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
+import torch.utils.data
 
 def load_hrir(path):
     names = []
@@ -52,6 +58,50 @@ def load_hrir(path):
 
     return hrirSet, locLabel, fs_HRIR
 
+
+class MyDataset(torch.utils.data.Dataset):
+    def __init__(self, filePath, isDebug=False):
+        super(MyDataset, self).__init__()
+        self.filePath = filePath
+        self.annotation = pd.read_csv(filePath+"dataLabels.csv", header=None)
+        self.isDebug = isDebug
+
+    def __len__(self):
+        return int(self.annotation.iloc[-1, 0] + 1)
+    
+    def __getitem__(self, pathIndex):
+        data = torch.load(self.filePath+str(pathIndex)+".pt")
+        labels = torch.tensor(int(self.annotation.iloc[pathIndex, 3])) # classification
+        # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
+        # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
+        # labels = torch.tensor(int((locLabel[self.annotation.iloc[dataIndex, 1], 1] % 360)/15)) # classify azimuth only
+
+        if self.isDebug:
+            print("pathIndex: ", pathIndex)
+
+        return data, labels
+
+
+def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
+    Ntrain = round(trainValidSplit[0]*dataset.__len__())
+    if Ntrain % batchSize == 1:
+        Ntrain -=1
+    Nvalid = round(trainValidSplit[1]*dataset.__len__())
+    if Nvalid % batchSize == 1:
+        Nvalid -=1
+    # Ntest = dataset.__len__() - Ntrain - Nvalid
+    # if Ntest % batchSize == 1:
+    #     Ntest -=1
+    print("Dataset separation: ", Ntrain, Nvalid)
+
+    train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
+    # train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
+    # valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
+
+    train_loader = MultiEpochsDataLoader(dataset=train, batch_size=batchSize, shuffle=False, num_workers=numWorker, persistent_workers=False)
+    valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=False, num_workers=numWorker, persistent_workers=False)
+
+    return train_loader, valid_loader
 
 
 if __name__ == "__main__":

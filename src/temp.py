@@ -15,15 +15,16 @@ import librosa
 import librosa.display
 import torch
 import torch.nn as nn
-from torch import optim
 from torch.utils.data import DataLoader, TensorDataset
 import torch.utils.data
+from torch import optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
 from torchsummary import summary
 
+# from load_data import *
 from utils import *
 from model_transformer import *
 
@@ -55,51 +56,6 @@ class _RepeatSampler(object):
     def __iter__(self):
         while True:
             yield from iter(self.sampler)
-
-
-class MyDataset(torch.utils.data.Dataset):
-    def __init__(self, filePath, isDebug=False):
-        super(MyDataset, self).__init__()
-        self.filePath = filePath
-        self.annotation = pd.read_csv(filePath+"dataLabels.csv", header=None)
-        self.isDebug = isDebug
-
-    def __len__(self):
-        return int(self.annotation.iloc[-1, 0] + 1)
-    
-    def __getitem__(self, pathIndex):
-        data = torch.load(self.filePath+str(pathIndex)+".pt")
-        labels = torch.tensor(int(self.annotation.iloc[pathIndex, 3])) # classification
-        # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
-        # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
-        # labels = torch.tensor(int((locLabel[self.annotation.iloc[dataIndex, 1], 1] % 360)/15)) # classify azimuth only
-
-        if self.isDebug:
-            print("pathIndex: ", pathIndex)
-
-        return data, labels
-
-def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
-    Ntrain = round(trainValidSplit[0]*dataset.__len__())
-    if Ntrain % batchSize == 1:
-        Ntrain -=1
-    Nvalid = round(trainValidSplit[1]*dataset.__len__())
-    if Nvalid % batchSize == 1:
-        Nvalid -=1
-    # Ntest = dataset.__len__() - Ntrain - Nvalid
-    # if Ntest % batchSize == 1:
-    #     Ntest -=1
-    print("Dataset separation: ", Ntrain, Nvalid)
-
-    train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
-    # train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
-    # valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
-
-    train_loader = MultiEpochsDataLoader(dataset=train, batch_size=batchSize, shuffle=False, num_workers=numWorker, persistent_workers=False)
-    valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=False, num_workers=numWorker, persistent_workers=False)
-
-    return train_loader, valid_loader
-
 
 def get_lr(optimizer):
     for param_group in optimizer.param_groups:
@@ -138,6 +94,7 @@ if __name__ == "__main__":
     ), "Data directory doesn't exist."
 
     dataset = MyDataset(dirName)
+    print(dataset)
     # train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
     train_loader = DataLoader(dataset=dataset, batch_size=args.batchSize, shuffle=False, num_workers=args.numWorker)
 
@@ -171,7 +128,7 @@ if __name__ == "__main__":
         os.mkdir(checkpointPath)
 
     
-    print("Before entering training - time elapse: ", round(time.time() - check_time, 5))
+    print("Before entering training - time elapsed: ", round(time.time() - check_time, 5))
     for epoch in range(num_epochs):
         print("\nEpoch %d, lr = %f" % ((epoch + 1), get_lr(optimizer)))
         num_batches = len(train_loader)
@@ -184,13 +141,15 @@ if __name__ == "__main__":
         model.train()
 
         print("Before entering the first batch - time elapse: ", round(time.time() - check_time, 5))
+        check_time = time.time()
 
         for i, (inputs, labels) in enumerate(train_loader, 0):
-            print("Batch %d, Before copy to device time: %f" % (i+1, round(time.time() - check_time, 5)))
+            if (i+1)%250 == 0:
+                print(" %d batches, time elapsed: %f" % (i+1, round(time.time() - check_time, 5)))
+                check_time = time.time()
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
             # print("Input shape: ",inputs.shape)
 
-            print("Batch %d, Loading data time: %f" % (i+1, round(time.time() - check_time, 5)))
             outputs = model(inputs)
             
             # print("Ouput shape: ", outputs.shape)
@@ -201,8 +160,6 @@ if __name__ == "__main__":
             # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
             optimizer.step()
             train_sum_loss += loss.item()
-
-            print("Batch %d, Model prediction time: %f" % (i+1, round(time.time() - check_time, 5)))
 
             _, predicted = torch.max(outputs.data, 1)
             train_total += labels.size(0)
