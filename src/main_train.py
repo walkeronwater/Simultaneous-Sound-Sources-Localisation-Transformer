@@ -49,12 +49,12 @@ def saveCurves(epoch, tl, ta, vl, va, savePath, task):
 def loadCheckpoint(model, optimizer, loadPath, task, phase):
     checkpoint = torch.load(loadPath+"param.pth.tar")
     if checkpoint['task'] == task:
-        # epoch = checkpoint['epoch']
+        epoch = checkpoint['epoch']-1
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
 
         trainHistory = glob(os.path.join(loadPath, "curve*"))
-        val_acc_optim = 0.0
+        val_optim = 0.0
 
         history = {
             'train_acc': [],
@@ -66,13 +66,16 @@ def loadCheckpoint(model, optimizer, loadPath, task, phase):
             checkpt = torch.load(trainHistory[i])
             for idx in history.keys():
                 history[idx].append(checkpt[idx])
-        val_acc_optim = max(history['valid_acc'])
-        print("val_acc_optim: ", val_acc_optim)
+        val_optim = history['valid_loss'][epoch]
+        print("val_optim: ", val_optim)
+        print("Corresponding validation accuracy: ",
+            history['valid_acc'][epoch]
+        )
         epoch = len(trainHistory)
         if phase == "train":
             print("Training will start from epoch", epoch+1)
 
-        return model, optimizer, epoch, val_acc_optim
+        return model, optimizer, epoch, val_optim
 
 def getLR(optimizer):
     for param_group in optimizer.param_groups:
@@ -138,7 +141,7 @@ if __name__ == "__main__":
     learning_rate = 1e-4
     early_epoch = 10
     early_epoch_count = 0
-    val_acc_optim = 0.0
+    val_optim = 0.0
 
     num_warmup_steps = 2
     num_training_steps = num_epochs+1
@@ -162,7 +165,7 @@ if __name__ == "__main__":
         try:
             learning_rate = 1e-4
             optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-            model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, args.modelDir, args.task, "train")
+            model, optimizer, pretrainEpoch, val_optim = loadCheckpoint(model, optimizer, args.modelDir, args.task, "train")
             print("Found a pre-trained model in directory", args.modelDir)
         except:
             print("Not found any pre-trained model in directory", args.modelDir)
@@ -256,10 +259,10 @@ if __name__ == "__main__":
         )
 
         # early stopping
-        if (val_acc <= val_acc_optim):
+        if (val_loss <= val_optim):
             early_epoch_count += 1
         else:
-            val_acc_optim = val_acc
+            val_optim = val_loss
             early_epoch_count = 0
 
             saveParam(
