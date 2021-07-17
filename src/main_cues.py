@@ -40,7 +40,7 @@ if __name__ == "__main__":
     hrirSet, locLabel, fs_HRIR = loadHRIR(path)
     path = glob(os.path.join(args.audioDir+"/*"))
     Naudio = len(path)
-    print("# audio files: ", Naudio)
+    print("Number of audio files: ", Naudio)
 
     lenSliceInSec = 0.5   # length of audio slice in sec
     fileCount = 0   # count the number of data samples

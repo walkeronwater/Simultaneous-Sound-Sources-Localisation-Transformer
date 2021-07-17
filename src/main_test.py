@@ -27,14 +27,28 @@ from torchsummary import summary
 from load_data import *
 from utils import *
 from model_transformer import *
+from loss import DoALoss
+from main_train import *
 
 
-# retrieve the model state with the best performance
+def testPhase(
+    modelDir,
+    task,
+    model
+
+):
+    learning_rate = 1e-4
+    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, modelDir, args.task, "test")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing hyperparamters')
-    parser.add_argument('dataDir', type=str, help='Directory of saved cues')
-    parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
+    parser.add_argument('audioDir', type=str, help='Directory of audio files')
+    parser.add_argument('hrirDir', type=str, help='Directory of HRIR files')
+    parser.add_argument('modelDir', type=str, help='Directory of saved model')
     parser.add_argument('numWorker', type=int, help='Number of workers')
+    parser.add_argument('task', type=str, help='Task')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
     parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
@@ -42,51 +56,55 @@ if __name__ == "__main__":
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
-    args = parser.parse_args()
-    print("Data directory", args.dataDir)
-    print("Model directory", args.modelDir)
-    print("Number of workers", args.numWorker)
-    print("Number of encoder layers", args.numEnc)
-    print("Number of FC layers", args.numFC)
-    print("Dropout value", args.valDropout)
-    print("Number of epochs", args.numEpoch)
-    print("Batch size", args.batchSize)
+    path = "./HRTF/IRC*"
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
 
-    valDropout = 0.3
-    num_layers = 6
-    model = SSSL(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, valDropout, False).to(device)
-    learning_rate = 1e-4
-    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    expName = "vol_144000_loc_24_layer_6/"
-    checkpointPath = rootDir+expName
-    model, optimizer, epoch = loadCheckpoint(model, optimizer, checkpointPath+"param.pth.tar")
+    args = parser.parse_args()
+    if args.audioDir[-1] != "/":
+        args.audioDir += "/"
+    if args.hrirDir[-1] != "/":
+        args.hrirDir += "/"
+    if args.modelDir[-1] != "/":
+        args.modelDir += "/"
+    print("Audio files directory: ", args.audioDir)
+    print("HRIR files directory: ", args.hrirDir)
+    print("Model directory: ", args.modelDir)
+    print("Number of workers: ", args.numWorker)
+    print("Task: ", args.task)
+    print("Number of encoder layers: ", args.numEnc)
+    print("Number of FC layers: ", args.numFC)
+    print("Dropout value: ", args.valDropout)
+    print("Number of epochs: ", args.numEpoch)
+    print("Batch size: ", args.batchSize)
+    if args.isDebug == "True":
+        args.isDebug = True
+    else:
+        args.isDebug = False
+
+    path = args.hrirDir + "/IRC*"
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+    path = glob(os.path.join(args.audioDir+"/*"))
+    Naudio = len(path)
+    print("Number of audio files: ", Naudio)
 
     lenSliceInSec = 0.5   # length of audio slice in sec
     Nfreq = 512
     Ntime = 44
     Ncues = 5
-    Nloc = 24
-    Nsample = Nloc * 500
+    Nloc = 187
+    Nsample = Nloc * 1
 
-    isDisk = False
     # allocate tensors cues and labels in RAM
-    if not isDisk:
-        if "cues_" in globals() or "cues_" in locals():
-            del cues_
-        if "labels_" in globals() or "labels_" in locals():
-            del labels_
-        cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
-        labels_ = torch.zeros((Nsample,))
+    cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
+    labels_ = torch.zeros((Nsample,))
 
-    # valSNRList = [-10,-5,0,5,10,15,20,100]
-    valSNRList = [5,10,15,20,100]
+    valSNRList = [-10,-5,0,5,10,15,20,25,100]
 
-    dirName = '/content/saved_cues/'
-
-    if not os.path.isdir(dirName):
-        os.mkdir(dirName)
-
-    print(path)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
+    learning_rate = 1e-4
+    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, args.modelDir, args.task, "test")
 
     for valSNR in valSNRList:
         fileCount = 0   # count the number of data samples
@@ -127,12 +145,8 @@ if __name__ == "__main__":
 
                     cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
 
-                    # save cues onto disk
-                    if isDisk:
-                        saveCues(cues, locIndex, dirName, fileCount, locLabel, task="azim")
-                    else:
-                        cues_[fileCount] = cues
-                        labels_[fileCount] = locIndex2Label(locIndex, task="azim")
+                    cues_[fileCount] = cues
+                    labels_[fileCount] = locIndex2Label(locLabel, locIndex, args.task)
 
                     '''if fileCount == 23:
                         raise SystemExit("Debugging")'''
@@ -143,45 +157,46 @@ if __name__ == "__main__":
                     #           fileCount // (Nloc*len(valSNRList)))
 
         # create tensor dataset from data loaded in RAM
-        if not isDisk:
-            dataset = TensorDataset(cues_, labels_.long())
+        dataset = TensorDataset(cues_, labels_.long())
 
-            test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=True, num_workers=4)
+        test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=True, num_workers=args.numWorker)
 
         '''
         testing
         '''
-        # confusion matrix
-        confusion_matrix = torch.zeros(Nloc, Nloc)
+        if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
+            # confusion matrix
+            confusion_matrix = torch.zeros(predNeuron(args.task), predNeuron(args.task))
 
-        test_loss = 0.0
         test_correct = 0.0
         test_total = 0.0
-        # test phase
-        model.isDebug=False
+        test_sum_loss = 0.0
+        test_loss = 0.0
+        train_acc = 0.0
         model.eval()
         criterion = nn.CrossEntropyLoss()
         with torch.no_grad():
-            for i, data in enumerate(test_loader, 0):
-                inputs, labels = data
+            for i, (inputs, labels) in enumerate(test_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 # print(inputs.shape)
 
                 outputs = model(inputs)
                 # print(outputs.shape)
                 # print(labels.shape)
-                test_loss = criterion(outputs, labels)
+                test_sum_loss = criterion(outputs, labels)
                 _, predicted = torch.max(outputs.data, 1)
                 test_total += labels.size(0)
                 test_correct += predicted.eq(labels.data).sum().item()
                 
-                for t, p in zip(labels.view(-1), predicted.view(-1)):
-                    confusion_matrix[t.long(), p.long()] += 1
-
+                if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
+                    for t, p in zip(labels.view(-1), predicted.view(-1)):
+                        confusion_matrix[t.long(), p.long()] += 1
+        test_loss = test_sum_loss / (i+1)
+        test_acc = round(100.0 * test_correct / test_total, 2)
         print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.4f%% '
-            % (valSNR, test_loss, 100.0 * test_correct / test_total))
+            % (valSNR, test_loss, test_acc))
 
-
+'''
     # confusion matrix
     confusion_matrix = torch.zeros(Nloc, Nloc)
 
@@ -211,3 +226,4 @@ if __name__ == "__main__":
 
     print('Test_Loss: %.04f | Test_Acc: %.4f%% '
         % (test_loss, 100.0 * test_correct / test_total))
+'''

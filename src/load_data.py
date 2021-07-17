@@ -148,6 +148,6 @@ if __name__ == "__main__":
     # path = "./HRTF/IRC*"
     # hrirSet, locLabel, fs_HRIR = loadHRIR(path)
 
-    dataset = MyDataset("./saved_cues_temptemp/", "allRegression")
+    dataset = MyDataset("./saved_cues_temp/", "allRegression")
     for i in range(25):
         print(dataset[i][1].shape)

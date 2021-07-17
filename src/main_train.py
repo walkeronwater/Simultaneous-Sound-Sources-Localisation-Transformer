@@ -46,7 +46,7 @@ def saveCurves(epoch, tl, ta, vl, va, savePath, task):
         'task': task
     }, savePath)
 
-def loadCheckpoint(model, optimizer, loadPath, task):
+def loadCheckpoint(model, optimizer, loadPath, task, phase):
     checkpoint = torch.load(loadPath+"param.pth.tar")
     if checkpoint['task'] == task:
         # epoch = checkpoint['epoch']
@@ -69,7 +69,8 @@ def loadCheckpoint(model, optimizer, loadPath, task):
         val_acc_optim = max(history['valid_acc'])
         print("val_acc_optim: ", val_acc_optim)
         epoch = len(trainHistory)
-        print("Training will start from epoch", epoch+1)
+        if phase == "train":
+            print("Training will start from epoch", epoch+1)
 
         return model, optimizer, epoch, val_acc_optim
 
@@ -97,17 +98,17 @@ if __name__ == "__main__":
     if args.modelDir[-1] != "/":
         args.modelDir += "/"
     
-    print("Data directory", args.dataDir)
-    print("Model directory", args.modelDir)
-    print("Number of workers", args.numWorker)
-    print("Task", args.task)
+    print("Data directory: ", args.dataDir)
+    print("Model directory: ", args.modelDir)
+    print("Number of workers: ", args.numWorker)
+    print("Task: ", args.task)
     trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
-    print("Train validation split", trainValidSplit)
-    print("Number of encoder layers", args.numEnc)
-    print("Number of FC layers", args.numFC)
-    print("Dropout value", args.valDropout)
-    print("Number of epochs", args.numEpoch)
-    print("Batch size", args.batchSize)
+    print("Train validation split: ", trainValidSplit)
+    print("Number of encoder layers: ", args.numEnc)
+    print("Number of FC layers: ", args.numFC)
+    print("Dropout value: ", args.valDropout)
+    print("Number of epochs: ", args.numEpoch)
+    print("Batch size: ", args.batchSize)
     if args.isDebug == "True":
         args.isDebug = True
     else:
@@ -126,7 +127,6 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     Nsample = dataset.__len__()
-    Nloc = 24
     Ntime = 44
     Nfreq = 512
     Ncues = 5
@@ -162,7 +162,7 @@ if __name__ == "__main__":
         try:
             learning_rate = 1e-4
             optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-            model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, args.modelDir, args.task)
+            model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, args.modelDir, args.task, "train")
             print("Found a pre-trained model in directory", args.modelDir)
         except:
             print("Not found any pre-trained model in directory", args.modelDir)
