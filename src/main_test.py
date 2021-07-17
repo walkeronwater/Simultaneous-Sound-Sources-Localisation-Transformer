@@ -54,6 +54,7 @@ if __name__ == "__main__":
     parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
+    parser.add_argument('--samplePerSNR', default=100, type=int, help='Number of samples per SNR')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     path = "./HRTF/IRC*"
@@ -76,6 +77,8 @@ if __name__ == "__main__":
     print("Dropout value: ", args.valDropout)
     print("Number of epochs: ", args.numEpoch)
     print("Batch size: ", args.batchSize)
+    print("Number of samples per SNR: ", args.samplePerSNR)
+
     if args.isDebug == "True":
         args.isDebug = True
     else:
@@ -92,7 +95,7 @@ if __name__ == "__main__":
     Ntime = 44
     Ncues = 5
     Nloc = 187
-    Nsample = Nloc * 1
+    Nsample = Nloc * args.samplePerSNR
 
     # allocate tensors cues and labels in RAM
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
