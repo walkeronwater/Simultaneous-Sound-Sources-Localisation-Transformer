@@ -26,48 +26,54 @@ from torchsummary import summary
 from load_data import *
 from utils import *
 from model_transformer import *
+from loss import DoALoss
 
+def saveParam(epoch, model, optimizer, savePath, task):
+    torch.save({
+        'epoch': epoch+1,
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'task': task
+    }, savePath)
 
-class MultiEpochsDataLoader(torch.utils.data.DataLoader):
+def saveCurves(epoch, tl, ta, vl, va, savePath, task):
+    torch.save({
+        'epoch': epoch+1,
+        'train_loss': tl,
+        'train_acc': ta,
+        'valid_loss': vl,
+        'valid_acc': va,
+        'task': task
+    }, savePath)
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._DataLoader__initialized = False
-        self.batch_sampler = _RepeatSampler(self.batch_sampler)
-        self._DataLoader__initialized = True
-        self.iterator = super().__iter__()
+def loadCheckpoint(model, optimizer, loadPath, task):
+    checkpoint = torch.load(loadPath+"param.pth.tar")
+    if checkpoint['task'] == task:
+        # epoch = checkpoint['epoch']
+        model.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
 
-    def __len__(self):
-        return len(self.batch_sampler.sampler)
+        trainHistory = glob(os.path.join(loadPath, "curve*"))
+        val_acc_optim = 0.0
 
-    def __iter__(self):
-        for i in range(len(self)):
-            yield next(self.iterator)
+        history = {
+            'train_acc': [],
+            'train_loss': [],
+            'valid_acc': [],
+            'valid_loss': []
+        }
+        for i in range(len(trainHistory)):
+            checkpt = torch.load(trainHistory[i])
+            for idx in history.keys():
+                history[idx].append(checkpt[idx])
+        val_acc_optim = max(history['valid_acc'])
+        print("val_acc_optim: ", val_acc_optim)
+        epoch = len(trainHistory)
+        print("Training will start from epoch", epoch+1)
 
-class _RepeatSampler(object):
-    """ Sampler that repeats forever.
-    Args:
-        sampler (Sampler)
-    """
+        return model, optimizer, epoch, val_acc_optim
 
-    def __init__(self, sampler):
-        self.sampler = sampler
-
-    def __iter__(self):
-        while True:
-            yield from iter(self.sampler)
-
-'''
-def recordTime(start: float, end: float, processName: str):
-    if start == 0:
-        startTime = time.time()
-    else:
-        elapseTime = time.time() - startTime
-        print(processName, ": ", elapseTime)
-        startTime = 0.0
-'''
-
-def get_lr(optimizer):
+def getLR(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
@@ -76,6 +82,7 @@ if __name__ == "__main__":
     parser.add_argument('dataDir', type=str, help='Directory of saved cues')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
     parser.add_argument('numWorker', type=int, help='Number of workers')
+    parser.add_argument('task', type=str, help='Task')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
@@ -85,9 +92,15 @@ if __name__ == "__main__":
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
+    if args.dataDir[-1] != "/":
+        args.dataDir += "/"
+    if args.modelDir[-1] != "/":
+        args.modelDir += "/"
+    
     print("Data directory", args.dataDir)
     print("Model directory", args.modelDir)
     print("Number of workers", args.numWorker)
+    print("Task", args.task)
     trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
     print("Train validation split", trainValidSplit)
     print("Number of encoder layers", args.numEnc)
@@ -95,6 +108,10 @@ if __name__ == "__main__":
     print("Dropout value", args.valDropout)
     print("Number of epochs", args.numEpoch)
     print("Batch size", args.batchSize)
+    if args.isDebug == "True":
+        args.isDebug = True
+    else:
+        args.isDebug = False
 
     # dirName = './saved_cues/'
     dirName = args.dataDir
@@ -102,39 +119,10 @@ if __name__ == "__main__":
         os.path.isdir(dirName)
     ), "Data directory doesn't exist."
 
-    start_time_dset = time.time()
-    dataset = MyDataset(dirName)
+    dataset = MyDataset(dirName, args.task, args.isDebug)
     print("Dataset length: ", dataset.__len__())
-    print("Dataset init time: ", round(time.time() - start_time_dset, 5))
 
-    # batch_size = 32
-    batchSize = args.batchSize
-    numWorker = args.numWorker
-
-    start_time_dset = time.time()
-    # train_loader, valid_loader = splitDataset(batchSize, trainValidSplit, numWorker, dataset)
-
-    Ntrain = round(trainValidSplit[0]*dataset.__len__())
-    if Ntrain % batchSize == 1:
-        Ntrain -=1
-    Nvalid = round(trainValidSplit[1]*dataset.__len__())
-    if Nvalid % batchSize == 1:
-        Nvalid -=1
-    # Ntest = dataset.__len__() - Ntrain - Nvalid
-    # if Ntest % batchSize == 1:
-    #     Ntest -=1
-    print("Dataset separation: ", Ntrain, Nvalid)
-
-    train, valid = torch.utils.data.random_split(dataset, [Ntrain, Nvalid], generator=torch.Generator().manual_seed(24))
-    train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker)
-    valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker)
-    
-    print("Dataset split time: ", round(time.time() - start_time_dset, 5))
-
-    # rootDir = "./model/"
-    rootDir = args.modelDir
-    if not os.path.isdir(rootDir):
-        os.mkdir(rootDir)
+    train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     Nsample = dataset.__len__()
@@ -142,15 +130,11 @@ if __name__ == "__main__":
     Ntime = 44
     Nfreq = 512
     Ncues = 5
-    # valDropout = 0.3
-    valDropout = args.valDropout
-    num_layers = args.numEnc
-    model = FC3(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, valDropout, False).to(device)
-    model.isDebug = args.isDebug
-    dataset.isDebug = args.isDebug
+    model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
 
     # num_epochs = 30
     num_epochs = args.numEpoch
+    pretrainEpoch = 0
     learning_rate = 1e-4
     early_epoch = 10
     early_epoch_count = 0
@@ -172,17 +156,19 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     # criterion = nn.MSELoss()
 
-    # print("Data volume: ", Nsample)
-    # print("Nloc: ", Nloc)
-    # print("Number of layers: ", num_layers)
-    # print("Dropout: ", valDropout)
-    expName = "vol_"+str(Nsample)+"_loc_"+str(Nloc)+"_layer_"+str(num_layers)+"/"
-    checkpointPath = rootDir+expName
-    if not os.path.isdir(checkpointPath):
-        os.mkdir(checkpointPath)
+    if not os.path.isdir(args.modelDir):
+        os.mkdir(args.modelDir)
+    else:
+        try:
+            learning_rate = 1e-4
+            optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+            model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, args.modelDir, args.task)
+            print("Found a pre-trained model in directory", args.modelDir)
+        except:
+            print("Not found any pre-trained model in directory", args.modelDir)
 
-    for epoch in range(num_epochs):
-        print("\nEpoch %d, lr = %f" % ((epoch + 1), get_lr(optimizer)))
+    for epoch in range(pretrainEpoch, pretrainEpoch + num_epochs):
+        print("\nEpoch %d, lr = %f" % ((epoch + 1), getLR(optimizer)))
         
         train_correct = 0.0
         train_total = 0.0
@@ -190,29 +176,40 @@ if __name__ == "__main__":
         train_loss = 0.0
         train_acc = 0.0
         model.train()
-        for i, data in enumerate(train_loader, 0):
+        for i, (inputs, labels) in enumerate(train_loader, 0):
             num_batches = len(train_loader)
-            inputs, labels = data
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
             # print("Input shape: ",inputs.shape)
             outputs = model(inputs)
             
             # print("Ouput shape: ", outputs.shape)
             # print("Label shape: ", labels.shape)
-            loss = criterion(outputs, labels) # .unsqueeze_(1)
+            if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
+                loss = DoALoss(outputs, labels)
+            else:
+                loss = criterion(outputs, labels)
+            if args.isDebug:
+                print("Loss", loss.shape)
+            train_sum_loss += loss.item()
             optimizer.zero_grad()
             loss.backward()
             # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
             optimizer.step()
-            train_sum_loss += loss.item()
 
-            _, predicted = torch.max(outputs.data, 1)
-            train_total += labels.size(0)
-            train_correct += predicted.eq(labels.data).sum().item()
+            if not (args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression"):
+                _, predicted = torch.max(outputs.data, 1)
+                # print(predicted.shape)
+                train_total += labels.size(0)
+                train_correct += predicted.eq(labels.data).sum().item()
         train_loss = train_sum_loss / (i+1)
-        train_acc = round(100.0 * train_correct / train_total, 2)
-        print('Training Loss: %.04f | Training Acc: %.4f%% '
-            % (train_loss, train_acc))
+        if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
+            train_acc = train_loss
+            print('Training Loss: %.04f | Training Acc: %.04f '
+                % (train_loss, train_acc))
+        else:
+            train_acc = round(100.0 * train_correct / train_total, 2)
+            print('Training Loss: %.04f | Training Acc: %.4f%% '
+                % (train_loss, train_acc))
         
         val_correct = 0.0
         val_total = 0.0
@@ -223,38 +220,40 @@ if __name__ == "__main__":
         # validation phase
         model.eval()
         with torch.no_grad():
-            for i, data in enumerate(valid_loader, 0):
-                inputs, labels = data
+            for i, (inputs, labels) in enumerate(valid_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 
                 outputs = model(inputs)
-                val_loss = criterion(outputs, labels) # .unsqueeze_(1)
+                if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
+                    val_loss = DoALoss(outputs, labels)
+                else:
+                    val_loss = criterion(outputs, labels) # .unsqueeze_(1)
                 val_sum_loss += val_loss.item()
 
-                _, predicted = torch.max(outputs.data, 1)
-                val_total += labels.size(0)
-                val_correct += predicted.eq(labels.data).sum().item()
+                if not (args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression"):
+                    _, predicted = torch.max(outputs.data, 1)
+                    val_total += labels.size(0)
+                    val_correct += predicted.eq(labels.data).sum().item()
             val_loss = val_sum_loss / (i+1)
-            val_acc = round(100.0 * val_correct / val_total, 2)
+            if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
+                val_acc = val_loss
+                print('Val_Loss: %.04f | Val_Acc: %.04f '
+                    % (val_loss, val_acc))
+            else:
+                val_acc = round(100.0 * val_correct / val_total, 2)
+                print('Val_Loss: %.04f | Val_Acc: %.4f%% '
+                    % (val_loss, val_acc))
             scheduler.step(val_loss)
 
-        print('Val_Loss: %.04f | Val_Acc: %.4f%% '
-            % (val_loss, val_acc))
-        
-        checkpoint_curve = {
-            "epoch": epoch+1,
-            "train_loss": train_loss,
-            "train_acc": train_acc,
-            "valid_loss": val_loss,
-            "valid_acc": val_acc
-        }
-        
-        torch.save(
-            checkpoint_curve,
-            checkpointPath + "curve_epoch_"+str(epoch+1)+".pth.tar"
+        saveCurves(
+            epoch, 
+            train_loss, 
+            train_acc, 
+            val_loss, 
+            val_acc,
+            args.modelDir + "curve_epoch_" + str(epoch+1) + ".pth.tar",
+            args.task
         )
-
-        
 
         # early stopping
         if (val_acc <= val_acc_optim):
@@ -263,15 +262,13 @@ if __name__ == "__main__":
             val_acc_optim = val_acc
             early_epoch_count = 0
 
-            checkpoint_param = {
-                "epoch": epoch+1,
-                "state_dict": model.state_dict(),
-                "optimizer": optimizer.state_dict()
-            }
-
-            torch.save(
-                checkpoint_param,
-                checkpointPath + "param.pth.tar"
+            saveParam(
+                epoch,
+                model,
+                optimizer,
+                args.modelDir + "param.pth.tar",
+                args.task
             )
+            
         if (early_epoch_count >= early_epoch):
             break

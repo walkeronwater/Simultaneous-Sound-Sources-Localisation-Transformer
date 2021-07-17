@@ -21,6 +21,17 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from torchsummary import summary
 
+def predNeuron(task):
+    if task == "elevClass":
+        return 10
+    elif task == "azimClass":
+        return 24
+    elif task == "allClass":
+        return 187
+    elif task == "elevRegression" or task == "azimRegression":
+        return 1
+    elif task == "allRegression":
+        return 2
 class SelfAttention(nn.Module):
     def __init__(self, Nfreq, heads):
         super(SelfAttention, self).__init__()
@@ -69,7 +80,7 @@ class SelfAttention(nn.Module):
 
 
 class Attention(nn.Module):
-    def __init__(self, embedSize, Nloc):
+    def __init__(self, embedSize):
         super(Attention, self).__init__()
         self.embedSize = embedSize
 
@@ -77,7 +88,7 @@ class Attention(nn.Module):
         self.values = nn.Linear(embedSize, embedSize, bias=False)
         self.keys = nn.Linear(embedSize, embedSize, bias=False)
         self.queries = nn.Linear(embedSize, embedSize, bias=False)
-        self.fc_out = nn.Linear(embedSize, Nloc)
+        self.fc_out = nn.Linear(embedSize, embedSize)
 
     def forward(self, value, key, query):
         # Get number of training examples
@@ -170,7 +181,7 @@ class Encoder(nn.Module):
 class FC3(nn.Module):
     def __init__(
         self,
-        Nloc,
+        task,
         Ntime, # time windows
         Nfreq, # frequency bins
         Ncues,
@@ -190,14 +201,16 @@ class FC3(nn.Module):
             forward_expansion,
             dropout,
         )
-        # self.attention = Attention(Ncues, Nloc)
-        self.fc_freq = nn.Linear(Nfreq*Ncues, Nloc)
-        self.fc_time = nn.Linear(Ntime, 1)
-        self.fc_time_freq = nn.Linear(Ntime*Nfreq*Ncues, Nloc*4)
-        self.fc2 = nn.Linear(Nloc*4, Nloc*2)
-        self.fc3 = nn.Linear(Nloc*2, Nloc)
+        Nloc = predNeuron(task)
+        print("Number of neurons in the final layer: ", Nloc)
+        # self.attention = Attention(Ncues)
+        # self.fc_freq = nn.Linear(Nfreq*Ncues, Nloc)
+        # self.fc_time = nn.Linear(Ntime, 1)
+        self.fc_time_freq = nn.Linear(Ntime*Nfreq*Ncues, 256)
+        self.fc2 = nn.Linear(256, Nloc)
+        self.fc3 = nn.Linear(Nloc, Nloc)
         self.dropout = nn.Dropout(dropout)
-        self.bn = nn.BatchNorm1d(Nloc*4)
+        self.bn = nn.BatchNorm1d(256)
         self.activation = nn.ReLU()
         # self.softmaxLayer = nn.Softmax(dim = -1)
         self.isDebug = isDebug
@@ -247,11 +260,11 @@ class FC3(nn.Module):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     numLayers = 6
-    Nloc = 24
+    task = "allRegression"
     Ntime = 44
     Nfreq = 512
     Ncues = 5
-    model = FC3(Nloc, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
+    model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
 
     testInput = torch.rand(2, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     # testInput = x[0].unsqueeze(0).to(device)
@@ -261,5 +274,5 @@ if __name__ == "__main__":
     testOutput = model(testInput)
     # print(torch.max(testOutput, 1))
 
-    # summary(model, (Nfreq, Ntime, Ncues))
+    summary(model, (Nfreq, Ntime, Ncues))
     

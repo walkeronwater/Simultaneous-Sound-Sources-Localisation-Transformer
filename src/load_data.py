@@ -1,3 +1,4 @@
+from math import pi
 import numpy as np
 import matplotlib.pyplot as plt 
 from scipy.io import loadmat
@@ -11,7 +12,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import torch.utils.data
 
-def load_hrir(path):
+def loadHRIR(path):
     names = []
     names += glob(path)
     print(names[0])
@@ -58,11 +59,39 @@ def load_hrir(path):
 
     return hrirSet, locLabel, fs_HRIR
 
+class MultiEpochsDataLoader(torch.utils.data.DataLoader):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._DataLoader__initialized = False
+        self.batch_sampler = _RepeatSampler(self.batch_sampler)
+        self._DataLoader__initialized = True
+        self.iterator = super().__iter__()
+
+    def __len__(self):
+        return len(self.batch_sampler.sampler)
+
+    def __iter__(self):
+        for i in range(len(self)):
+            yield next(self.iterator)
+
+class _RepeatSampler(object):
+    """ Sampler that repeats forever.
+    Args:
+        sampler (Sampler)
+    """
+
+    def __init__(self, sampler):
+        self.sampler = sampler
+
+    def __iter__(self):
+        while True:
+            yield from iter(self.sampler)
 class MyDataset(torch.utils.data.Dataset):
-    def __init__(self, filePath, isDebug=False):
+    def __init__(self, filePath, task, isDebug=False):
         super(MyDataset, self).__init__()
         self.filePath = filePath
+        self.task = task
         self.annotation = pd.read_csv(filePath+"dataLabels.csv", header=None)
         self.isDebug = isDebug
 
@@ -71,16 +100,27 @@ class MyDataset(torch.utils.data.Dataset):
     
     def __getitem__(self, pathIndex):
         data = torch.load(self.filePath+str(pathIndex)+".pt")
-        labels = torch.tensor(int(self.annotation.iloc[pathIndex, 3])) # classification
-        # labels = torch.tensor(locLabel[int(self.annotation.iloc[idx, 1]), 1], dtype=torch.float32) # regression
-        # labels = torch.tensor(int(((locLabel[self.annotation.iloc[dataIndex, 1], 0]+45) % 150)/15)) # classify elevation only
-        # labels = torch.tensor(int((locLabel[self.annotation.iloc[dataIndex, 1], 1] % 360)/15)) # classify azimuth only
+        if self.task == "allClass":
+            labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1]))
+        elif self.task == "elevClass":
+            labels = torch.tensor(int(self.annotation.iloc[pathIndex, 2]))
+        elif self.task == "azimClass":
+            labels = torch.tensor(int(self.annotation.iloc[pathIndex, 3]))
+        elif self.task == "elevRegression":
+            labels = torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32)
+        elif self.task == "azimRegression":
+            labels = torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)
+        elif self.task == "allRegression":
+            labels = torch.stack([
+                torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32),
+                torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)]
+            )
 
         if self.isDebug:
             print("pathIndex: ", pathIndex)
+            print("label:", labels)
 
         return data, labels
-
 
 def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
     Ntrain = round(trainValidSplit[0]*dataset.__len__())
@@ -98,12 +138,16 @@ def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
     # train_loader = DataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
     # valid_loader = DataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
 
-    train_loader = MultiEpochsDataLoader(dataset=train, batch_size=batchSize, shuffle=False, num_workers=numWorker, persistent_workers=False)
-    valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=False, num_workers=numWorker, persistent_workers=False)
+    train_loader = MultiEpochsDataLoader(dataset=train, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
+    valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
 
     return train_loader, valid_loader
 
 
 if __name__ == "__main__":
-    path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = load_hrir(path)
+    # path = "./HRTF/IRC*"
+    # hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+
+    dataset = MyDataset("./saved_cues_temptemp/", "allRegression")
+    for i in range(25):
+        print(dataset[i][1].shape)

@@ -21,7 +21,7 @@ from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from load_data import load_hrir
+from load_data import loadHRIR
 from utils import *
 
 if __name__ == "__main__":
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     print("HRIR files directory: ", args.hrirDir)
 
     path = args.hrirDir + "/IRC*"
-    hrirSet, locLabel, fs_HRIR = load_hrir(path)
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
     path = glob(os.path.join(args.audioDir+"/*"))
     Naudio = len(path)
     print("# audio files: ", Naudio)
