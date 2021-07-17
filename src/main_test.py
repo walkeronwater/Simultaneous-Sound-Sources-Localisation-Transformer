@@ -57,9 +57,6 @@ if __name__ == "__main__":
     parser.add_argument('--samplePerSNR', default=100, type=int, help='Number of samples per SNR')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
-    path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
-
     args = parser.parse_args()
     if args.audioDir[-1] != "/":
         args.audioDir += "/"
