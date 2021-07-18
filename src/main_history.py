@@ -39,7 +39,9 @@ def loadHistory(loadPath, figPath, isDebug):
         'valid_loss': []
     }
     for i in range(len(trainHistory)):
-        checkpt = torch.load(trainHistory[i])
+        checkpt = torch.load(
+            loadPath+"curve_epoch_"+str(i+1)+".pth.tar"
+        )
         for idx in history.keys():
             history[idx].append(round(checkpt[idx], 5))
     if isDebug:
