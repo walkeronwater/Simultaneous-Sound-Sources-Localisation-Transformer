@@ -29,7 +29,7 @@ from model_transformer import *
 from loss import DoALoss
 from main_train import loadCheckpoint
 
-def loadHistory(loadPath):
+def loadHistory(loadPath, figPath):
     trainHistory = glob(os.path.join(loadPath, "curve*"))
 
     history = {
@@ -50,6 +50,7 @@ def loadHistory(loadPath):
     plt.title('Accuracy curve')
     plt.legend(['Train', 'Valid'])
     plt.grid()
+    plt.savefig(figPath+"Accuracy.png")
     plt.show()
 
     plt.plot(history['train_loss'])
@@ -59,16 +60,23 @@ def loadHistory(loadPath):
     plt.title('Loss curve')
     plt.legend(['Train', 'Valid'])
     plt.grid()
+    plt.savefig(figPath+"Loss.png")
     plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training history plot')
     parser.add_argument('modelDir', type=str, help='Directory of model')
+    parser.add_argument('--figDir', type=str, help='Directory of figures to be saved at')
 
     args = parser.parse_args()
     if args.modelDir[-1] != "/":
         args.modelDir += "/"
+    if args.figDir == None:
+        args.figDir = args.modelDir
+    else:
+        if args.figDir[-1] != "/":
+            args.figDir += "/"
     
     print("Model directory: ", args.modelDir)
     
-    loadHistory(args.modelDir)
+    loadHistory(args.modelDir, args.figDir)
