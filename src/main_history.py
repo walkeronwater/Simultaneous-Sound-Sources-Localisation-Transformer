@@ -29,7 +29,7 @@ from model_transformer import *
 from loss import DoALoss
 from main_train import loadCheckpoint
 
-def loadHistory(loadPath, figPath):
+def loadHistory(loadPath, figPath, isDebug):
     trainHistory = glob(os.path.join(loadPath, "curve*"))
 
     history = {
@@ -41,7 +41,10 @@ def loadHistory(loadPath, figPath):
     for i in range(len(trainHistory)):
         checkpt = torch.load(trainHistory[i])
         for idx in history.keys():
-            history[idx].append(checkpt[idx])
+            history[idx].append(round(checkpt[idx], 5))
+    if isDebug:
+        for idx in history.keys(): 
+            print(idx, history[idx])
 
     plt.plot(history['train_acc'])
     plt.plot(history['valid_acc'])
@@ -67,6 +70,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training history plot')
     parser.add_argument('modelDir', type=str, help='Directory of model')
     parser.add_argument('--figDir', type=str, help='Directory of figures to be saved at')
+    parser.add_argument('--isDebug', type=str, default="False", help='isDebug?')
 
     args = parser.parse_args()
     if args.modelDir[-1] != "/":
@@ -76,7 +80,11 @@ if __name__ == "__main__":
     else:
         if args.figDir[-1] != "/":
             args.figDir += "/"
+    if args.isDebug == "True":
+        args.isDebug = True
+    else:
+        args.isDebug = False
     
     print("Model directory: ", args.modelDir)
     
-    loadHistory(args.modelDir, args.figDir)
+    loadHistory(args.modelDir, args.figDir, args.isDebug)
