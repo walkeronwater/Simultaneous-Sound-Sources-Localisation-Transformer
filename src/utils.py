@@ -170,11 +170,6 @@ def saveCues(cues, locIndex, dirName, fileCount, locLabel):
             csvFile.write('\n')
     torch.save(cues, dirName+str(fileCount)+'.pt')
 
-if False:
-    temp = torch.tensor([1,2,3])
-    tempIndex = 96
-    saveCues(temp, tempIndex, "/content/temp_data/", 0, locLabel, task="elev")
-
 if __name__ == "__main__":
     path = "./HRTF/IRC*"
     hrirSet, locLabel, fs_HRIR = loadHRIR(path)
