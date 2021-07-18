@@ -105,6 +105,7 @@ if __name__ == "__main__":
     learning_rate = 1e-4
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, args.modelDir, args.task, "test")
+    print("Retrieved the model at epoch: ", pretrainEpoch)
 
     for valSNR in valSNRList:
         fileCount = 0   # count the number of data samples
