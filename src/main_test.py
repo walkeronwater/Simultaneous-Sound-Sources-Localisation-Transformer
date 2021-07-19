@@ -31,7 +31,7 @@ from loss import *
 from main_train import *
 
 
-def regressionAcc(output, label, locLabel):
+def regressionAcc(output, label, locLabel, device):
     correct = 0
 
     for i in range(output.shape[0]):
@@ -207,7 +207,7 @@ if __name__ == "__main__":
                         confusion_matrix[t.long(), p.long()] += 1
                 else:
                     test_total += labels.shape[0]
-                    test_correct += regressionAcc(outputs, labels, locLabel)
+                    test_correct += regressionAcc(outputs, labels, locLabel, device)
         test_loss = test_sum_loss / (i+1)
         if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
             test_acc = round(100.0 * test_correct / test_total, 2)
