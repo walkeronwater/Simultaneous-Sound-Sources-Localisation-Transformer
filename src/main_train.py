@@ -28,17 +28,18 @@ from utils import *
 from model_transformer import *
 from loss import DoALoss
 
-def saveParam(epoch, model, optimizer, savePath, task):
+def saveParam(epoch, model, optimizer, scheduler, savePath, task):
     torch.save({
-        'epoch': epoch+1,
-        'state_dict': model.state_dict(),
+        'epoch': epoch,
+        'model': model.state_dict(),
         'optimizer': optimizer.state_dict(),
+        'scheduler': scheduler.state_dict(),
         'task': task
     }, savePath)
 
 def saveCurves(epoch, tl, ta, vl, va, savePath, task):
     torch.save({
-        'epoch': epoch+1,
+        'epoch': epoch,
         'train_loss': tl,
         'train_acc': ta,
         'valid_loss': vl,
@@ -46,12 +47,16 @@ def saveCurves(epoch, tl, ta, vl, va, savePath, task):
         'task': task
     }, savePath)
 
-def loadCheckpoint(model, optimizer, loadPath, task, phase):
+def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
     checkpoint = torch.load(loadPath+"param.pth.tar")
     if checkpoint['task'] == task:
-        epoch = checkpoint['epoch']-1
-        model.load_state_dict(checkpoint['state_dict'])
+        epoch = checkpoint['epoch']
+        model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
+        try:
+            scheduler.load_state_dict(checkpoint['scheduler'])
+        except:
+            print("scheduler not found")
 
         trainHistory = glob(os.path.join(loadPath, "curve*"))
         val_optim = 0.0
@@ -66,19 +71,20 @@ def loadCheckpoint(model, optimizer, loadPath, task, phase):
             checkpt = torch.load(
                 loadPath+"curve_epoch_"+str(i+1)+".pth.tar"
             )
-            
             for idx in history.keys():
                 history[idx].append(checkpt[idx])
-        val_optim = history['valid_loss'][epoch]
+
+        val_optim = history['valid_loss'][epoch-1]
         print("val_optim: ", val_optim)
         print("Corresponding validation accuracy: ",
-            history['valid_acc'][epoch]
+            history['valid_acc'][epoch-1]
         )
+        
         epoch = len(trainHistory)
         if phase == "train":
             print("Training will start from epoch", epoch+1)
 
-        return model, optimizer, epoch, val_optim
+        return model, optimizer, scheduler, epoch, val_optim
 
 def getLR(optimizer):
     for param_group in optimizer.param_groups:
@@ -142,7 +148,7 @@ if __name__ == "__main__":
     num_epochs = args.numEpoch
     pretrainEpoch = 0
     learning_rate = 1e-4
-    early_epoch = 10
+    early_epoch = 20
     early_epoch_count = 0
     val_optim = 0.0
 
@@ -166,15 +172,13 @@ if __name__ == "__main__":
         os.mkdir(args.modelDir)
     else:
         try:
-            learning_rate = 1e-4
-            optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-            model, optimizer, pretrainEpoch, val_optim = loadCheckpoint(model, optimizer, args.modelDir, args.task, "train")
+            model, optimizer, scheduler, pretrainEpoch, val_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, "train")
             print("Found a pre-trained model in directory", args.modelDir)
         except:
             print("Not found any pre-trained model in directory", args.modelDir)
 
     for epoch in range(pretrainEpoch, pretrainEpoch + num_epochs):
-        print("\nEpoch %d, lr = %f" % ((epoch + 1), getLR(optimizer)))
+        print("\nEpoch %d, lr = %f" % ((epoch+1), getLR(optimizer)))
         
         train_correct = 0.0
         train_total = 0.0
@@ -252,7 +256,7 @@ if __name__ == "__main__":
             scheduler.step(val_loss)
 
         saveCurves(
-            epoch, 
+            epoch+1, 
             train_loss, 
             train_acc, 
             val_loss, 
@@ -269,9 +273,10 @@ if __name__ == "__main__":
             early_epoch_count = 0
 
             saveParam(
-                epoch,
+                epoch+1,
                 model,
                 optimizer,
+                scheduler,
                 args.modelDir + "param.pth.tar",
                 args.task
             )
