@@ -1,7 +1,11 @@
+from math import pi
 import torch
 import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
+
+def radian2degree(val):
+    return val/pi*180
 
 def DoALoss(output, target):
     # target should be (elev, azim)
@@ -30,4 +34,4 @@ if __name__ == "__main__":
     # loss = nn.MSELoss(outputs, labels)
     loss = DoALoss(outputs, labels)
 
-    print(loss)
+    print(radian2degree(loss.item()))
