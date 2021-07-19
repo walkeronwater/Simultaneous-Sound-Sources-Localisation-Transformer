@@ -33,12 +33,12 @@ from main_train import *
 
 def regressionAcc(output, label, locLabel):
     correct = 0
-    locLabel = locLabel.to(device)
+
     for i in range(output.shape[0]):
         minAngle = float('inf')
-        outputs = torch.stack(locLabel.shape[0]*[output[i]], dim=0)
-        labels = torch.tensor(locLabel)
-        loss = DoALoss(outputs, labels)
+        tempOutput = torch.stack(locLabel.shape[0]*[output[i]], dim=0).to(device)
+        tempLabel = torch.tensor(locLabel)
+        loss = DoALoss(tempOutput, tempLabel)
         pred = torch.argmax(loss)
         if label[i, 0].item() == pred.item():
             correct += 0
