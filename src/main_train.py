@@ -59,7 +59,6 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
             print("scheduler not found")
 
         trainHistory = glob(os.path.join(loadPath, "curve*"))
-        val_optim = 0.0
 
         history = {
             'train_acc': [],
@@ -150,7 +149,7 @@ if __name__ == "__main__":
     learning_rate = 1e-4
     early_epoch = 20
     early_epoch_count = 0
-    val_optim = 0.0
+    val_optim = float('inf')
 
     num_warmup_steps = 2
     num_training_steps = num_epochs+1
