@@ -130,6 +130,13 @@ def locIndex2Label(locLabel, locIndex, task):
         labels = locLabel[locIndex, 0]/180.0*pi
     elif task == "azimRegression":
         labels = locLabel[locIndex, 1]/180.0*pi
+    elif task == "allRegression":
+        labels = torch.tensor(
+            [
+                locLabel[locIndex, 0]/180.0*pi,
+                locLabel[locIndex, 1]/180.0*pi
+            ]
+        )
     return labels
 
 def saveCues(cues, locIndex, dirName, fileCount, locLabel):

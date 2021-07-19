@@ -96,7 +96,10 @@ if __name__ == "__main__":
 
     # allocate tensors cues and labels in RAM
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
-    labels_ = torch.zeros((Nsample,))
+    if args.task == "allRegression":
+        labels_ = torch.zeros((Nsample,2))
+    else:
+        labels_ = torch.zeros((Nsample,))
 
     valSNRList = [-10,-5,0,5,10,15,20,25,100]
 
@@ -149,6 +152,7 @@ if __name__ == "__main__":
 
                     cues_[fileCount] = cues
                     labels_[fileCount] = locIndex2Label(locLabel, locIndex, args.task)
+
 
                     '''if fileCount == 23:
                         raise SystemExit("Debugging")'''
