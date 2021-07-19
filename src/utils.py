@@ -135,7 +135,7 @@ def locIndex2Label(locLabel, locIndex, task):
             [
                 locLabel[locIndex, 0]/180.0*pi,
                 locLabel[locIndex, 1]/180.0*pi
-            ]
+            ], dtype=torch.float32
         )
     return labels
 

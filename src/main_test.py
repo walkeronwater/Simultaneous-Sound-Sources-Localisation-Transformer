@@ -27,20 +27,24 @@ from torchsummary import summary
 from load_data import *
 from utils import *
 from model_transformer import *
-from loss import DoALoss
+from loss import *
 from main_train import *
 
 
-def testPhase(
-    modelDir,
-    task,
-    model
+def regressionAcc(output, label, locLabel):
+    correct = 0
 
-):
-    learning_rate = 1e-4
-    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, modelDir, args.task, "test")
+    for i in range(output.shape[0]):
+        minAngle = float('inf')
+        outputs = torch.stack(locLabel.shape[0]*[output[i]], dim=0)
+        labels = torch.tensor(locLabel)
+        loss = DoALoss(outputs, labels)
+        pred = torch.argmax(loss)
+        if label[i, 0].item() == pred.item():
+            correct += 0
 
+    print('Acc: ', correct/output.shape[0])
+   
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing hyperparamters')
@@ -97,9 +101,9 @@ if __name__ == "__main__":
     # allocate tensors cues and labels in RAM
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
     if args.task == "allRegression":
-        labels_ = torch.zeros((Nsample,2))
+        labels_ = torch.zeros((Nsample,3), dtype=torch.float32)
     else:
-        labels_ = torch.zeros((Nsample,))
+        labels_ = torch.zeros((Nsample,), dtype=torch.float32)
 
     valSNRList = [-10,-5,0,5,10,15,20,25,100]
 
@@ -151,7 +155,8 @@ if __name__ == "__main__":
                     cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
 
                     cues_[fileCount] = cues
-                    labels_[fileCount] = locIndex2Label(locLabel, locIndex, args.task)
+                    labels_[fileCount][0] = locIndex
+                    labels_[fileCount][1:3] = locIndex2Label(locLabel, locIndex, args.task)
 
 
                     '''if fileCount == 23:
@@ -163,9 +168,9 @@ if __name__ == "__main__":
                     #           fileCount // (Nloc*len(valSNRList)))
 
         # create tensor dataset from data loaded in RAM
-        dataset = TensorDataset(cues_, labels_.long())
+        dataset = TensorDataset(cues_, labels_)
 
-        test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=True, num_workers=args.numWorker)
+        test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=False, num_workers=args.numWorker)
 
         '''
         testing
@@ -188,7 +193,7 @@ if __name__ == "__main__":
                 outputs = model(inputs)
 
                 if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-                    loss = DoALoss(outputs, labels)
+                    loss = torch.mean(DoALoss(outputs, labels[:, 1:3]))
                 else:
                     loss = criterion(outputs, labels)
                 test_sum_loss = loss.item()
@@ -199,6 +204,8 @@ if __name__ == "__main__":
 
                     for t, p in zip(labels.view(-1), predicted.view(-1)):
                         confusion_matrix[t.long(), p.long()] += 1
+                else:
+                    regressionAcc(outputs, labels, locLabel)
         test_loss = test_sum_loss / (i+1)
         if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
             test_acc = test_loss

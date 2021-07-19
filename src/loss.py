@@ -4,8 +4,11 @@ import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
 
-def radian2degree(val):
+def radian2Degree(val):
     return val/pi*180
+
+def degree2Radian(val):
+    return val/180*pi
 
 def DoALoss(output, target):
     # target should be (elev, azim)
@@ -14,19 +17,17 @@ def DoALoss(output, target):
     cosine_term = torch.cos(output[:, 0]) * torch.cos(target[:, 0]) * torch.cos(target[:, 1] - output[:, 1])
     loss = torch.acos(F.hardtanh(sine_term + cosine_term, min_val=-1, max_val=1))
 
-    return torch.mean(loss)
+    return loss
 
 if __name__ == "__main__":
     outputs = torch.tensor(
         [
-            [1.047, 0],
-            [0.7854, 0]
+            [1.047, 0]
         ]
     )
 
     labels = torch.tensor(
         [
-            [-1.57, 3.14],
             [-1.57, 3.14]
         ]
     )
@@ -34,4 +35,4 @@ if __name__ == "__main__":
     # loss = nn.MSELoss(outputs, labels)
     loss = DoALoss(outputs, labels)
 
-    print(radian2degree(loss.item()))
+    print(radian2Degree(loss.item()))

@@ -188,6 +188,7 @@ if __name__ == "__main__":
         for i, (inputs, labels) in enumerate(train_loader, 0):
             num_batches = len(train_loader)
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
+            print(labels)
             # print("Input shape: ",inputs.shape)
             outputs = model(inputs)
             
