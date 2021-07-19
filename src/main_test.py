@@ -172,7 +172,10 @@ if __name__ == "__main__":
                     #           fileCount // (Nloc*len(valSNRList)))
 
         # create tensor dataset from data loaded in RAM
-        dataset = TensorDataset(cues_, labels_)
+        if args.task == "allRegression":
+            dataset = TensorDataset(cues_, labels_)
+        else:
+            dataset = TensorDataset(cues_, labels_.long())
 
         test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=False, num_workers=args.numWorker)
 
