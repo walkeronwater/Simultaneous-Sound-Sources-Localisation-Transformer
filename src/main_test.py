@@ -156,8 +156,11 @@ if __name__ == "__main__":
                     cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
 
                     cues_[fileCount] = cues
-                    labels_[fileCount][0] = locIndex
-                    labels_[fileCount][1:3] = locIndex2Label(locLabel, locIndex, args.task)
+                    if args.task == "allRegression":
+                        labels_[fileCount][0] = locIndex
+                        labels_[fileCount][1:3] = locIndex2Label(locLabel, locIndex, args.task)
+                    else:
+                        labels_[fileCount] = locIndex
 
 
                     '''if fileCount == 23:
