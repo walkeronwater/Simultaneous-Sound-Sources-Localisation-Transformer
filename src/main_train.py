@@ -63,7 +63,10 @@ def loadCheckpoint(model, optimizer, loadPath, task, phase):
             'valid_loss': []
         }
         for i in range(len(trainHistory)):
-            checkpt = torch.load(trainHistory[i])
+            checkpt = torch.load(
+                loadPath+"curve_epoch_"+str(i+1)+".pth.tar"
+            )
+            
             for idx in history.keys():
                 history[idx].append(checkpt[idx])
         val_optim = history['valid_loss'][epoch]
