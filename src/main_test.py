@@ -44,6 +44,7 @@ def regressionAcc(output, label, locLabel):
             correct += 0
 
     print('Acc: ', correct/output.shape[0])
+    return correct
    
 
 if __name__ == "__main__":
@@ -205,7 +206,8 @@ if __name__ == "__main__":
                     for t, p in zip(labels.view(-1), predicted.view(-1)):
                         confusion_matrix[t.long(), p.long()] += 1
                 else:
-                    regressionAcc(outputs, labels, locLabel)
+                    test_total += labels.shape(0)
+                    test_correct += regressionAcc(outputs, labels, locLabel)
         test_loss = test_sum_loss / (i+1)
         if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
             test_acc = test_loss
