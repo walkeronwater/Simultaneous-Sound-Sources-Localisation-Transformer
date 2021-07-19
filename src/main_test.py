@@ -206,7 +206,7 @@ if __name__ == "__main__":
                     for t, p in zip(labels.view(-1), predicted.view(-1)):
                         confusion_matrix[t.long(), p.long()] += 1
                 else:
-                    test_total += labels.shape(0)
+                    test_total += labels.shape[0]
                     test_correct += regressionAcc(outputs, labels, locLabel)
         test_loss = test_sum_loss / (i+1)
         if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
