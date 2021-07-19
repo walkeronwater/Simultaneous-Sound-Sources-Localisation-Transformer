@@ -266,7 +266,7 @@ if __name__ == "__main__":
         )
 
         # early stopping
-        if (val_loss <= val_optim):
+        if (val_loss >= val_optim):
             early_epoch_count += 1
         else:
             val_optim = val_loss
