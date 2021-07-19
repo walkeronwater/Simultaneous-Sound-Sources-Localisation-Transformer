@@ -210,7 +210,7 @@ if __name__ == "__main__":
                     test_correct += regressionAcc(outputs, labels, locLabel)
         test_loss = test_sum_loss / (i+1)
         if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-            test_acc = test_loss
+            test_acc = round(100.0 * test_correct / test_total, 2)
             print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.04f '
                 % (valSNR, test_loss, test_acc))
         else:
