@@ -44,7 +44,7 @@ def regressionAcc(output, label, locLabel, device):
             correct += 0
         # print(int(label[i, 0].item()))
         # print(pred.item())
-    raise SystemExit("debug")
+    # raise SystemExit("debug")
     print('Acc: ', correct/output.shape[0])
     return correct
    
