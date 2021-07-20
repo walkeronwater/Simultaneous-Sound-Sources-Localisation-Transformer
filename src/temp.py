@@ -148,9 +148,7 @@ if __name__ == "__main__":
 
         test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=False, num_workers=args.numWorker)
 
-        '''
         # testing
-        '''
         
         if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
             # confusion matrix
