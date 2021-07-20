@@ -49,6 +49,7 @@ def saveCurves(epoch, tl, ta, vl, va, savePath, task):
 
 def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
     checkpoint = torch.load(loadPath+"param.pth.tar")
+    print("ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt")
     print("True?", checkpoint['task'] == task)
     if checkpoint['task'] == task:
         epoch = checkpoint['epoch']
