@@ -53,7 +53,10 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
     if checkpoint['task'] == task:
         epoch = checkpoint['epoch']
         print("Model is retrieved at epoch ", epoch)
-        model.load_state_dict(checkpoint['model'])
+        try:
+            model.load_state_dict(checkpoint['model'])
+        except:
+            model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
 
         if phase == "train":
