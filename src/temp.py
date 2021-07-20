@@ -84,7 +84,10 @@ if __name__ == "__main__":
 
     # allocate tensors cues and labels in RAM
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
-    labels_ = torch.zeros((Nsample,))
+    if args.task == "allRegression":
+        labels_ = torch.zeros((Nsample,2))
+    else:
+        labels_ = torch.zeros((Nsample,))
 
     valSNRList = [-10,-5,0,5,10,15,20,25,100]
 
@@ -138,6 +141,7 @@ if __name__ == "__main__":
                     cues_[fileCount] = cues
                     labels_[fileCount] = locIndex2Label(locLabel, locIndex, args.task)
 
+
                     '''if fileCount == 23:
                         raise SystemExit("Debugging")'''
 
@@ -154,6 +158,7 @@ if __name__ == "__main__":
         '''
         testing
         '''
+        
         if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
             # confusion matrix
             confusion_matrix = torch.zeros(predNeuron(args.task), predNeuron(args.task))
@@ -168,49 +173,26 @@ if __name__ == "__main__":
         with torch.no_grad():
             for i, (inputs, labels) in enumerate(test_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
-                # print(inputs.shape)
-
                 outputs = model(inputs)
-                # print(outputs.shape)
-                # print(labels.shape)
-                test_sum_loss = criterion(outputs, labels)
-                _, predicted = torch.max(outputs.data, 1)
-                test_total += labels.size(0)
-                test_correct += predicted.eq(labels.data).sum().item()
-                
+
+                if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
+                    loss = DoALoss(outputs, labels)
+                else:
+                    loss = criterion(outputs, labels)
+                test_sum_loss = loss.item()
                 if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
+                    _, predicted = torch.max(outputs.data, 1)
+                    test_total += labels.size(0)
+                    test_correct += predicted.eq(labels.data).sum().item()
+
                     for t, p in zip(labels.view(-1), predicted.view(-1)):
                         confusion_matrix[t.long(), p.long()] += 1
         test_loss = test_sum_loss / (i+1)
-        test_acc = round(100.0 * test_correct / test_total, 2)
-        print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.4f%% '
-            % (valSNR, test_loss, test_acc))
-
-'''
-    # confusion matrix
-    confusion_matrix = torch.zeros(Nloc, Nloc)
-    test_loss = 0.0
-    test_correct = 0.0
-    test_total = 0.0
-    # test phase
-    model.isDebug=False
-    model.eval()
-    criterion = nn.CrossEntropyLoss()
-    with torch.no_grad():
-        for i, data in enumerate(test_loader, 0):
-            inputs, labels = data
-            inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
-            # print(inputs.shape)
-            outputs = model(inputs)
-            # print(outputs.shape)
-            # print(labels.shape)
-            test_loss = criterion(outputs, labels)
-            _, predicted = torch.max(outputs.data, 1)
-            test_total += labels.size(0)
-            test_correct += predicted.eq(labels.data).sum().item()
-            
-            for t, p in zip(labels.view(-1), predicted.view(-1)):
-                confusion_matrix[t.long(), p.long()] += 1
-    print('Test_Loss: %.04f | Test_Acc: %.4f%% '
-        % (test_loss, 100.0 * test_correct / test_total))
-'''
+        if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
+            test_acc = test_loss
+            print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.04f '
+                % (valSNR, test_loss, test_acc))
+        else:
+            test_acc = round(100.0 * test_correct / test_total, 2)
+            print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.4f%% '
+                % (valSNR, test_loss, test_acc))
