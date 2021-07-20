@@ -106,7 +106,7 @@ if __name__ == "__main__":
     if args.task == "allRegression":
         labels_ = torch.zeros((Nsample,3), dtype=torch.float32)
     else:
-        labels_ = torch.zeros((Nsample,), dtype=torch.float32)
+        labels_ = torch.zeros((Nsample,))
 
     valSNRList = [-10,-5,0,5,10,15,20,25,100]
 
@@ -163,10 +163,6 @@ if __name__ == "__main__":
                         labels_[fileCount][1:3] = locIndex2Label(locLabel, locIndex, args.task)
                     else:
                         labels_[fileCount] = locIndex2Label(locLabel, locIndex, args.task)
-
-
-                    '''if fileCount == 23:
-                        raise SystemExit("Debugging")'''
 
                     fileCount += 1
                     # if fileCount % (Nloc*len(valSNRList)) == 0:
