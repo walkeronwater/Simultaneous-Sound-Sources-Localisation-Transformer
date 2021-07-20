@@ -175,7 +175,7 @@ if __name__ == "__main__":
         else:
             dataset = TensorDataset(cues_, labels_.long())
 
-        test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=False, num_workers=args.numWorker)
+        test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=True, num_workers=args.numWorker)
 
         '''
         testing
