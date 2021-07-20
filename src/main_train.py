@@ -49,7 +49,7 @@ def saveCurves(epoch, tl, ta, vl, va, savePath, task):
 
 def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
     checkpoint = torch.load(loadPath+"param.pth.tar")
-    
+
     if checkpoint['task'] == task:
         epoch = checkpoint['epoch']
         print("Model is retrieved at epoch ", epoch)
@@ -57,13 +57,6 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
             model.load_state_dict(checkpoint['model'])
         except:
             model.load_state_dict(checkpoint['state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-
-        if phase == "train":
-            try:
-                scheduler.load_state_dict(checkpoint['scheduler'])
-            except:
-                print("scheduler not found")
 
         trainHistory = glob(os.path.join(loadPath, "curve*"))
 
@@ -85,14 +78,21 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
         print("Corresponding validation accuracy: ",
             history['valid_acc'][epoch-1]
         )
-        
-        preTrainEpoch = len(trainHistory)
-        if phase == "train":
-            print("Training will start from epoch", preTrainEpoch+1)
 
-        return model, optimizer, scheduler, preTrainEpoch, val_optim
+        if phase == "train":
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            try:
+                scheduler.load_state_dict(checkpoint['scheduler'])
+            except:
+                print("scheduler not found")
+            
+            preTrainEpoch = len(trainHistory)
+            print("Training will start from epoch", preTrainEpoch+1)
+            return model, optimizer, scheduler, preTrainEpoch, val_optim
+        elif phase == "test":
+            return model, val_optim
     else:
-        raise SystemExit("Not found model")
+        raise SystemExit("Task doesn't match")
 
 def getLR(optimizer):
     for param_group in optimizer.param_groups:
