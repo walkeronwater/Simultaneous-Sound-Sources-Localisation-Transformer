@@ -49,17 +49,18 @@ def saveCurves(epoch, tl, ta, vl, va, savePath, task):
 
 def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
     checkpoint = torch.load(loadPath+"param.pth.tar")
-    print("ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt")
-    print("True?", checkpoint['task'] == task)
+    
     if checkpoint['task'] == task:
         epoch = checkpoint['epoch']
         print("Model is retrieved at epoch ", epoch)
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
-        try:
-            scheduler.load_state_dict(checkpoint['scheduler'])
-        except:
-            print("scheduler not found")
+
+        if phase == "train":
+            try:
+                scheduler.load_state_dict(checkpoint['scheduler'])
+            except:
+                print("scheduler not found")
 
         trainHistory = glob(os.path.join(loadPath, "curve*"))
 
