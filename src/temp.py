@@ -24,210 +24,204 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from torchsummary import summary
 
-# from load_data import *
+from load_data import *
 from utils import *
 from model_transformer import *
+from loss import DoALoss
+from main_train import *
 
-class MultiEpochsDataLoader(torch.utils.data.DataLoader):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._DataLoader__initialized = False
-        self.batch_sampler = _RepeatSampler(self.batch_sampler)
-        self._DataLoader__initialized = True
-        self.iterator = super().__iter__()
+def testPhase(
+    modelDir,
+    task,
+    model
 
-    def __len__(self):
-        return len(self.batch_sampler.sampler)
+):
+    learning_rate = 1e-4
+    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, modelDir, args.task, "test")
 
-    def __iter__(self):
-        for i in range(len(self)):
-            yield next(self.iterator)
-
-class _RepeatSampler(object):
-    """ Sampler that repeats forever.
-    Args:
-        sampler (Sampler)
-    """
-
-    def __init__(self, sampler):
-        self.sampler = sampler
-
-    def __iter__(self):
-        while True:
-            yield from iter(self.sampler)
-
-def get_lr(optimizer):
-    for param_group in optimizer.param_groups:
-        return param_group['lr']
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Training hyperparamters')
-    parser.add_argument('dataDir', type=str, help='Directory of saved cues')
-    parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
+    parser = argparse.ArgumentParser(description='Testing hyperparamters')
+    parser.add_argument('audioDir', type=str, help='Directory of audio files')
+    parser.add_argument('hrirDir', type=str, help='Directory of HRIR files')
+    parser.add_argument('modelDir', type=str, help='Directory of saved model')
     parser.add_argument('numWorker', type=int, help='Number of workers')
-    parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
+    parser.add_argument('task', type=str, help='Task')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
     parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
+    parser.add_argument('--samplePerSNR', default=100, type=int, help='Number of samples per SNR')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
-    print("Data directory", args.dataDir)
-    print("Model directory", args.modelDir)
-    print("Number of workers", args.numWorker)
-    trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
-    print("Train validation split", trainValidSplit)
-    print("Number of encoder layers", args.numEnc)
-    print("Number of FC layers", args.numFC)
-    print("Dropout value", args.valDropout)
-    print("Number of epochs", args.numEpoch)
-    print("Batch size", args.batchSize)
+    if args.audioDir[-1] != "/":
+        args.audioDir += "/"
+    if args.hrirDir[-1] != "/":
+        args.hrirDir += "/"
+    if args.modelDir[-1] != "/":
+        args.modelDir += "/"
+    print("Audio files directory: ", args.audioDir)
+    print("HRIR files directory: ", args.hrirDir)
+    print("Model directory: ", args.modelDir)
+    print("Number of workers: ", args.numWorker)
+    print("Task: ", args.task)
+    print("Number of encoder layers: ", args.numEnc)
+    print("Number of FC layers: ", args.numFC)
+    print("Dropout value: ", args.valDropout)
+    print("Number of epochs: ", args.numEpoch)
+    print("Batch size: ", args.batchSize)
+    print("Number of samples per SNR: ", args.samplePerSNR)
 
-    check_time = time.time()
-    # dirName = './saved_cues/'
-    dirName = args.dataDir
-    assert (
-        os.path.isdir(dirName)
-    ), "Data directory doesn't exist."
+    if args.isDebug == "True":
+        args.isDebug = True
+    else:
+        args.isDebug = False
 
-    dataset = MyDataset(dirName)
-    print(dataset)
-    # train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
-    train_loader = DataLoader(dataset=dataset, batch_size=args.batchSize, shuffle=False, num_workers=args.numWorker)
+    path = args.hrirDir + "/IRC*"
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+    path = glob(os.path.join(args.audioDir+"/*"))
+    Naudio = len(path)
+    print("Number of audio files: ", Naudio)
 
-    print("Dataset instantialised - time elapse: ", round(time.time() - check_time, 5))
+    lenSliceInSec = 0.5   # length of audio slice in sec
+    Nfreq = 512
+    Ntime = 44
+    Ncues = 5
+    Nloc = 187
+    Nsample = Nloc * args.samplePerSNR
+
+    # allocate tensors cues and labels in RAM
+    cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
+    labels_ = torch.zeros((Nsample,))
+
+    valSNRList = [-10,-5,0,5,10,15,20,25,100]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    Nsample = dataset.__len__()
-    Nloc = 24
-    Ntime = 44
-    Nfreq = 512
-    Ncues = 5
-    valDropout = args.valDropout
-    num_layers = args.numEnc
-    model = FC3(Nloc, Ntime, Nfreq, Ncues, num_layers, 8, device, 4, valDropout, False).to(device)
-
-    print("Model instantialised - time elapse: ", round(time.time() - check_time, 5))
-
-    num_epochs = args.numEpoch
+    model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
     learning_rate = 1e-4
-    early_epoch = 10
-    early_epoch_count = 0
-    val_acc_optim = 0.0
-
-    # optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
-    criterion = nn.CrossEntropyLoss()
+    model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, args.modelDir, args.task, "test")
+    print("Retrieved the model at epoch: ", pretrainEpoch)
 
-    checkpointPath = args.modelDir + "/temp/"
-    if not os.path.isdir(checkpointPath):
-        os.mkdir(checkpointPath)
+    for valSNR in valSNRList:
+        fileCount = 0   # count the number of data samples
+        for audioIndex in range(len(path)):
+            if fileCount == Nsample:
+                break
+            # print("Audio index: ", audioIndex)
+            audio, fs_audio = sf.read(path[audioIndex])
+            # audio = librosa.resample(audio, fs_audio, fs_HRIR)
 
-    
-    print("Before entering training - time elapsed: ", round(time.time() - check_time, 5))
-    for epoch in range(num_epochs):
-        print("\nEpoch %d, lr = %f" % ((epoch + 1), get_lr(optimizer)))
-        num_batches = len(train_loader)
-        
-        train_correct = 0.0
-        train_total = 0.0
-        train_sum_loss = 0.0
-        train_loss = 0.0
-        train_acc = 0.0
-        model.train()
+            audioSliceList = audioSliceGenerator(audio, fs_HRIR, lenSliceInSec)
 
-        print("Before entering the first batch - time elapse: ", round(time.time() - check_time, 5))
-        check_time = time.time()
+            for sliceIndex in range(len(audioSliceList)):
+                if fileCount == Nsample:
+                    break
+                audioSlice = audio[audioSliceList[sliceIndex]]
 
-        for i, (inputs, labels) in enumerate(train_loader, 0):
-            if (i+1)%250 == 0:
-                print(" %d batches, time elapsed: %f" % (i+1, round(time.time() - check_time, 5)))
-                check_time = time.time()
-            inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
-            # print("Input shape: ",inputs.shape)
+                for locIndex in range(Nloc):
+                    if fileCount == Nsample:
+                        break
 
-            outputs = model(inputs)
-            
-            # print("Ouput shape: ", outputs.shape)
-            # print("Label shape: ", labels.shape)
-            loss = criterion(outputs, labels) # .unsqueeze_(1)
-            optimizer.zero_grad()
-            loss.backward()
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
-            optimizer.step()
-            train_sum_loss += loss.item()
+                    hrirLeft_re = librosa.resample(hrirSet[locIndex, 0], fs_HRIR, fs_audio)
+                    hrirRight_re = librosa.resample(hrirSet[locIndex, 1], fs_HRIR, fs_audio)
+                    sigLeft = np.convolve(audioSlice, hrirLeft_re)
+                    sigRight = np.convolve(audioSlice, hrirRight_re)
 
-            _, predicted = torch.max(outputs.data, 1)
-            train_total += labels.size(0)
-            train_correct += predicted.eq(labels.data).sum().item()
-        train_loss = train_sum_loss / (i+1)
-        train_acc = round(100.0 * train_correct / train_total, 2)
-        print('Training Loss: %.04f | Training Acc: %.4f%% '
-            % (train_loss, train_acc))
-        
-'''
-        val_correct = 0.0
-        val_total = 0.0
-        val_sum_loss = 0.0
-        val_loss = 0.0
-        val_acc = 0.0
-        # validation phase
-        model.eval()
-        with torch.no_grad():
-            for i, data in enumerate(valid_loader, 0):
-                inputs, labels = data
-                inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
+                    # print("Location index: ", locIndex)
+                    # showSpectrogram(sigLeft, fs_HRIR)
+                    # showSpectrogram(sigRight, fs_HRIR)
                 
+                    specLeft = calSpectrogram(sigLeft + noiseGenerator(sigLeft, valSNR))
+                    specRight = calSpectrogram(sigRight + noiseGenerator(sigRight, valSNR))
+
+                    ipdCues = calIPD(specLeft, specRight)
+                    ildCues = calILD(specLeft, specRight)
+                    r_l, theta_l  = cartesian2euler(specLeft)
+                    r_r, theta_r  = cartesian2euler(specRight)
+
+                    cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+
+                    cues_[fileCount] = cues
+                    labels_[fileCount] = locIndex2Label(locLabel, locIndex, args.task)
+
+                    '''if fileCount == 23:
+                        raise SystemExit("Debugging")'''
+
+                    fileCount += 1
+                    # if fileCount % (Nloc*len(valSNRList)) == 0:
+                    #     print("# location set ("+str(Nloc*len(valSNRList))+" samples per set): ",
+                    #           fileCount // (Nloc*len(valSNRList)))
+
+        # create tensor dataset from data loaded in RAM
+        dataset = TensorDataset(cues_, labels_.long())
+
+        test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=True, num_workers=args.numWorker)
+
+        '''
+        testing
+        '''
+        if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
+            # confusion matrix
+            confusion_matrix = torch.zeros(predNeuron(args.task), predNeuron(args.task))
+
+        test_correct = 0.0
+        test_total = 0.0
+        test_sum_loss = 0.0
+        test_loss = 0.0
+        train_acc = 0.0
+        model.eval()
+        criterion = nn.CrossEntropyLoss()
+        with torch.no_grad():
+            for i, (inputs, labels) in enumerate(test_loader, 0):
+                inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
+                # print(inputs.shape)
+
                 outputs = model(inputs)
-                val_loss = criterion(outputs, labels) # .unsqueeze_(1)
-                val_sum_loss += val_loss.item()
-
+                # print(outputs.shape)
+                # print(labels.shape)
+                test_sum_loss = criterion(outputs, labels)
                 _, predicted = torch.max(outputs.data, 1)
-                val_total += labels.size(0)
-                val_correct += predicted.eq(labels.data).sum().item()
-            val_loss = val_sum_loss / (i+1)
-            val_acc = round(100.0 * val_correct / val_total, 2)
-            scheduler.step(val_loss)
+                test_total += labels.size(0)
+                test_correct += predicted.eq(labels.data).sum().item()
+                
+                if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
+                    for t, p in zip(labels.view(-1), predicted.view(-1)):
+                        confusion_matrix[t.long(), p.long()] += 1
+        test_loss = test_sum_loss / (i+1)
+        test_acc = round(100.0 * test_correct / test_total, 2)
+        print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.4f%% '
+            % (valSNR, test_loss, test_acc))
 
-        print('Val_Loss: %.04f | Val_Acc: %.4f%% '
-            % (val_loss, val_acc))
-        
-        checkpoint_curve = {
-            "epoch": epoch+1,
-            "train_loss": train_loss,
-            "train_acc": train_acc,
-            "valid_loss": val_loss,
-            "valid_acc": val_acc
-        }
-        
-        torch.save(
-            checkpoint_curve,
-            checkpointPath + "curve_epoch_"+str(epoch+1)+".pth.tar"
-        )
-
-        
-
-        # early stopping
-        if (val_acc <= val_acc_optim):
-            early_epoch_count += 1
-        else:
-            val_acc_optim = val_acc
-            early_epoch_count = 0
-
-            checkpoint_param = {
-                "epoch": epoch+1,
-                "state_dict": model.state_dict(),
-                "optimizer": optimizer.state_dict()
-            }
-
-            torch.save(
-                checkpoint_param,
-                checkpointPath + "param.pth.tar"
-            )
-        if (early_epoch_count >= early_epoch):
-            break
+'''
+    # confusion matrix
+    confusion_matrix = torch.zeros(Nloc, Nloc)
+    test_loss = 0.0
+    test_correct = 0.0
+    test_total = 0.0
+    # test phase
+    model.isDebug=False
+    model.eval()
+    criterion = nn.CrossEntropyLoss()
+    with torch.no_grad():
+        for i, data in enumerate(test_loader, 0):
+            inputs, labels = data
+            inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
+            # print(inputs.shape)
+            outputs = model(inputs)
+            # print(outputs.shape)
+            # print(labels.shape)
+            test_loss = criterion(outputs, labels)
+            _, predicted = torch.max(outputs.data, 1)
+            test_total += labels.size(0)
+            test_correct += predicted.eq(labels.data).sum().item()
+            
+            for t, p in zip(labels.view(-1), predicted.view(-1)):
+                confusion_matrix[t.long(), p.long()] += 1
+    print('Test_Loss: %.04f | Test_Acc: %.4f%% '
+        % (test_loss, 100.0 * test_correct / test_total))
 '''
