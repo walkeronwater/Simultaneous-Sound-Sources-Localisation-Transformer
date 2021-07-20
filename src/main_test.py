@@ -189,7 +189,6 @@ if __name__ == "__main__":
         test_total = 0.0
         test_sum_loss = 0.0
         test_loss = 0.0
-        train_acc = 0.0
         model.eval()
         criterion = nn.CrossEntropyLoss()
         with torch.no_grad():
@@ -201,7 +200,7 @@ if __name__ == "__main__":
                     loss = torch.mean(DoALoss(outputs, labels[:, 1:3]))
                 else:
                     loss = criterion(outputs, labels)
-                test_sum_loss = loss.item()
+                test_sum_loss += loss.item()
                 if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
                     _, predicted = torch.max(outputs.data, 1)
                     test_total += labels.size(0)
@@ -212,6 +211,8 @@ if __name__ == "__main__":
                 else:
                     test_total += labels.shape[0]
                     test_correct += regressionAcc(outputs, labels, locLabel, device)
+        print(inputs)
+        print(labels)
         test_loss = test_sum_loss / (i+1)
         if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
             test_acc = round(100.0 * test_correct / test_total, 2)
