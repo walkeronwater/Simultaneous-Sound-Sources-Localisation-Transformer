@@ -245,6 +245,9 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
+    learning_rate = 1e-4
+    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
     model, val_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, "test")
     print("Retrieved the model at epoch: ", pretrainEpoch)
 
