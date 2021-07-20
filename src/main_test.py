@@ -221,35 +221,3 @@ if __name__ == "__main__":
             test_acc = round(100.0 * test_correct / test_total, 2)
             print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.4f%% '
                 % (valSNR, test_loss, test_acc))
-
-'''
-    # confusion matrix
-    confusion_matrix = torch.zeros(Nloc, Nloc)
-
-    test_loss = 0.0
-    test_correct = 0.0
-    test_total = 0.0
-    # test phase
-    model.isDebug=False
-    model.eval()
-    criterion = nn.CrossEntropyLoss()
-    with torch.no_grad():
-        for i, data in enumerate(test_loader, 0):
-            inputs, labels = data
-            inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
-            # print(inputs.shape)
-
-            outputs = model(inputs)
-            # print(outputs.shape)
-            # print(labels.shape)
-            test_loss = criterion(outputs, labels)
-            _, predicted = torch.max(outputs.data, 1)
-            test_total += labels.size(0)
-            test_correct += predicted.eq(labels.data).sum().item()
-            
-            for t, p in zip(labels.view(-1), predicted.view(-1)):
-                confusion_matrix[t.long(), p.long()] += 1
-
-    print('Test_Loss: %.04f | Test_Acc: %.4f%% '
-        % (test_loss, 100.0 * test_correct / test_total))
-'''

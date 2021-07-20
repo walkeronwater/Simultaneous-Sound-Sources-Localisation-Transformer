@@ -91,6 +91,8 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
             print("Training will start from epoch", preTrainEpoch+1)
 
         return model, optimizer, scheduler, preTrainEpoch, val_optim
+    else:
+        raise SystemExit("Not found model")
 
 def getLR(optimizer):
     for param_group in optimizer.param_groups:

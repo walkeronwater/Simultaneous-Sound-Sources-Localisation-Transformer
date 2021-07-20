@@ -27,8 +27,9 @@ from torchsummary import summary
 from load_data import *
 from utils import *
 from model_transformer import *
-from loss import DoALoss
+from loss import *
 from main_train import *
+   
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing hyperparamters')
@@ -84,10 +85,7 @@ if __name__ == "__main__":
 
     # allocate tensors cues and labels in RAM
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
-    if args.task == "allRegression":
-        labels_ = torch.zeros((Nsample,2))
-    else:
-        labels_ = torch.zeros((Nsample,))
+    labels_ = torch.zeros((Nsample,))
 
     valSNRList = [-10,-5,0,5,10,15,20,25,100]
 
@@ -97,7 +95,6 @@ if __name__ == "__main__":
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
     model, optimizer, scheduler, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, "test")
-    print("Retrieved the model at epoch: ", pretrainEpoch)
 
     for valSNR in valSNRList:
         fileCount = 0   # count the number of data samples
@@ -141,10 +138,6 @@ if __name__ == "__main__":
                     cues_[fileCount] = cues
                     labels_[fileCount] = locIndex2Label(locLabel, locIndex, args.task)
 
-
-                    '''if fileCount == 23:
-                        raise SystemExit("Debugging")'''
-
                     fileCount += 1
                     # if fileCount % (Nloc*len(valSNRList)) == 0:
                     #     print("# location set ("+str(Nloc*len(valSNRList))+" samples per set): ",
@@ -153,7 +146,7 @@ if __name__ == "__main__":
         # create tensor dataset from data loaded in RAM
         dataset = TensorDataset(cues_, labels_.long())
 
-        test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=True, num_workers=args.numWorker)
+        test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=False, num_workers=args.numWorker)
 
         '''
         testing
@@ -167,7 +160,7 @@ if __name__ == "__main__":
         test_total = 0.0
         test_sum_loss = 0.0
         test_loss = 0.0
-        train_acc = 0.0
+        test_acc = 0.0
         model.eval()
         criterion = nn.CrossEntropyLoss()
         with torch.no_grad():
@@ -175,11 +168,8 @@ if __name__ == "__main__":
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 outputs = model(inputs)
 
-                if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-                    loss = DoALoss(outputs, labels)
-                else:
-                    loss = criterion(outputs, labels)
-                test_sum_loss = loss.item()
+                loss = criterion(outputs, labels)
+                test_sum_loss += loss.item()
                 if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
                     _, predicted = torch.max(outputs.data, 1)
                     test_total += labels.size(0)
@@ -187,12 +177,10 @@ if __name__ == "__main__":
 
                     for t, p in zip(labels.view(-1), predicted.view(-1)):
                         confusion_matrix[t.long(), p.long()] += 1
+                # else:
+                    # test_total += labels.shape[0]
+                    # test_correct += regressionAcc(outputs, labels, locLabel, device)
         test_loss = test_sum_loss / (i+1)
-        if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-            test_acc = test_loss
-            print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.04f '
-                % (valSNR, test_loss, test_acc))
-        else:
-            test_acc = round(100.0 * test_correct / test_total, 2)
-            print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.4f%% '
-                % (valSNR, test_loss, test_acc))
+        test_acc = round(100.0 * test_correct / test_total, 2)
+        print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.4f%% '
+            % (valSNR, test_loss, test_acc))
