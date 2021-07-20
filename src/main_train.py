@@ -188,14 +188,14 @@ if __name__ == "__main__":
         for i, (inputs, labels) in enumerate(train_loader, 0):
             num_batches = len(train_loader)
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
-            print(labels)
+            # print(labels)
             # print("Input shape: ",inputs.shape)
             outputs = model(inputs)
             
             # print("Ouput shape: ", outputs.shape)
             # print("Label shape: ", labels.shape)
             if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-                loss = DoALoss(outputs, labels)
+                loss = torch.mean(DoALoss(outputs, labels))
             else:
                 loss = criterion(outputs, labels)
             if args.isDebug:
@@ -235,7 +235,7 @@ if __name__ == "__main__":
                 
                 outputs = model(inputs)
                 if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-                    val_loss = DoALoss(outputs, labels)
+                    val_loss = torch.mean(DoALoss(outputs, labels))
                 else:
                     val_loss = criterion(outputs, labels) # .unsqueeze_(1)
                 val_sum_loss += val_loss.item()
