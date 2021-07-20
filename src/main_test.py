@@ -162,7 +162,7 @@ if __name__ == "__main__":
                         labels_[fileCount][0] = locIndex
                         labels_[fileCount][1:3] = locIndex2Label(locLabel, locIndex, args.task)
                     else:
-                        labels_[fileCount] = locIndex
+                        labels_[fileCount] = locIndex2Label(locLabel, locIndex, args.task)
 
 
                     '''if fileCount == 23:
