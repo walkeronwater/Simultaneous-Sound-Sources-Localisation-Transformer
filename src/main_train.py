@@ -82,7 +82,7 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
         preTrainEpoch = len(trainHistory)
         if phase == "train":
             print("Training will start from epoch", preTrainEpoch+1)
-        elif phase =="test":
+        else:
             print("Retrieved the epoch at", epoch)
 
         return model, optimizer, scheduler, preTrainEpoch, val_optim
