@@ -116,7 +116,6 @@ if __name__ == "__main__":
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
     model, optimizer, scheduler, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, "test")
-    print("Retrieved the model at epoch: ", pretrainEpoch)
 
     for valSNR in valSNRList:
         fileCount = 0   # count the number of data samples

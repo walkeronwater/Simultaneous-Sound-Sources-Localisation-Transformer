@@ -79,11 +79,13 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
             history['valid_acc'][epoch-1]
         )
         
-        epoch = len(trainHistory)
+        preTrainEpoch = len(trainHistory)
         if phase == "train":
-            print("Training will start from epoch", epoch+1)
+            print("Training will start from epoch", preTrainEpoch+1)
+        elif phase =="test":
+            print("Retrieved the epoch at", epoch)
 
-        return model, optimizer, scheduler, epoch, val_optim
+        return model, optimizer, scheduler, preTrainEpoch, val_optim
 
 def getLR(optimizer):
     for param_group in optimizer.param_groups:
@@ -208,7 +210,6 @@ if __name__ == "__main__":
 
             if not (args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression"):
                 _, predicted = torch.max(outputs.data, 1)
-                # print(predicted.shape)
                 train_total += labels.size(0)
                 train_correct += predicted.eq(labels.data).sum().item()
         train_loss = train_sum_loss / (i+1)
