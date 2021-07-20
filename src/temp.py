@@ -311,6 +311,7 @@ if __name__ == "__main__":
         '''
         testing
         '''
+        del optimizer, scheduler
         if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
             # confusion matrix
             confusion_matrix = torch.zeros(predNeuron(args.task), predNeuron(args.task))
