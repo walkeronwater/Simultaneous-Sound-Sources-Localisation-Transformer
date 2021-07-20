@@ -211,8 +211,6 @@ if __name__ == "__main__":
                 else:
                     test_total += labels.shape[0]
                     test_correct += regressionAcc(outputs, labels, locLabel, device)
-        print(predicted)
-        print(labels)
         test_loss = test_sum_loss / (i+1)
         if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
             test_acc = round(100.0 * test_correct / test_total, 2)
