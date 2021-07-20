@@ -30,18 +30,6 @@ from model_transformer import *
 from loss import DoALoss
 from main_train import *
 
-
-def testPhase(
-    modelDir,
-    task,
-    model
-
-):
-    learning_rate = 1e-4
-    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, modelDir, args.task, "test")
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing hyperparamters')
     parser.add_argument('audioDir', type=str, help='Directory of audio files')
@@ -104,7 +92,8 @@ if __name__ == "__main__":
     model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
     learning_rate = 1e-4
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    model, optimizer, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, args.modelDir, args.task, "test")
+    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
+    model, optimizer, scheduler, pretrainEpoch, val_acc_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, "test")
     print("Retrieved the model at epoch: ", pretrainEpoch)
 
     for valSNR in valSNRList:
