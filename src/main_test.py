@@ -45,7 +45,7 @@ def regressionAcc(output, label, locLabel, device):
         # print("label", int(label[i, 0].item()))
         # print("pred", pred.item())
     # raise SystemExit("debug")
-    print('Acc: ', correct/output.shape[0])
+    # print('Acc: ', correct/output.shape[0])
     return correct
    
 
@@ -188,6 +188,7 @@ if __name__ == "__main__":
         test_total = 0.0
         test_sum_loss = 0.0
         test_loss = 0.0
+        test_acc = 0.0
         model.eval()
         criterion = nn.CrossEntropyLoss()
         with torch.no_grad():
@@ -207,12 +208,13 @@ if __name__ == "__main__":
 
                     for t, p in zip(labels.view(-1), predicted.view(-1)):
                         confusion_matrix[t.long(), p.long()] += 1
-                else:
-                    test_total += labels.shape[0]
-                    test_correct += regressionAcc(outputs, labels, locLabel, device)
+                # else:
+                    # test_total += labels.shape[0]
+                    # test_correct += regressionAcc(outputs, labels, locLabel, device)
         test_loss = test_sum_loss / (i+1)
         if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-            test_acc = round(100.0 * test_correct / test_total, 2)
+            test_acc = test_loss
+            # test_acc = round(100.0 * test_correct / test_total, 2)
             print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.04f '
                 % (valSNR, test_loss, test_acc))
         else:
