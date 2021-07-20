@@ -51,6 +51,7 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
     checkpoint = torch.load(loadPath+"param.pth.tar")
     if checkpoint['task'] == task:
         epoch = checkpoint['epoch']
+        print("Model is retrieved at epoch ", epoch)
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         try:
@@ -82,8 +83,6 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
         preTrainEpoch = len(trainHistory)
         if phase == "train":
             print("Training will start from epoch", preTrainEpoch+1)
-        else:
-            print("Retrieved the epoch at", epoch)
 
         return model, optimizer, scheduler, preTrainEpoch, val_optim
 
