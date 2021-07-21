@@ -197,7 +197,7 @@ if __name__ == "__main__":
                 outputs = model(inputs)
 
                 if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-                    loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3])))
+                    loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
                 else:
                     loss = criterion(outputs, labels)
                 test_sum_loss += loss.item()
