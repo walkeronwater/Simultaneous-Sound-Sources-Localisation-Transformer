@@ -5,6 +5,7 @@ from scipy import signal
 import random
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure
 import os
 import h5py
 import csv
@@ -48,7 +49,9 @@ def loadHistory(loadPath, figPath, isDebug):
         for idx in history.keys(): 
             print(idx, history[idx])
 
-    plt.subplot(121)
+    # plt.subplot(211, figs)
+    # fig = matplotlib.pyplot.gcf()
+    # figure(figsize=(8, 6), dpi=80)
     plt.plot(range(1, len(history['train_loss'])+1), history['train_loss'])
     plt.plot(range(1, len(history['train_loss'])+1), history['valid_loss'])
     plt.xlabel('epoch')
@@ -57,8 +60,10 @@ def loadHistory(loadPath, figPath, isDebug):
     plt.title('Loss curve')
     plt.legend(['Train', 'Valid'])
     plt.grid()
+    plt.savefig(figPath+"loss.png")
+    plt.show()
 
-    plt.subplot(122)
+    # plt.subplot(212)
     plt.plot(range(1, len(history['train_acc'])+1), history['train_acc'])
     plt.plot(range(1, len(history['train_acc'])+1), history['valid_acc'])
     plt.xlabel('epoch')
@@ -67,7 +72,7 @@ def loadHistory(loadPath, figPath, isDebug):
     plt.title('Accuracy curve')
     plt.legend(['Train', 'Valid'])
     plt.grid()
-    plt.savefig(figPath+"lrCurves.png")
+    plt.savefig(figPath+"acc.png")
     plt.show()
 
 if __name__ == "__main__":
