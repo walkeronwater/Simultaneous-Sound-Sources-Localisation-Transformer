@@ -111,11 +111,12 @@ if __name__ == "__main__":
     valSNRList = [-10,-5,0,5,10,15,20,25,100]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
+    # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
+    model = CNNModel(task="allClass", dropout=0, isDebug=False).to(device)
     learning_rate = 1e-4
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
-    model, val_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, "test")
+    model, val_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, phase="test", whichModel="bestValLoss")
 
     for valSNR in valSNRList:
         fileCount = 0   # count the number of data samples

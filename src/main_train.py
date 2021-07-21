@@ -47,8 +47,11 @@ def saveCurves(epoch, tl, ta, vl, va, savePath, task):
         'task': task
     }, savePath)
 
-def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
-    checkpoint = torch.load(loadPath+"param.pth.tar")
+def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase, whichModel=None):
+    if whichModel != None:
+        checkpoint = torch.load(loadPath+"param"+"_"+whichModel+".pth.tar")
+    else:
+        checkpoint = torch.load(loadPath+"param.pth.tar")
 
     if checkpoint['task'] == task:
         epoch = checkpoint['epoch']
@@ -277,7 +280,8 @@ if __name__ == "__main__":
             args.task
         )
 
-        if val_acc <= val_acc_optim:
+        if val_acc > val_acc_optim or ((val_acc == val_acc_optim) and (val_loss <= val_loss_optim)):
+            val_acc_optim = val_acc
             saveParam(
                 epoch+1,
                 model,
