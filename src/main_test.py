@@ -98,7 +98,7 @@ if __name__ == "__main__":
     Nfreq = 512
     Ntime = 44
     Ncues = 5
-    Nloc = 187
+    Nloc = 24
     Nsample = Nloc * args.samplePerSNR
 
     # allocate tensors cues and labels in RAM
