@@ -204,7 +204,7 @@ if __name__ == "__main__":
             # print("Ouput shape: ", outputs.shape)
             # print("Label shape: ", labels.shape)
             if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-                loss = torch.mean(DoALoss(outputs, labels))
+                loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
             else:
                 loss = criterion(outputs, labels)
             if args.isDebug:
@@ -243,7 +243,7 @@ if __name__ == "__main__":
                 
                 outputs = model(inputs)
                 if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-                    val_loss = torch.mean(DoALoss(outputs, labels))
+                    val_loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
                 else:
                     val_loss = criterion(outputs, labels) # .unsqueeze_(1)
                 val_sum_loss += val_loss.item()
