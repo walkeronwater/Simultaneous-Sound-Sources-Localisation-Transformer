@@ -56,13 +56,14 @@ if __name__ == "__main__":
     parser.add_argument('modelDir', type=str, help='Directory of saved model')
     parser.add_argument('numWorker', type=int, help='Number of workers')
     parser.add_argument('task', type=str, help='Task')
+    parser.add_argument('whichModel', type=str, help='whichModel')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
     parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
     parser.add_argument('--samplePerSNR', default=100, type=int, help='Number of samples per SNR')
-    parser.add_argument('--whichModel', default="bestValLoss", type=str, help='whichModel')
+    parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
@@ -72,8 +73,6 @@ if __name__ == "__main__":
         args.hrirDir += "/"
     if args.modelDir[-1] != "/":
         args.modelDir += "/"
-    if args.whichModel == "None":
-        args.whichModel = None
     print("Audio files directory: ", args.audioDir)
     print("HRIR files directory: ", args.hrirDir)
     print("Model directory: ", args.modelDir)
@@ -114,12 +113,14 @@ if __name__ == "__main__":
     valSNRList = [-10,-5,0,5,10,15,20,25,100]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    model = CNNModel(task="allClass", dropout=0, isDebug=False).to(device)
+    if args.whichModel == "transformer":
+        model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
+    elif args.whichModel == "CNN":
+        model = CNNModel(task=args.task, dropout=0, isDebug=False).to(device)
     learning_rate = 1e-4
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
-    model, val_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, phase="test", whichModel=args.whichModel)
+    model, val_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, phase="test", whichBest=args.whichBest)
 
     for valSNR in valSNRList:
         fileCount = 0   # count the number of data samples
