@@ -62,6 +62,7 @@ if __name__ == "__main__":
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
     parser.add_argument('--samplePerSNR', default=100, type=int, help='Number of samples per SNR')
+    parser.add_argument('--whichModel', default="bestValLoss", type=str, help='whichModel')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
@@ -116,7 +117,7 @@ if __name__ == "__main__":
     learning_rate = 1e-4
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
-    model, val_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, phase="test", whichModel="bestValLoss")
+    model, val_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, phase="test", whichModel=args.whichModel)
 
     for valSNR in valSNRList:
         fileCount = 0   # count the number of data samples
