@@ -148,6 +148,10 @@ if __name__ == "__main__":
     # path = "./HRTF/IRC*"
     # hrirSet, locLabel, fs_HRIR = loadHRIR(path)
 
-    dataset = MyDataset("./saved_cues_temp/", "allRegression")
-    for i in range(25):
-        print(dataset[i][1].shape)
+    dataset = MyDataset("./saved_cues_temp/", "azimClass", isDebug=True)
+    train_loader, valid_loader = splitDataset(32, [0.8, 0.2], 0, dataset)
+
+    for i, data in enumerate(train_loader):
+        inputs, labels = data
+    # for i in range(25):
+    #     print(dataset[i][1].shape)
