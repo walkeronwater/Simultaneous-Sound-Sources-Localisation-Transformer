@@ -73,8 +73,8 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
             for idx in history.keys():
                 history[idx].append(checkpt[idx])
 
-        val_optim = history['valid_loss'][epoch-1]
-        print("val_optim: ", val_optim)
+        val_loss_optim = history['valid_loss'][epoch-1]
+        print("val_loss_optim: ", val_loss_optim)
         print("Corresponding validation accuracy: ",
             history['valid_acc'][epoch-1]
         )
@@ -88,9 +88,9 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase):
             
             preTrainEpoch = len(trainHistory)
             print("Training will start from epoch", preTrainEpoch+1)
-            return model, optimizer, scheduler, preTrainEpoch, val_optim
+            return model, optimizer, scheduler, preTrainEpoch, val_loss_optim
         elif phase == "test":
-            return model, val_optim
+            return model, val_loss_optim
     else:
         raise SystemExit("Task doesn't match")
 
@@ -153,15 +153,16 @@ if __name__ == "__main__":
     Nfreq = 512
     Ncues = 5
     # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
-
+    # model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
+    model = CNNModel(task=args.task, dropout=0).to(device)
     # num_epochs = 30
     num_epochs = args.numEpoch
     pretrainEpoch = 0
     learning_rate = args.lrRate
     early_epoch = 20
     early_epoch_count = 0
-    val_optim = float('inf')
+    val_loss_optim = float('inf')
+    val_acc_optim = 0.0
 
     num_warmup_steps = 2
     num_training_steps = num_epochs+1
@@ -183,7 +184,7 @@ if __name__ == "__main__":
         os.mkdir(args.modelDir)
     else:
         try:
-            model, optimizer, scheduler, pretrainEpoch, val_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, "train")
+            model, optimizer, scheduler, pretrainEpoch, val_loss_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, "train")
             print("Found a pre-trained model in directory", args.modelDir)
         except:
             print("Not found any pre-trained model in directory", args.modelDir)
@@ -276,11 +277,21 @@ if __name__ == "__main__":
             args.task
         )
 
+        if val_acc <= val_acc_optim:
+            saveParam(
+                epoch+1,
+                model,
+                optimizer,
+                scheduler,
+                args.modelDir + "param_bestValAcc.pth.tar",
+                args.task
+            )
+
         # early stopping
-        if (val_loss >= val_optim):
+        if val_loss >= val_loss_optim:
             early_epoch_count += 1
         else:
-            val_optim = val_loss
+            val_loss_optim = val_loss
             early_epoch_count = 0
 
             saveParam(
@@ -288,7 +299,7 @@ if __name__ == "__main__":
                 model,
                 optimizer,
                 scheduler,
-                args.modelDir + "param.pth.tar",
+                args.modelDir + "param_bestValLoss.pth.tar",
                 args.task
             )
             

@@ -32,6 +32,53 @@ def predNeuron(task):
         return 1
     elif task == "allRegression":
         return 2
+
+class CNNModel(nn.Module):
+    def __init__(self, task, dropout, isDebug=False):
+        super(CNNModel, self).__init__()
+
+        Nloc = predNeuron(task)
+        self.convLayers = nn.Sequential(
+            nn.Conv2d(5, 32, (5,5), stride=3),
+            nn.ReLU(),
+            nn.BatchNorm2d(32),
+            nn.Conv2d(32, 64, (3,3), stride=2),
+            nn.ReLU(),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(64, 96, (3,3), stride=2),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
+            # nn.Conv2d(96, 128, (3,3), stride=2),
+            # nn.ReLU(),
+            # nn.BatchNorm2d(128)
+        )
+        self.FCLayers = nn.Sequential(
+            nn.Linear(7872, 1024),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(1024, 512),
+            nn.ReLU(),
+            nn.Linear(512, 256),
+            nn.ReLU(),
+            nn.Linear(256, Nloc)
+        )
+        self.isDebug = isDebug
+    def forward(self, cues):
+        out = self.convLayers(cues.permute(0,3,2,1))
+        if self.isDebug:
+            print("Shape after convLayers: ", out.shape)
+        out = torch.flatten(out, 1, -1)
+
+        if self.isDebug:
+            print("Shape after flatten: ", out.shape)
+
+        out = self.FCLayers(out)
+        if self.isDebug:
+            print("Shape after FClayers (output): ", out.shape)
+
+        return out
+
+
 class SelfAttention(nn.Module):
     def __init__(self, Nfreq, heads):
         super(SelfAttention, self).__init__()
@@ -354,15 +401,20 @@ if __name__ == "__main__":
     Nfreq = 512
     Ncues = 5
     # model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
-    model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
+    # model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
+    model = CNNModel(task="allClass", dropout=0, isDebug=True).to(device)
 
     testInput = torch.rand(2, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     # testInput = x[0].unsqueeze(0).to(device)
     # testLabel = x[1].to(device)
-    print("testInput shape: ", testInput.shape)
+    # print("testInput shape: ", testInput.shape)
     # print(testLabel)
-    testOutput = model(testInput)
+
+    print(testInput.permute(0,3,1,2).shape)
+    # raise SystemExit("debug")
+    testOutput = model(testInput.permute(0,3,2,1))
+    print(testOutput.shape)
     # print(torch.max(testOutput, 1))
 
-    summary(model, (Nfreq, Ntime, Ncues))
+    summary(model, (Ncues, Nfreq, Ntime))
     
