@@ -257,14 +257,104 @@ class FC3(nn.Module):
         # out = self.softmaxLayer(out)
         return out
 
+class DIYModel(nn.Module):
+    def __init__(
+        self,
+        task,
+        Ntime, # time windows
+        Nfreq, # frequency bins
+        Ncues,
+        num_layers,
+        numFC,
+        heads,
+        device,
+        forward_expansion,
+        dropout,
+        isDebug
+    ):
+        super(DIYModel, self).__init__()
+        self.encoder = Encoder(           
+            Nfreq, # frequency bins
+            num_layers,
+            heads,
+            device,
+            forward_expansion,
+            dropout,
+        )
+        Nloc = predNeuron(task)
+        print("Number of neurons in the final layer: ", Nloc)
+        
+        if numFC >= 3:
+            self.FClayers = nn.ModuleList(
+                [
+                    nn.Linear(Ntime*Nfreq*Ncues, 256),
+                    nn.BatchNorm1d(256),
+                    nn.ReLU(),
+                    nn.Dropout(dropout),
+                    nn.Linear(256, Nloc),
+                    nn.ReLU()
+                ]
+            )
+            self.FClayers.extend(
+                [
+                    nn.Linear(Nloc, Nloc)
+                    for _ in range(numFC-2)
+                ]
+            )
+        else:
+            self.FClayers = nn.Sequential(
+                nn.Linear(Ntime*Nfreq*Ncues, 256),
+                nn.BatchNorm1d(256),
+                nn.ReLU(),
+                nn.Dropout(dropout),
+                nn.Linear(256, Nloc),
+                nn.ReLU(),
+                nn.Linear(Nloc, Nloc)
+            )
+
+        # self.sequentialFC = nn.Sequential(
+        #     nn.Linear(Ntime*Nfreq*Ncues, 256),
+        #     nn.BatchNorm1d(256),
+        #     nn.ReLU(),
+        #     nn.Dropout(dropout),
+        #     nn.Linear(256, Nloc)
+        #     nn.ReLU()
+        #     nn.Linear(Nloc, Nloc)
+        # )
+
+        # self.softmaxLayer = nn.Softmax(dim = -1)
+        self.isDebug = isDebug
+    def forward(self, cues):
+        encList = []
+        for i in range(cues.shape[-1]):
+            enc = self.encoder(cues[:,:,:,0].permute(0,2,1))
+            encList.append(enc)
+
+        if self.isDebug:
+            print("Encoder for one cue shape: ", enc.shape)
+
+        out = torch.stack(encList)
+        out = out.permute(1,2,3,0)
+
+        out = torch.flatten(out, 1, -1)
+        if self.isDebug:
+            print("Encoder output shape: ", out.shape)
+
+        for layers in self.FClayers:
+            out = layers(out)
+
+        # out = self.softmaxLayer(out)
+        return out
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    numLayers = 6
     task = "allRegression"
+    numEnc = 6
+    numFC = 3
     Ntime = 44
     Nfreq = 512
     Ncues = 5
-    model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
+    # model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
+    model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
 
     testInput = torch.rand(2, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     # testInput = x[0].unsqueeze(0).to(device)
