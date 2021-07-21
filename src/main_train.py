@@ -152,7 +152,8 @@ if __name__ == "__main__":
     Ntime = 44
     Nfreq = 512
     Ncues = 5
-    model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
+    # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
+    model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
 
     # num_epochs = 30
     num_epochs = args.numEpoch
