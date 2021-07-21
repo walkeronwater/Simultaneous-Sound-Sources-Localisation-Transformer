@@ -337,7 +337,7 @@ class DIYModel(nn.Module):
                     nn.Linear(Ntime*Nfreq*Ncues, 256),
                     nn.BatchNorm1d(256),
                     nn.ReLU(),
-                    nn.Dropout(dropout),
+                    nn.Dropout(0.2),
                     nn.Linear(256, Nloc),
                     nn.ReLU()
                 ]
@@ -353,7 +353,7 @@ class DIYModel(nn.Module):
                 nn.Linear(Ntime*Nfreq*Ncues, 256),
                 nn.BatchNorm1d(256),
                 nn.ReLU(),
-                nn.Dropout(dropout),
+                nn.Dropout(0.2),
                 nn.Linear(256, Nloc),
                 nn.ReLU(),
                 nn.Linear(Nloc, Nloc)
@@ -412,9 +412,9 @@ if __name__ == "__main__":
 
     print(testInput.permute(0,3,1,2).shape)
     # raise SystemExit("debug")
-    testOutput = model(testInput.permute(0,3,2,1))
+    testOutput = model(testInput)
     print(testOutput.shape)
     # print(torch.max(testOutput, 1))
 
-    summary(model, (Ncues, Nfreq, Ntime))
+    summary(model, (Nfreq, Ntime, Ncues))
     
