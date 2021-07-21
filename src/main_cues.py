@@ -60,7 +60,7 @@ if __name__ == "__main__":
         cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
         labels_ = torch.zeros((Nsample, 1))
 
-    valSNRList = [-10,-5,0,5,10,15,20,100]
+    valSNRList = [-5,0,5,10,15,20,100]
 
     dirName = args.cuesDir
 
