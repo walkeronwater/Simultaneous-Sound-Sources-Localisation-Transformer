@@ -72,7 +72,7 @@ if __name__ == "__main__":
         args.hrirDir += "/"
     if args.modelDir[-1] != "/":
         args.modelDir += "/"
-    if args.whichModel != "None":
+    if args.whichModel == "None":
         args.whichModel = None
     print("Audio files directory: ", args.audioDir)
     print("HRIR files directory: ", args.hrirDir)
