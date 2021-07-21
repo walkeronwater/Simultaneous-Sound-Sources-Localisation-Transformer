@@ -215,7 +215,7 @@ if __name__ == "__main__":
             train_sum_loss += loss.item()
             optimizer.zero_grad()
             loss.backward()
-            # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
             optimizer.step()
 
             if not (args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression"):
