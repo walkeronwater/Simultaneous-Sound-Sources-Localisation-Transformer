@@ -107,6 +107,7 @@ if __name__ == "__main__":
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
     parser.add_argument('numWorker', type=int, help='Number of workers')
     parser.add_argument('task', type=str, help='Task')
+    parser.add_argument('whichModel', type=str, help='whichModel')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
@@ -128,6 +129,7 @@ if __name__ == "__main__":
     print("Task: ", args.task)
     trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
     print("Train validation split: ", trainValidSplit)
+    print("Model: ", args.whichModel)
     print("Number of encoder layers: ", args.numEnc)
     print("Number of FC layers: ", args.numFC)
     print("Learning rate: ", args.lrRate)
@@ -157,7 +159,10 @@ if __name__ == "__main__":
     Ncues = 5
     # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
     # model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    model = CNNModel(task=args.task, dropout=0).to(device)
+    if args.whichModel == "transformer":
+        model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
+    elif args.whichModel == "CNN":
+        model = CNNModel(task=args.task, dropout=0, isDebug=False).to(device)
     # num_epochs = 30
     num_epochs = args.numEpoch
     pretrainEpoch = 0
