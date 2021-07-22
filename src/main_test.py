@@ -220,7 +220,7 @@ if __name__ == "__main__":
         if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
             test_acc = radian2Degree(test_loss)
             # test_acc = round(100.0 * test_correct / test_total, 2)
-            print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.04f '
+            print('For SNR: %d Test_Loss: %.04f | RMS angle (degree): %.04f '
                 % (valSNR, test_loss, test_acc))
         else:
             test_acc = round(100.0 * test_correct / test_total, 2)
