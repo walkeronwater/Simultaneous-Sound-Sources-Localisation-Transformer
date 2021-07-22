@@ -466,6 +466,10 @@ def getLR(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
+def setLR(newLR, optimizer):
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = newLR
+    return param_group['lr']
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

@@ -124,6 +124,9 @@ if __name__ == "__main__":
             model, optimizer, scheduler, pretrainEpoch, val_loss_optim = loadCheckpoint(
                 model, optimizer, scheduler, args.modelDir, args.task, phase="train", whichBest=args.whichBest
             )
+
+            if args.lrRate != 1e-4:
+                optimizer = setLR(args.lrRate, optimizer)
             print("Found a pre-trained model in directory", args.modelDir)
         except:
             print("Not found any pre-trained model in directory", args.modelDir)

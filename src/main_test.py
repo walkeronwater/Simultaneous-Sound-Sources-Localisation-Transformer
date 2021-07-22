@@ -63,7 +63,7 @@ if __name__ == "__main__":
     parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
-    parser.add_argument('--samplePerSNR', default=100, type=int, help='Number of samples per SNR')
+    parser.add_argument('--samplePerSNR', default=10, type=int, help='Number of samples per SNR')
     parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
