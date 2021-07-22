@@ -29,6 +29,20 @@ from utils import *
 from model_transformer import *
 from loss import DoALoss
 
+def data_parallel(module, input, device_ids, output_device=None):
+    if not device_ids:
+        return module(input)
+
+    if output_device is None:
+        output_device = device_ids[0]
+
+    replicas = nn.parallel.replicate(module, device_ids)
+    inputs = nn.parallel.scatter(input, device_ids)
+    replicas = replicas[:len(inputs)]
+    outputs = nn.parallel.parallel_apply(replicas, inputs)
+    return nn.parallel.gather(outputs, output_device)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training hyperparamters')
     parser.add_argument('dataDir', type=str, help='Directory of saved cues')
@@ -45,6 +59,7 @@ if __name__ == "__main__":
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
     parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
+    parser.add_argument('--ngpus', default=0, type=int, help='Number of GPUs')
 
     args = parser.parse_args()
     if args.dataDir[-1] != "/":
@@ -89,9 +104,9 @@ if __name__ == "__main__":
     # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
     # model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
     if args.whichModel == "transformer":
-        model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
+        model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
     elif args.whichModel == "CNN":
-        model = CNNModel(task=args.task, dropout=0, isDebug=False).to(device)
+        model = CNNModel(task=args.task, dropout=0, isDebug=False)
     # num_epochs = 30
     num_epochs = args.numEpoch
     pretrainEpoch = 0
@@ -127,7 +142,12 @@ if __name__ == "__main__":
             print("Found a pre-trained model in directory", args.modelDir)
         except:
             print("Not found any pre-trained model in directory", args.modelDir)
-
+    
+    if torch.cuda.device_count() > 1:
+        print("Let's use", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model)
+    model.to(device)
+    
     for epoch in range(pretrainEpoch, pretrainEpoch + num_epochs):
         print("\nEpoch %d, lr = %f" % ((epoch+1), getLR(optimizer)))
         
