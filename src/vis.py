@@ -6,7 +6,7 @@ import os
 import torch
 import torch.nn as nn
 
-# visualise
+# visualise the spectrogram
 def showSpectrogram(Zxx, fs, figTitle, isLog=True):
     fig, ax = plt.subplots()
     print("Spectrogram shape: ", Zxx.shape)
@@ -62,5 +62,9 @@ def plotHistory(checkptPath):
     plt.grid()
     plt.show()
 
+
+# [TODO]
+# need a method to visualise the cues
+
 if __name__ == "__main__":
-    plotHistory("D:/SSSL/model/Azim_221376_L6_D0.3")
+    pass

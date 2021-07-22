@@ -27,7 +27,8 @@ from torchsummary import summary
 from load_data import *
 from utils import *
 from model_transformer import *
-from loss import DoALoss
+from loss import *
+from main_cues import CuesShape
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training hyperparamters')
@@ -76,21 +77,29 @@ if __name__ == "__main__":
         os.path.isdir(dirName)
     ), "Data directory doesn't exist."
 
-    dataset = MyDataset(dirName, args.task, args.isDebug)
-    print("Dataset length: ", dataset.__len__())
+    train_dataset = MyDataset(dirName+"/train/", args.task, args.isDebug)
+    valid_dataset = MyDataset(dirName+"/valid/", args.task, args.isDebug)
+    print("Dataset length: ", train_dataset.__len__())
+    print("Dataset length: ", valid_dataset.__len__())
 
-    train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
+    isPersistent = True if args.numWorker > 0 else False
+    train_loader = MultiEpochsDataLoader(
+        dataset=train_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorker, persistent_workers=isPersistent
+    )
+    valid_loader = MultiEpochsDataLoader(
+        dataset=valid_dataset, batch_size=args.batchSize, shuffle=False, num_workers=args.numWorker, persistent_workers=isPersistent
+    )
+    # train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    Nsample = dataset.__len__()
-    Ntime = 44
-    Nfreq = 512
-    Ncues = 5
+    Nfreq = CuesShape.Nfreq
+    Ntime = CuesShape.Ntime
+    Ncues = CuesShape.Ncues
     # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
     # model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    if args.whichModel == "transformer":
+    if args.whichModel.lower() == "transformer":
         model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    elif args.whichModel == "CNN":
+    elif args.whichModel.lower() == "cnn":
         model = CNNModel(task=args.task, dropout=0, isDebug=False).to(device)
     # num_epochs = 30
     num_epochs = args.numEpoch
@@ -114,8 +123,10 @@ if __name__ == "__main__":
     #     num_training_steps=num_training_steps
     # )
     scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
-    criterion = nn.CrossEntropyLoss()
-    # criterion = nn.MSELoss()
+    if args.task in ["elevRegression","azimRegression","allRegression"]:
+        criterion = nn.MSELoss()
+    else:
+        criterion = nn.CrossEntropyLoss()
 
     if not os.path.isdir(args.modelDir):
         os.mkdir(args.modelDir)
@@ -149,10 +160,7 @@ if __name__ == "__main__":
             
             # print("Ouput shape: ", outputs.shape)
             # print("Label shape: ", labels.shape)
-            if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-                loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
-            else:
-                loss = criterion(outputs, labels)
+            loss = criterion(outputs, labels)
             if args.isDebug:
                 print("Loss", loss.shape)
             train_sum_loss += loss.item()
@@ -161,14 +169,14 @@ if __name__ == "__main__":
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
             optimizer.step()
 
-            if not (args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression"):
+            if not (args.task in ["elevRegression","azimRegression","allRegression"]):
                 _, predicted = torch.max(outputs.data, 1)
                 train_total += labels.size(0)
                 train_correct += predicted.eq(labels.data).sum().item()
         train_loss = train_sum_loss / (i+1)
-        if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-            train_acc = train_loss
-            print('Training Loss: %.04f | Training Acc: %.04f '
+        if args.task in ["elevRegression","azimRegression","allRegression"]:
+            train_acc = radian2Degree(train_loss)
+            print('Training Loss: %.04f | RMS angle (degree): %.04f '
                 % (train_loss, train_acc))
         else:
             train_acc = round(100.0 * train_correct / train_total, 2)
@@ -188,25 +196,33 @@ if __name__ == "__main__":
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 
                 outputs = model(inputs)
-                if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-                    val_loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
-                else:
-                    val_loss = criterion(outputs, labels) # .unsqueeze_(1)
+                val_loss = criterion(outputs, labels)
                 val_sum_loss += val_loss.item()
 
-                if not (args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression"):
+                if not (args.task in ["elevRegression","azimRegression","allRegression"]):
                     _, predicted = torch.max(outputs.data, 1)
                     val_total += labels.size(0)
                     val_correct += predicted.eq(labels.data).sum().item()
             val_loss = val_sum_loss / (i+1)
-            if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-                val_acc = val_loss
-                print('Val_Loss: %.04f | Val_Acc: %.04f '
+            if args.task in ["elevRegression","azimRegression","allRegression"]:
+                val_acc = radian2Degree(val_loss)
+                print('Validation Loss: %.04f | RMS angle (degree): %.04f '
                     % (val_loss, val_acc))
             else:
                 val_acc = round(100.0 * val_correct / val_total, 2)
-                print('Val_Loss: %.04f | Val_Acc: %.4f%% '
+                print('Validation Loss: %.04f | Validation Acc: %.4f%% '
                     % (val_loss, val_acc))
+                if val_acc > val_acc_optim or ((val_acc == val_acc_optim) and (val_loss <= val_loss_optim)):
+                    val_acc_optim = val_acc
+                    # for classfication, we also save the model with the best validation accuracy
+                    saveParam(
+                        epoch+1,
+                        model,
+                        optimizer,
+                        scheduler,
+                        args.modelDir + "param_bestValAcc.pth.tar",
+                        args.task
+                    )
             scheduler.step(val_loss)
 
         saveCurves(
@@ -218,17 +234,6 @@ if __name__ == "__main__":
             args.modelDir + "curve_epoch_" + str(epoch+1) + ".pth.tar",
             args.task
         )
-
-        if val_acc > val_acc_optim or ((val_acc == val_acc_optim) and (val_loss <= val_loss_optim)):
-            val_acc_optim = val_acc
-            saveParam(
-                epoch+1,
-                model,
-                optimizer,
-                scheduler,
-                args.modelDir + "param_bestValAcc.pth.tar",
-                args.task
-            )
 
         # early stopping
         if val_loss >= val_loss_optim:

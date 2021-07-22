@@ -30,6 +30,7 @@ from utils import *
 from model_transformer import *
 from loss import *
 from main_train import *
+from main_cues import *
 
 
 def regressionAcc(output, label, locLabel, device):
@@ -97,12 +98,13 @@ if __name__ == "__main__":
     Naudio = len(path)
     print("Number of audio files: ", Naudio)
 
-    lenSliceInSec = 0.5   # length of audio slice in sec
-    Nfreq = 512
-    Ntime = 44
-    Ncues = 5
-    Nloc = 187
+    lenSliceInSec = CuesShape.lenSliceInSec
+    Nfreq = CuesShape.Nfreq
+    Ntime = CuesShape.Ntime
+    Ncues = CuesShape.Ncues
+    Nloc = CuesShape.Nloc
     Nsample = Nloc * args.samplePerSNR
+    valSNRList = [-10,-5,0,5,10,15,20,25,100]
 
     # allocate tensors cues and labels in RAM
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
@@ -110,8 +112,6 @@ if __name__ == "__main__":
         labels_ = torch.zeros((Nsample,3), dtype=torch.float32)
     else:
         labels_ = torch.zeros((Nsample,))
-
-    valSNRList = [-10,-5,0,5,10,15,20,25,100]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if args.whichModel == "transformer":

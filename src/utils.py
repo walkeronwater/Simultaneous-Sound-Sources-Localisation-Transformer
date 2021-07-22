@@ -98,12 +98,13 @@ def calILD(seqL, seqR):
     ild = 20*np.log10(np.divide(np.absolute(seqL), np.absolute(seqR), out=np.zeros_like(np.absolute(seqL)), where=np.absolute(seqR)!=0))
     return ild
 
-# method to normalise a sequence which can be broadcasted to a sequence of sequence
+# [TODO] method to normalise a sequence which can be broadcasted to a sequence of sequence
+# min-max/standardise/L2 norm for each tensor like an image
 def normalise(seq):
     # return (seq - np.mean(seq))/(np.std(seq))
     return seq/np.linalg.norm(seq)
 
-# [todo] method to log IPD cues and spectral cues
+# [TODO] method to log IPD cues and spectral cues
 '''def cuesLog():'''
 
 def calSpectrogram(seq):
