@@ -114,7 +114,7 @@ if __name__ == "__main__":
     if args.whichModel.lower() == "transformer":
         model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
     elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, dropout=0, isDebug=False)
+        model = CNNModel(task=args.task, dropout=args.valDropout, isDebug=False)
     # num_epochs = 30
     num_epochs = args.numEpoch
     pretrainEpoch = 0
