@@ -105,7 +105,7 @@ if __name__ == "__main__":
     num_epochs = args.numEpoch
     pretrainEpoch = 0
     learning_rate = args.lrRate
-    early_epoch = 20
+    early_epoch = 10
     early_epoch_count = 0
     val_loss_optim = float('inf')
     val_acc_optim = 0.0
@@ -122,7 +122,8 @@ if __name__ == "__main__":
     #     optimizer, num_warmup_steps=num_warmup_steps, 
     #     num_training_steps=num_training_steps
     # )
-    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
+
+    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True)
     if args.task in ["elevRegression","azimRegression","allRegression"]:
         criterion = nn.MSELoss()
     else:
