@@ -183,9 +183,7 @@ if __name__ == "__main__":
 
         test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=True, num_workers=args.numWorker)
 
-        '''
-        testing
-        '''
+        # test phase
         
         if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
             # confusion matrix
@@ -197,16 +195,16 @@ if __name__ == "__main__":
         test_loss = 0.0
         test_acc = 0.0
         model.eval()
-        criterion = nn.CrossEntropyLoss()
+        if args.task in ["elevRegression","azimRegression","allRegression"]:
+            criterion = nn.MSELoss()
+        else:
+            criterion = nn.CrossEntropyLoss()
         with torch.no_grad():
             for i, (inputs, labels) in enumerate(test_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 outputs = model(inputs)
-
-                if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
-                    loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
-                else:
-                    loss = criterion(outputs, labels)
+                
+                loss = criterion(outputs, labels)
                 test_sum_loss += loss.item()
                 if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
                     _, predicted = torch.max(outputs.data, 1)
@@ -221,10 +219,9 @@ if __name__ == "__main__":
         test_loss = test_sum_loss / (i+1)
         if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
             test_acc = radian2Degree(test_loss)
-            # test_acc = round(100.0 * test_correct / test_total, 2)
-            print('For SNR: %d Test_Loss: %.04f | RMS angle (degree): %.04f '
+            print('For SNR: %d Test Loss: %.04f | RMS angle (degree): %.04f '
                 % (valSNR, test_loss, test_acc))
         else:
             test_acc = round(100.0 * test_correct / test_total, 2)
-            print('For SNR: %d Test_Loss: %.04f | Test_Acc: %.4f%% '
+            print('For SNR: %d Test Loss: %.04f | Test Acc: %.4f%% '
                 % (valSNR, test_loss, test_acc))
