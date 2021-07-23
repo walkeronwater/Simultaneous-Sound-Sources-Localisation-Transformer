@@ -18,7 +18,7 @@ import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader, TensorDataset
 import torch.utils.data
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, LambdaLR
 from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     val_loss_optim = float('inf')
     val_acc_optim = 0.0
 
-    num_warmup_steps = 2
+    num_warmup_steps = 5
     num_training_steps = num_epochs+1
     warmup_proportion = float(num_warmup_steps) / float(num_training_steps)
 
@@ -122,8 +122,13 @@ if __name__ == "__main__":
     #     optimizer, num_warmup_steps=num_warmup_steps, 
     #     num_training_steps=num_training_steps
     # )
+    
+    lr_lambda = lambda epoch: learning_rate * np.minimum(
+        (epoch + 1) ** -0.5, (epoch + 1) * (num_warmup_steps ** -1.5)
+    )
+    scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda, verbose=True)
 
-    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True)
+    # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True)
     if args.task in ["elevRegression","azimRegression","allRegression"]:
         criterion = nn.MSELoss()
     else:
@@ -224,7 +229,8 @@ if __name__ == "__main__":
                         args.modelDir + "param_bestValAcc.pth.tar",
                         args.task
                     )
-            scheduler.step(val_loss)
+            # scheduler.step(val_loss)
+            scheduler.step()
 
         saveCurves(
             epoch+1, 
