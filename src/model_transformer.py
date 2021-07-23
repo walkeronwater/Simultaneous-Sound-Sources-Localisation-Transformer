@@ -337,7 +337,7 @@ class DIYModel(nn.Module):
                     nn.Linear(Ntime*Nfreq*Ncues, 256),
                     nn.BatchNorm1d(256),
                     nn.ReLU(),
-                    nn.Dropout(0.2),
+                    nn.Dropout(0.1),
                     nn.Linear(256, Nloc),
                     nn.ReLU()
                 ]
@@ -353,7 +353,7 @@ class DIYModel(nn.Module):
                 nn.Linear(Ntime*Nfreq*Ncues, 256),
                 nn.BatchNorm1d(256),
                 nn.ReLU(),
-                nn.Dropout(0.2),
+                nn.Dropout(0.1),
                 nn.Linear(256, Nloc),
                 nn.ReLU(),
                 nn.Linear(Nloc, Nloc)
