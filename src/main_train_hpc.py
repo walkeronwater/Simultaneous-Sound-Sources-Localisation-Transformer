@@ -119,12 +119,12 @@ if __name__ == "__main__":
     num_epochs = args.numEpoch
     pretrainEpoch = 0
     learning_rate = args.lrRate
-    early_epoch = 20
+    early_epoch = 10
     early_epoch_count = 0
     val_loss_optim = float('inf')
     val_acc_optim = 0.0
 
-    num_warmup_steps = 2
+    num_warmup_steps = 5
     num_training_steps = num_epochs+1
     warmup_proportion = float(num_warmup_steps) / float(num_training_steps)
 
@@ -136,7 +136,13 @@ if __name__ == "__main__":
     #     optimizer, num_warmup_steps=num_warmup_steps, 
     #     num_training_steps=num_training_steps
     # )
-    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
+    
+    lr_lambda = lambda epoch: learning_rate * np.minimum(
+        (epoch + 1) ** -0.5, (epoch + 1) * (num_warmup_steps ** -1.5)
+    )
+    scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda, verbose=True)
+
+    # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
 
     if not os.path.isdir(args.modelDir):
         os.mkdir(args.modelDir)
