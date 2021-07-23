@@ -413,10 +413,10 @@ def saveCurves(epoch, tl, ta, vl, va, savePath, task):
     }, savePath)
 
 def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase, whichBest=None):
-    if whichBest != "None":
-        checkpoint = torch.load(loadPath+"param"+"_"+whichBest+".pth.tar")
-    else:
+    if whichBest == "None":
         checkpoint = torch.load(loadPath+"param.pth.tar")
+    else:
+        checkpoint = torch.load(loadPath+"param"+"_"+whichBest+".pth.tar")
 
     if checkpoint['task'] == task:
         epoch = checkpoint['epoch']
@@ -470,6 +470,9 @@ def setLR(newLR, optimizer):
     for param_group in optimizer.param_groups:
         param_group['lr'] = newLR
     return optimizer
+
+#[TODO] evaluation
+# 
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

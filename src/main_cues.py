@@ -146,7 +146,8 @@ if __name__ == "__main__":
     # raise SystemExit('debug')
 
     print(trainAudioPath)
-    createCues(trainAudioPath, Nsample_train, CuesShape, dirName=args.cuesDir+"/train/")
+    # createCues(trainAudioPath, Nsample_train, CuesShape, dirName=args.cuesDir+"/train/")
+    print(validAudioPath)
     createCues(validAudioPath, Nsample_valid, CuesShape, dirName=args.cuesDir+"/valid/")
 
 
