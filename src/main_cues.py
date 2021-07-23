@@ -104,7 +104,7 @@ def createCues(path, Nsample, CuesShape, dirName):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Create cues')
     parser.add_argument('trainAudioDir', type=str, help='Directory of audio files for training')
-    parser.add_argument('valAudioDir', type=str, help='Directory of audio files for validation')
+    parser.add_argument('validAudioDir', type=str, help='Directory of audio files for validation')
     parser.add_argument('hrirDir', type=str, help='Directory of HRIR files')
     parser.add_argument('cuesDir', type=str, help='Directory of cues to be saved')
     parser.add_argument('Nsample', type=int, help='Number of samples?')
@@ -113,7 +113,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     print("Training audio files directory: ", args.trainAudioDir)
-    print("Validation audio files directory: ", args.valAudioDir)
+    print("Validation audio files directory: ", args.validAudioDir)
     print("HRIR files directory: ", args.hrirDir)
     args.trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
     print("Train validation split: ", args.trainValidSplit)
@@ -126,7 +126,7 @@ if __name__ == "__main__":
 
     hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
     trainAudioPath = glob(os.path.join(args.trainAudioDir+"/*"))
-    validAudioPath = glob(os.path.join(args.valAudioDir+"/*"))
+    validAudioPath = glob(os.path.join(args.validAudioDir+"/*"))
     print("Number of training audio files: ", len(trainAudioPath))
     print("Number of validation audio files: ", len(validAudioPath))
 
