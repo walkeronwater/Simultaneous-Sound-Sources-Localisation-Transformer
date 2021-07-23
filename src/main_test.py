@@ -195,18 +195,17 @@ if __name__ == "__main__":
         test_loss = 0.0
         test_acc = 0.0
         model.eval()
-        if args.task in ["elevRegression","azimRegression","allRegression"]:
-            criterion = nn.MSELoss()
-        else:
-            criterion = nn.CrossEntropyLoss()
         with torch.no_grad():
             for i, (inputs, labels) in enumerate(test_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 outputs = model(inputs)
-                
-                loss = criterion(DoALoss(outputs, labels[:, 1:3]))
+                if args.task in ["elevRegression","azimRegression","allRegression"]:
+                    loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
+                else:
+                    loss = nn.CrossEntropyLoss(outputs, labels)
                 test_sum_loss += loss.item()
-                if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
+
+                if not (args.task in ["elevRegression","azimRegression","allRegression"]):
                     _, predicted = torch.max(outputs.data, 1)
                     test_total += labels.size(0)
                     test_correct += predicted.eq(labels.data).sum().item()

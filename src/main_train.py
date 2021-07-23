@@ -129,10 +129,6 @@ if __name__ == "__main__":
     scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda, verbose=True)
 
     # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True)
-    if args.task in ["elevRegression","azimRegression","allRegression"]:
-        criterion = nn.MSELoss()
-    else:
-        criterion = nn.CrossEntropyLoss()
 
     if not os.path.isdir(args.modelDir):
         os.mkdir(args.modelDir)
@@ -167,9 +163,9 @@ if __name__ == "__main__":
             # print("Ouput shape: ", outputs.shape)
             # print("Label shape: ", labels.shape)
             if args.task in ["elevRegression","azimRegression","allRegression"]:
-                val_loss = criterion(DoALoss(outputs, labels))
+                loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
             else:
-                val_loss = criterion(outputs, labels)
+                loss = nn.CrossEntropyLoss(outputs, labels)
             if args.isDebug:
                 print("Loss", loss.shape)
             train_sum_loss += loss.item()
@@ -206,9 +202,9 @@ if __name__ == "__main__":
                 
                 outputs = model(inputs)
                 if args.task in ["elevRegression","azimRegression","allRegression"]:
-                    val_loss = criterion(DoALoss(outputs, labels))
+                    val_loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
                 else:
-                    val_loss = criterion(outputs, labels)
+                    val_loss = nn.CrossEntropyLoss(outputs, labels)
                 val_sum_loss += val_loss.item()
 
                 if not (args.task in ["elevRegression","azimRegression","allRegression"]):
