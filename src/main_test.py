@@ -204,7 +204,7 @@ if __name__ == "__main__":
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 outputs = model(inputs)
                 
-                loss = criterion(outputs, labels)
+                loss = criterion(DoALoss(outputs, labels[:, 1:3]))
                 test_sum_loss += loss.item()
                 if args.task == "elevClass" or args.task == "azimClass" or args.task == "allClass":
                     _, predicted = torch.max(outputs.data, 1)

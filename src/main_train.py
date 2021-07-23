@@ -166,7 +166,10 @@ if __name__ == "__main__":
             
             # print("Ouput shape: ", outputs.shape)
             # print("Label shape: ", labels.shape)
-            loss = criterion(outputs, labels)
+            if args.task in ["elevRegression","azimRegression","allRegression"]:
+                val_loss = criterion(DoALoss(outputs, labels))
+            else:
+                val_loss = criterion(outputs, labels)
             if args.isDebug:
                 print("Loss", loss.shape)
             train_sum_loss += loss.item()
@@ -202,7 +205,10 @@ if __name__ == "__main__":
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 
                 outputs = model(inputs)
-                val_loss = criterion(outputs, labels)
+                if args.task in ["elevRegression","azimRegression","allRegression"]:
+                    val_loss = criterion(DoALoss(outputs, labels))
+                else:
+                    val_loss = criterion(outputs, labels)
                 val_sum_loss += val_loss.item()
 
                 if not (args.task in ["elevRegression","azimRegression","allRegression"]):
