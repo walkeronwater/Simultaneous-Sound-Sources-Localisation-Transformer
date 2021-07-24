@@ -241,8 +241,8 @@ if __name__ == "__main__":
         test_loss = 0.0
         test_acc = 0.0
         
-        print("UD, LR, FB: ", confusion.rms_UD, confusion.rms_LR, confusion.rms_FB)
         confusion = ConfusionEval(Nsample)
+        print("UD, LR, FB: ", confusion.rms_UD, confusion.rms_LR, confusion.rms_FB)
         model.eval()
         with torch.no_grad():
             for i, (inputs, labels) in enumerate(test_loader, 0):
