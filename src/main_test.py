@@ -80,10 +80,11 @@ class ConfusionEval:
     def up_down(self, pred, target):
         # print(target.shape)
         self.rms_UD += torch.sum(torch.square(pred[:,0] - target[:,0])).item()
-        # raise SystemExit("dbg")
 
     def left_right(self, pred, target):
-        self.rms_LR += torch.sum(self.FB_loss(pred) - self.FB_loss(target)).item()
+        self.rms_LR += torch.square(self.FB_loss(pred) - self.FB_loss(target)).item()
+        print(self.rms_LR)
+        raise SystemExit("dbg")
 
         # pred_ = torch.empty(pred.shape[0])
         # target_ = torch.empty(pred.shape[0])
@@ -94,7 +95,7 @@ class ConfusionEval:
         pass
 
     def front_back(self, pred, target):
-        self.rms_FB += torch.sum(self.FB_loss(pred) - self.FB_loss(target)).item()
+        self.rms_FB += torch.square(self.FB_loss(pred) - self.FB_loss(target)).item()
 
         # pred_ = torch.empty(pred.shape[0])
         # target_ = torch.empty(pred.shape[0])
