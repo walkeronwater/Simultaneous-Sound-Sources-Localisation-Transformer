@@ -18,6 +18,7 @@ import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader, TensorDataset
 import torch.utils.data
+from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import ReduceLROnPlateau, LambdaLR, StepLR
 from sklearn.utils import class_weight
 from torch.autograd import Variable
@@ -136,6 +137,8 @@ if __name__ == "__main__":
         optimizer = optim.Adam(model.parameters(), lr=learning_rate)
         scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
 
+    writer = SummaryWriter(f'runs/temp/tryingout_tensorboard')
+
     if not os.path.isdir(args.modelDir):
         os.mkdir(args.modelDir)
     else:
@@ -150,6 +153,7 @@ if __name__ == "__main__":
         except:
             print("Not found any pre-trained model in directory", args.modelDir)
 
+    step = 1
     for epoch in range(pretrainEpoch, pretrainEpoch + num_epochs):
         print("\nEpoch %d, lr = %f" % ((epoch+1), getLR(optimizer)))
         
@@ -249,6 +253,10 @@ if __name__ == "__main__":
             args.modelDir + "curve_epoch_" + str(epoch+1) + ".pth.tar",
             args.task
         )
+
+        writer.add_scalar('Training Loss', train_loss, global_step=step)
+        writer.add_scalar('Training Acc', train_acc, global_step=step)
+        step += 1
 
         # early stopping
         if val_loss >= val_loss_optim:
