@@ -57,18 +57,25 @@ class ConfusionEval:
         self.rms_LR = 0.0
         self.rms_FB = 0.0
 
-    def convertLR(self, val):
-        if val >= pi/2 and val <= 1.5*pi:
-            return pi - val
-        elif val > pi*1.5:
-            return val - 2*pi
-        return val
+    def LR_loss(self, output):
+        return torch.acos(
+            F.hardtanh(
+                torch.sqrt(
+                    torch.square(torch.cos(output[:, 0])) * torch.square(torch.cos(output[:, 1]))
+                    + torch.square(torch.sin(output[:, 0]))
+                ), min_val=-1, max_val=1
+            )
+        )
 
-    def convertFB(self, val):
-        if val <= pi:
-            return pi/2 - val
-        else:
-            return val - 1.5*pi
+    def FB_loss(self, output):
+        return torch.acos(
+            F.hardtanh(
+                torch.sqrt(
+                    torch.square(torch.cos(output[:, 0])) * torch.square(torch.sin(output[:, 1]))
+                    + torch.square(torch.sin(output[:, 0]))
+                ), min_val=-1, max_val=1
+            )
+        )
 
     def up_down(self, pred, target):
         # print(target.shape)
@@ -76,20 +83,25 @@ class ConfusionEval:
         # raise SystemExit("dbg")
 
     def left_right(self, pred, target):
-        pred_ = torch.empty(pred.shape[0])
-        target_ = torch.empty(pred.shape[0])
-        for i in range(pred.shape[0]):
-            pred_[i] = self.convertLR(pred[i,1])
-            target_[i] = self.convertLR(target[i,1])
-        self.rms_LR += torch.sum(torch.square(pred_ - target_)).item()
+        self.rms_FB += torch.sum(self.FB_loss(pred) - self.FB_loss(target)).item()
+
+        # pred_ = torch.empty(pred.shape[0])
+        # target_ = torch.empty(pred.shape[0])
+        # for i in range(pred.shape[0]):
+        #     pred_[i] = self.convertLR(pred[i,1])
+        #     target_[i] = self.convertLR(target[i,1])
+        # self.rms_LR += torch.sum(torch.square(pred_ - target_)).item()
+        pass
 
     def front_back(self, pred, target):
-        pred_ = torch.empty(pred.shape[0])
-        target_ = torch.empty(pred.shape[0])
-        for i in range(pred.shape[0]):
-            pred_[i] = self.convertFB(pred[i,1])
-            target_[i] = self.convertFB(target[i,1])
-        self.rms_FB += torch.sum(torch.square(pred_ - target_)).item()
+        self.rms_FB += torch.sum(self.FB_loss(pred) - self.FB_loss(target)).item()
+
+        # pred_ = torch.empty(pred.shape[0])
+        # target_ = torch.empty(pred.shape[0])
+        # for i in range(pred.shape[0]):
+        #     pred_[i] = self.convertFB(pred[i,1])
+        #     target_[i] = self.convertFB(target[i,1])
+        # self.rms_FB += torch.sum(torch.square(pred_ - target_)).item()
     
     def report(self):
         print(
