@@ -48,12 +48,12 @@ class CNNModel(nn.Module):
             nn.Conv2d(64, 96, (3,3), stride=2),
             nn.ReLU(),
             nn.BatchNorm2d(96),
-            # nn.Conv2d(96, 128, (3,3), stride=2),
-            # nn.ReLU(),
-            # nn.BatchNorm2d(128)
+            nn.Conv2d(96, 128, (2,2), stride=2),
+            nn.ReLU(),
+            nn.BatchNorm2d(128)
         )
         self.FCLayers = nn.Sequential(
-            nn.Linear(7872, 1024),
+            nn.Linear(2560, 1024),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(1024, 512),
@@ -484,7 +484,7 @@ if __name__ == "__main__":
     Ncues = 5
     # model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
     # model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
-    model = CNNModel(task="allClass", dropout=0, isDebug=True).to(device)
+    model = CNNModel(task="allRegression", dropout=0, isDebug=True).to(device)
 
     testInput = torch.rand(2, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     # testInput = x[0].unsqueeze(0).to(device)
