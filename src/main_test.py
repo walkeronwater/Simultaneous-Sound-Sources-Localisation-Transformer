@@ -151,10 +151,10 @@ if __name__ == "__main__":
         labels_ = torch.zeros((Nsample,))
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if args.whichModel == "transformer":
+    if args.whichModel.lower() == "transformer":
         # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
         model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    elif args.whichModel == "CNN":
+    elif args.whichModel.lower() == "cnn":
         model = CNNModel(task=args.task, dropout=0, isDebug=False).to(device)
     learning_rate = 1e-4
     # optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
