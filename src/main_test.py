@@ -49,7 +49,44 @@ def regressionAcc(output, label, locLabel, device):
     # raise SystemExit("debug")
     # print('Acc: ', correct/output.shape[0])
     return correct
-   
+
+class ConfusionEval:
+    def __init__(self, pred, target):
+        self.pred = pred
+        self.target = target
+
+    def convertLR(self, val):
+        if val >= pi/2 and val <= 1.5*pi:
+            return pi - val
+        elif val > pi*1.5:
+            return val - 2*pi
+        return val
+
+    def convertFB(self, val):
+        if val <= pi:
+            return pi/2 - val
+        else:
+            return val - 1.5*pi
+
+    def up_down(self):
+        return torch.sqrt(torch.mean(torch.square(self.pred[:,0] - self.target[:,0])))
+
+    def left_right(self):
+        pred = torch.empty(self.pred.shape[0])
+        target = torch.empty(self.pred.shape[0])
+        for i in range(self.pred.shape[0]):
+            pred[i] = self.convertLR(self.pred[i,1])
+            target[i] = self.convertLR(self.target[i,1])
+        return torch.sqrt(torch.mean(torch.square(pred - target)))
+
+    def front_back(self):
+        pred = torch.empty(self.pred.shape[0])
+        target = torch.empty(self.pred.shape[0])
+        for i in range(self.pred.shape[0]):
+            pred[i] = self.convertFB(self.pred[i,1])
+            target[i] = self.convertFB(self.target[i,1])
+        return torch.sqrt(torch.mean(torch.square(pred - target)))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing hyperparamters')
@@ -120,9 +157,9 @@ if __name__ == "__main__":
     elif args.whichModel == "CNN":
         model = CNNModel(task=args.task, dropout=0, isDebug=False).to(device)
     learning_rate = 1e-4
-    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
-    model, val_optim = loadCheckpoint(model, optimizer, scheduler, args.modelDir, args.task, phase="test", whichBest=args.whichBest)
+    # optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
+    model, val_optim = loadCheckpoint(model, optimizer=None, scheduler=None, args.modelDir, args.task, phase="test", whichBest=args.whichBest)
 
     for valSNR in valSNRList:
         fileCount = 0   # count the number of data samples
@@ -194,11 +231,14 @@ if __name__ == "__main__":
         test_sum_loss = 0.0
         test_loss = 0.0
         test_acc = 0.0
+        
         model.eval()
         with torch.no_grad():
             for i, (inputs, labels) in enumerate(test_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 outputs = model(inputs)
+
+                ConfusionEval(outputs, labels)
                 if args.task in ["elevRegression","azimRegression","allRegression"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
                 else:

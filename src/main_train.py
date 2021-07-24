@@ -255,7 +255,9 @@ if __name__ == "__main__":
         )
 
         writer.add_scalar('Training Loss', train_loss, global_step=step)
-        writer.add_scalar('Training Acc', train_acc, global_step=step)
+        writer.add_scalar('Training RMS angle (degree)', train_acc, global_step=step)
+        writer.add_scalar('Validation Loss', val_loss, global_step=step)
+        writer.add_scalar('Validation RMS angle (degree)', val_acc, global_step=step)
         step += 1
 
         # early stopping
