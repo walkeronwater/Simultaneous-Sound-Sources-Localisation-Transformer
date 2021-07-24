@@ -83,8 +83,8 @@ class ConfusionEval:
 
     def left_right(self, pred, target):
         self.rms_LR += torch.square(self.FB_loss(pred) - self.FB_loss(target)).item()
-        print(self.rms_LR)
-        raise SystemExit("dbg")
+        # print(self.rms_LR)
+        # raise SystemExit("dbg")
 
         # pred_ = torch.empty(pred.shape[0])
         # target_ = torch.empty(pred.shape[0])
