@@ -18,7 +18,7 @@ import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader, TensorDataset
 import torch.utils.data
-from torch.optim.lr_scheduler import ReduceLROnPlateau, LambdaLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau, LambdaLR, StepLR
 from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
@@ -95,12 +95,7 @@ if __name__ == "__main__":
     Nfreq = CuesShape.Nfreq
     Ntime = CuesShape.Ntime
     Ncues = CuesShape.Ncues
-    # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    # model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    if args.whichModel.lower() == "transformer":
-        model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, dropout=args.valDropout, isDebug=False).to(device)
+
     # num_epochs = 30
     num_epochs = args.numEpoch
     pretrainEpoch = 0
@@ -115,7 +110,7 @@ if __name__ == "__main__":
     warmup_proportion = float(num_warmup_steps) / float(num_training_steps)
 
     # optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    
     # optimizer = AdamW(model.parameters())
 
     # scheduler = get_linear_schedule_with_warmup(
@@ -123,12 +118,23 @@ if __name__ == "__main__":
     #     num_training_steps=num_training_steps
     # )
     
-    lr_lambda = lambda epoch: learning_rate * np.minimum(
-        (epoch + 1) ** -0.5, (epoch + 1) * (num_warmup_steps ** -1.5)
-    )
-    scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda, verbose=True)
+    
 
     # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True)
+
+    # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
+    # model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
+    if args.whichModel.lower() == "transformer":
+        model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
+        optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+        lr_lambda = lambda epoch: learning_rate * np.minimum(
+            (epoch + 1) ** -0.5, (epoch + 1) * (num_warmup_steps ** -1.5)
+        )
+        scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda, verbose=True)
+    elif args.whichModel.lower() == "cnn":
+        model = CNNModel(task=args.task, dropout=args.valDropout, isDebug=False).to(device)
+        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+        scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
 
     if not os.path.isdir(args.modelDir):
         os.mkdir(args.modelDir)
@@ -138,8 +144,8 @@ if __name__ == "__main__":
                 model, optimizer, scheduler, args.modelDir, args.task, phase="train", whichBest=args.whichBest
             )
 
-            if args.lrRate != 1e-4:
-                optimizer = setLR(args.lrRate, optimizer)
+            # if args.lrRate != 1e-4:
+            #     optimizer = setLR(args.lrRate, optimizer)
             print("Found a pre-trained model in directory", args.modelDir)
         except:
             print("Not found any pre-trained model in directory", args.modelDir)
