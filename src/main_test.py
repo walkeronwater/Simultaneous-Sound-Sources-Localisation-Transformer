@@ -91,9 +91,9 @@ class ConfusionEval:
     
     def report(self):
         print(
-            self.rms_UD /= torch.sqrt(self.numExample).item(),
-            self.rms_LR /= torch.sqrt(self.numExample).item(),
-            self.rms_FB /= torch.sqrt(self.numExample).item(),
+            torch.sqrt(self.rms_UD / self.numExample).item(),
+            torch.sqrt(self.rms_LR / self.numExample).item(),
+            torch.sqrt(self.rms_FB / self.numExample).item(),
         )
 
 
