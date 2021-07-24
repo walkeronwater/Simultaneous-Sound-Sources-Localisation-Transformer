@@ -94,7 +94,7 @@ class ConfusionEval:
     def report(self):
         print(
             "UD, LR, FB: ",
-            radian2degree(np.sqrt(self.rms_UD / self.numExample)),
+            radian2Degree(np.sqrt(self.rms_UD / self.numExample)),
             radian2Degree(np.sqrt(self.rms_LR / self.numExample)),
             radian2Degree(np.sqrt(self.rms_FB / self.numExample))
         )
