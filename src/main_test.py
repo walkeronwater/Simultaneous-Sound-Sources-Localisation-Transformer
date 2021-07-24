@@ -71,7 +71,9 @@ class ConfusionEval:
             return val - 1.5*pi
 
     def up_down(self, pred, target):
-         self.rms_UD += torch.sum(torch.square(pred[:,0] - target[:,0])).item()
+        # print(target.shape)
+        self.rms_UD += torch.sum(torch.square(pred[:,0] - target[:,0])).item()
+        # raise SystemExit("dbg")
 
     def left_right(self, pred, target):
         pred_ = torch.empty(pred.shape[0])
@@ -92,9 +94,9 @@ class ConfusionEval:
     def report(self):
         print(
             "UD, LR, FB: ",
-            np.sqrt(self.rms_UD / self.numExample),
-            np.sqrt(self.rms_LR / self.numExample),
-            np.sqrt(self.rms_FB / self.numExample)
+            radian2degree(np.sqrt(self.rms_UD / self.numExample)),
+            radian2Degree(np.sqrt(self.rms_LR / self.numExample)),
+            radian2Degree(np.sqrt(self.rms_FB / self.numExample))
         )
 
 
@@ -249,13 +251,13 @@ if __name__ == "__main__":
             for i, (inputs, labels) in enumerate(test_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 outputs = model(inputs)
-                
-                confusion.up_down(outputs, labels)
-                confusion.left_right(outputs, labels)
-                confusion.front_back(outputs, labels)
 
                 if args.task in ["elevRegression","azimRegression","allRegression"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
+                
+                    confusion.up_down(outputs, labels[:, 1:3])
+                    confusion.left_right(outputs, labels[:, 1:3])
+                    confusion.front_back(outputs, labels[:, 1:3])
                 else:
                     loss = nn.CrossEntropyLoss(outputs, labels)
                 test_sum_loss += loss.item()
