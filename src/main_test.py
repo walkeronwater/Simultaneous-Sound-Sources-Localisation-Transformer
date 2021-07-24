@@ -51,9 +51,8 @@ def regressionAcc(output, label, locLabel, device):
     return correct
 
 class ConfusionEval:
-    def __init__(self, pred, target):
-        self.pred = pred
-        self.target = target
+    def __init__(self, numBatch):
+        self.numBatch = numBatch
         self.rms_UD = 0.0
         self.rms_LR = 0.0
         self.rms_FB = 0.0
@@ -71,24 +70,31 @@ class ConfusionEval:
         else:
             return val - 1.5*pi
 
-    def up_down(self):
-         self.rms_UD += torch.sqrt(torch.mean(torch.square(self.pred[:,0] - self.target[:,0])))
+    def up_down(self, pred, target):
+         self.rms_UD += torch.sqrt(torch.mean(torch.square(pred[:,0] - target[:,0])))
 
-    def left_right(self):
-        pred = torch.empty(self.pred.shape[0])
-        target = torch.empty(self.pred.shape[0])
-        for i in range(self.pred.shape[0]):
-            pred[i] = self.convertLR(self.pred[i,1])
-            target[i] = self.convertLR(self.target[i,1])
-        self.rms_LR += torch.sqrt(torch.mean(torch.square(pred - target)))
+    def left_right(self, pred, target):
+        pred_ = torch.empty(pred.shape[0])
+        target_ = torch.empty(pred.shape[0])
+        for i in range(pred.shape[0]):
+            pred_[i] = self.convertLR(pred[i,1])
+            target_[i] = self.convertLR(target[i,1])
+        self.rms_LR += torch.sqrt(torch.mean(torch.square(pred_ - target_)))
 
-    def front_back(self):
-        pred = torch.empty(self.pred.shape[0])
-        target = torch.empty(self.pred.shape[0])
-        for i in range(self.pred.shape[0]):
-            pred[i] = self.convertFB(self.pred[i,1])
-            target[i] = self.convertFB(self.target[i,1])
-        self.rms_FB += torch.sqrt(torch.mean(torch.square(pred - target)))
+    def front_back(self, pred, target):
+        pred_ = torch.empty(pred.shape[0])
+        target_ = torch.empty(pred.shape[0])
+        for i in range(pred.shape[0]):
+            pred_[i] = self.convertFB(pred[i,1])
+            target_[i] = self.convertFB(target[i,1])
+        self.rms_FB += torch.sqrt(torch.mean(torch.square(pred_ - target_)))
+    
+    def report(self):
+        print(
+            self.rms_UD /= self.numBatch,
+            self.rms_LR /= self.numBatch,
+            self.rms_FB /= self.numBatch,
+        )
 
 
 if __name__ == "__main__":
@@ -235,14 +241,14 @@ if __name__ == "__main__":
         test_loss = 0.0
         test_acc = 0.0
         
-        confusion = ConfusionEval(outputs, labels)
         print("UD, LR, FB: ", confusion.rms_UD, confusion.rms_LR, confusion.rms_FB)
         model.eval()
         with torch.no_grad():
             for i, (inputs, labels) in enumerate(test_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 outputs = model(inputs)
-
+                
+                confusion = ConfusionEval(outputs, labels)
                 confusion.up_down()
                 confusion.left_right()
                 confusion.front_back()
@@ -273,4 +279,4 @@ if __name__ == "__main__":
             print('For SNR: %d Test Loss: %.04f | Test Acc: %.4f%% '
                 % (valSNR, test_loss, test_acc))
                 
-        print("UD, LR, FB: ", confusion.rms_UD, confusion.rms_LR, confusion.rms_FB)
+        confusion.report()
