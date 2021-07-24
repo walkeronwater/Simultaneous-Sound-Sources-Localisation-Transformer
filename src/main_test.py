@@ -249,9 +249,9 @@ if __name__ == "__main__":
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 outputs = model(inputs)
                 
-                confusion.up_down()
-                confusion.left_right()
-                confusion.front_back()
+                confusion.up_down(outputs, labels)
+                confusion.left_right(outputs, labels)
+                confusion.front_back(outputs, labels)
 
                 if args.task in ["elevRegression","azimRegression","allRegression"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
