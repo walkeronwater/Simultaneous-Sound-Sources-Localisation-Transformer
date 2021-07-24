@@ -71,7 +71,7 @@ class ConfusionEval:
             return val - 1.5*pi
 
     def up_down(self, pred, target):
-         self.rms_UD += torch.square(pred[:,0] - target[:,0]).item()
+         self.rms_UD += torch.sum(torch.square(pred[:,0] - target[:,0])).item()
 
     def left_right(self, pred, target):
         pred_ = torch.empty(pred.shape[0])
@@ -79,7 +79,7 @@ class ConfusionEval:
         for i in range(pred.shape[0]):
             pred_[i] = self.convertLR(pred[i,1])
             target_[i] = self.convertLR(target[i,1])
-        self.rms_LR += torch.square(pred_ - target_).item()
+        self.rms_LR += torch.sum(torch.square(pred_ - target_)).item()
 
     def front_back(self, pred, target):
         pred_ = torch.empty(pred.shape[0])
@@ -87,13 +87,14 @@ class ConfusionEval:
         for i in range(pred.shape[0]):
             pred_[i] = self.convertFB(pred[i,1])
             target_[i] = self.convertFB(target[i,1])
-        self.rms_FB += torch.square(pred_ - target_).item()
+        self.rms_FB += torch.sum(torch.square(pred_ - target_)).item()
     
     def report(self):
         print(
-            torch.sqrt(self.rms_UD / self.numExample).item(),
-            torch.sqrt(self.rms_LR / self.numExample).item(),
-            torch.sqrt(self.rms_FB / self.numExample).item(),
+            "UD, LR, FB: ",
+            np.sqrt(self.rms_UD / self.numExample),
+            np.sqrt(self.rms_LR / self.numExample),
+            np.sqrt(self.rms_FB / self.numExample)
         )
 
 
