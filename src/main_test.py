@@ -54,6 +54,9 @@ class ConfusionEval:
     def __init__(self, pred, target):
         self.pred = pred
         self.target = target
+        self.rms_UD = 0.0
+        self.rms_LR = 0.0
+        self.rms_FB = 0.0
 
     def convertLR(self, val):
         if val >= pi/2 and val <= 1.5*pi:
@@ -69,7 +72,7 @@ class ConfusionEval:
             return val - 1.5*pi
 
     def up_down(self):
-        return torch.sqrt(torch.mean(torch.square(self.pred[:,0] - self.target[:,0])))
+         self.rms_UD += torch.sqrt(torch.mean(torch.square(self.pred[:,0] - self.target[:,0])))
 
     def left_right(self):
         pred = torch.empty(self.pred.shape[0])
@@ -77,7 +80,7 @@ class ConfusionEval:
         for i in range(self.pred.shape[0]):
             pred[i] = self.convertLR(self.pred[i,1])
             target[i] = self.convertLR(self.target[i,1])
-        return torch.sqrt(torch.mean(torch.square(pred - target)))
+        self.rms_LR += torch.sqrt(torch.mean(torch.square(pred - target)))
 
     def front_back(self):
         pred = torch.empty(self.pred.shape[0])
@@ -85,7 +88,7 @@ class ConfusionEval:
         for i in range(self.pred.shape[0]):
             pred[i] = self.convertFB(self.pred[i,1])
             target[i] = self.convertFB(self.target[i,1])
-        return torch.sqrt(torch.mean(torch.square(pred - target)))
+        self.rms_FB += torch.sqrt(torch.mean(torch.square(pred - target)))
 
 
 if __name__ == "__main__":
@@ -232,13 +235,18 @@ if __name__ == "__main__":
         test_loss = 0.0
         test_acc = 0.0
         
+        confusion = ConfusionEval(outputs, labels)
+        print("UD, LR, FB: ", confusion.rms_UD, confusion.rms_LR, confusion.rms_FB)
         model.eval()
         with torch.no_grad():
             for i, (inputs, labels) in enumerate(test_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 outputs = model(inputs)
 
-                ConfusionEval(outputs, labels)
+                confusion.up_down()
+                confusion.left_right()
+                confusion.front_back()
+
                 if args.task in ["elevRegression","azimRegression","allRegression"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
                 else:
@@ -264,3 +272,5 @@ if __name__ == "__main__":
             test_acc = round(100.0 * test_correct / test_total, 2)
             print('For SNR: %d Test Loss: %.04f | Test Acc: %.4f%% '
                 % (valSNR, test_loss, test_acc))
+                
+        print("UD, LR, FB: ", confusion.rms_UD, confusion.rms_LR, confusion.rms_FB)
