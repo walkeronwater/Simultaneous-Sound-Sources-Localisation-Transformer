@@ -145,7 +145,7 @@ class ConfusionEval:
         x = np.linspace(0, 345, 100)
         y = x
         plt.figure()
-        plt.scatter(self.pred_elev, self.target_elev)
+        plt.scatter(self.pred_azim, self.target_azim)
         plt.plot(x, y,'-r')
         plt.xticks(range(0,360,30))
         plt.yticks(range(0,360,30))
