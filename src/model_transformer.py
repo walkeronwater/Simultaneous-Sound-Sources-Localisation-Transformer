@@ -1,6 +1,7 @@
 import soundfile as sf
 from scipy import signal
 import random
+from math import pi
 import numpy as np
 import matplotlib.pyplot as plt
 import os
@@ -37,6 +38,7 @@ class CNNModel(nn.Module):
     def __init__(self, task, dropout, isDebug=False):
         super(CNNModel, self).__init__()
 
+        self.task = task
         Nloc = predNeuron(task)
         self.convLayers = nn.Sequential(
             nn.Conv2d(5, 32, (5,5), stride=3),
@@ -62,6 +64,9 @@ class CNNModel(nn.Module):
             nn.ReLU(),
             nn.Linear(256, Nloc)
         )
+        if task in ["elevRegression","azimRegression","allRegression"]:
+            self.setRange1 = nn.Hardtanh()
+            self.setRange2 = nn.Hardtanh()
         self.isDebug = isDebug
     def forward(self, cues):
         out = self.convLayers(cues.permute(0,3,2,1))
@@ -76,6 +81,13 @@ class CNNModel(nn.Module):
         if self.isDebug:
             print("Shape after FClayers (output): ", out.shape)
 
+        if self.task in ["elevRegression","azimRegression","allRegression"]:
+            out = torch.stack(
+                [
+                    3/8*pi*self.setRange1(out[:,0])+pi/8,
+                    pi*self.setRange2(out[:,1])+pi
+                ], dim=1
+            )
         return out
 
 
@@ -328,6 +340,7 @@ class DIYModel(nn.Module):
             forward_expansion,
             dropout,
         )
+        self.task = task
         Nloc = predNeuron(task)
         print("Number of neurons in the final layer: ", Nloc)
         
@@ -352,13 +365,15 @@ class DIYModel(nn.Module):
             self.FClayers = nn.Sequential(
                 nn.Linear(Ntime*Nfreq*Ncues, 256),
                 nn.BatchNorm1d(256),
-                nn.ReLU(),
+                nn.Tanh(),
                 nn.Dropout(0.1),
                 nn.Linear(256, Nloc),
-                nn.ReLU(),
+                nn.Tanh(),
                 nn.Linear(Nloc, Nloc)
             )
-
+        if task in ["elevRegression","azimRegression","allRegression"]:
+            self.setRange1 = nn.Hardtanh()
+            self.setRange2 = nn.Hardtanh()
         # self.sequentialFC = nn.Sequential(
         #     nn.Linear(Ntime*Nfreq*Ncues, 256),
         #     nn.BatchNorm1d(256),
@@ -390,6 +405,14 @@ class DIYModel(nn.Module):
         for layers in self.FClayers:
             out = layers(out)
 
+        if self.task in ["elevRegression","azimRegression","allRegression"]:
+            out = torch.stack(
+                [
+                    3/8*pi*self.setRange1(out[:,0])+pi/8,
+                    pi*self.setRange2(out[:,1])+pi
+                ], dim=1
+            )
+        
         # out = self.softmaxLayer(out)
         return out
 
@@ -482,11 +505,12 @@ if __name__ == "__main__":
     Ntime = 44
     Nfreq = 512
     Ncues = 5
+    batchSize = 32
     # model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
-    # model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
-    model = CNNModel(task="allRegression", dropout=0, isDebug=True).to(device)
+    model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
+    # model = CNNModel(task=task, dropout=0, isDebug=True).to(device)
 
-    testInput = torch.rand(2, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
+    testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     # testInput = x[0].unsqueeze(0).to(device)
     # testLabel = x[1].to(device)
     # print("testInput shape: ", testInput.shape)
@@ -495,8 +519,9 @@ if __name__ == "__main__":
     print(testInput.permute(0,3,1,2).shape)
     # raise SystemExit("debug")
     testOutput = model(testInput)
-    print(testOutput.shape)
+    print("testOutput shape: ",testOutput.shape)
+    print("testOutput: ",testOutput)
     # print(torch.max(testOutput, 1))
 
-    summary(model, (Nfreq, Ntime, Ncues))
+    # summary(model, (Nfreq, Ntime, Ncues))
     
