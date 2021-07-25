@@ -26,12 +26,21 @@ from utils import *
 
 #[TODO] hardcoded tensor size
 class CuesShape:
-    Nfreq = 512
-    Ntime = 44
-    Ncues = 5
-    Nloc = 187
-    lenSliceInSec = 0.5     # length of audio slice in sec
-    valSNRList = [-5,0,5,10,15,20,25]
+    def __init__(
+        self,
+        Nfreq = 512,
+        Ntime = 44,
+        Ncues = 5,
+        Nloc = 187,
+        lenSliceInSec = 0.5,
+        valSNRList = [-5,0,5,10,15,20,25]
+    ):
+        self.Nfreq=Nfreq
+        self.Ntime=Ntime
+        self.Ncues=Ncues
+        self.Nloc=Nloc
+        self.lenSliceInSec=lenSliceInSec
+        self.valSNRList=valSNRList
 
 def createCues(path, Nsample, CuesShape, dirName):
     Nfreq = CuesShape.Nfreq
@@ -109,6 +118,7 @@ if __name__ == "__main__":
     parser.add_argument('cuesDir', type=str, help='Directory of cues to be saved')
     parser.add_argument('Nsample', type=int, help='Number of samples?')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
+    parser.add_argument('--valSNRList', default="5,10,15,20,25", type=str, help='Range of SNR')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
@@ -117,7 +127,8 @@ if __name__ == "__main__":
     print("HRIR files directory: ", args.hrirDir)
     args.trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
     print("Train validation split: ", args.trainValidSplit)
-
+    args.valSNRList = [float(item) for item in args.valSNRList.split(',')]
+    print("Range of SNR: ", args.valSNRList)
 
     Nsample_train = int(args.trainValidSplit[0]*args.Nsample)
     Nsample_valid = int(args.trainValidSplit[1]*args.Nsample)
@@ -130,6 +141,9 @@ if __name__ == "__main__":
     print("Number of training audio files: ", len(trainAudioPath))
     print("Number of validation audio files: ", len(validAudioPath))
 
+    cuesShape = CuesShape(valSNRList=args.valSNRList)
+    # print(cuesShape.valSNRList)
+    # raise SystemExit('debug')
 
     # fileCount = 0   # count the number of data samples
     
@@ -146,9 +160,9 @@ if __name__ == "__main__":
     # raise SystemExit('debug')
 
     print(trainAudioPath)
-    createCues(trainAudioPath, Nsample_train, CuesShape, dirName=args.cuesDir+"/train/")
+    createCues(trainAudioPath, Nsample_train, cuesShape, dirName=args.cuesDir+"/train/")
     print(validAudioPath)
-    createCues(validAudioPath, Nsample_valid, CuesShape, dirName=args.cuesDir+"/valid/")
+    createCues(validAudioPath, Nsample_valid, cuesShape, dirName=args.cuesDir+"/valid/")
 
 
     '''
