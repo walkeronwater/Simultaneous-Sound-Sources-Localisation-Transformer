@@ -31,7 +31,7 @@ class CuesShape:
     Ncues = 5
     Nloc = 187
     lenSliceInSec = 0.5     # length of audio slice in sec
-    valSNRList = [-5,0,5,10,15,20,100]
+    valSNRList = [-5,-5,0,0,5,5,10,10,15,20,100]
 
 def createCues(path, Nsample, CuesShape, dirName):
     Nfreq = CuesShape.Nfreq
