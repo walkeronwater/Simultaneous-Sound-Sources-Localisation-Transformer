@@ -46,6 +46,7 @@ if __name__ == "__main__":
     parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
+    parser.add_argument('--valSNRList', default="-10,-5,0,5,10,15,20,25,100", type=str, help='Range of SNR')
     parser.add_argument('--samplePerSNR', default=10, type=int, help='Number of samples per SNR')
     parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
@@ -67,6 +68,8 @@ if __name__ == "__main__":
     print("Dropout value: ", args.valDropout)
     print("Number of epochs: ", args.numEpoch)
     print("Batch size: ", args.batchSize)
+    args.valSNRList = [float(item) for item in args.valSNRList.split(',')]
+    print("Range of SNR: ", args.valSNRList)
     print("Number of samples per SNR: ", args.samplePerSNR)
 
     if args.isDebug == "True":
@@ -80,13 +83,14 @@ if __name__ == "__main__":
     Naudio = len(path)
     print("Number of audio files: ", Naudio)
 
-    lenSliceInSec = CuesShape.lenSliceInSec
-    Nfreq = CuesShape.Nfreq
-    Ntime = CuesShape.Ntime
-    Ncues = CuesShape.Ncues
-    Nloc = CuesShape.Nloc
+    cuesShape = CuesShape(valSNRList=args.valSNRList)
+    lenSliceInSec = cuesShape.lenSliceInSec
+    Nfreq = cuesShape.Nfreq
+    Ntime = cuesShape.Ntime
+    Ncues = cuesShape.Ncues
+    Nloc = cuesShape.Nloc
     Nsample = Nloc * args.samplePerSNR
-    valSNRList = [-10,-5,0,5,10,15,20,25,100]
+    valSNRList = cuesShape.valSNRList
 
     # allocate tensors cues and labels in RAM
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
