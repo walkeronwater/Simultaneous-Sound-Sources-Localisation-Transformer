@@ -259,7 +259,7 @@ if __name__ == "__main__":
         test_loss = 0.0
         test_acc = 0.0
         
-        confusion = ConfusionEval(Nsample)
+        confusion = ConfusionEval(Nsample, args.modelDir, expName="SNR="+str(int(valSNR)))
         # print("UD, LR, FB: ", confusion.rms_UD, confusion.rms_LR, confusion.rms_FB)
         model.eval()
         with torch.no_grad():
@@ -270,9 +270,10 @@ if __name__ == "__main__":
                 if args.task in ["elevRegression","azimRegression","allRegression"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
                 
-                    confusion.up_down(outputs, labels[:, 1:3])
-                    confusion.left_right(outputs, labels[:, 1:3])
-                    confusion.front_back(outputs, labels[:, 1:3])
+                    # confusion.up_down(outputs, labels[:, 1:3])
+                    # confusion.left_right(outputs, labels[:, 1:3])
+                    # confusion.front_back(outputs, labels[:, 1:3])
+                    confusion.evaluate(outputs, labels[:, 1:3])
                 else:
                     loss = nn.CrossEntropyLoss(outputs, labels)
                 test_sum_loss += loss.item()
