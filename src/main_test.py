@@ -130,16 +130,17 @@ class ConfusionEval:
         #     pred_[i] = self.convertFB(pred[i,1])
         #     target_[i] = self.convertFB(target[i,1])
         # self.rms_FB += torch.sum(torch.square(pred_ - target_)).item()
-    
-    def regression_plot(self):
-        pass
 
     def report(self):
+        UD_confusion = radian2Degree(np.sqrt(self.rms_UD / self.numExample))
+        LR_confusion = radian2Degree(np.sqrt(self.rms_LR / self.numExample))
+        FB_confusion = radian2Degree(np.sqrt(self.rms_FB / self.numExample))
+
         print(
             "UD, LR, FB: ",
-            radian2Degree(np.sqrt(self.rms_UD / self.numExample)),
-            radian2Degree(np.sqrt(self.rms_LR / self.numExample)),
-            radian2Degree(np.sqrt(self.rms_FB / self.numExample))
+            UD_confusion,
+            LR_confusion,
+            FB_confusion
         )
 
         x = np.linspace(-45, 90,100)
@@ -194,6 +195,21 @@ class ConfusionEval:
         plt.savefig(self.savePath+self.expName+"_fb.png")
         plt.close()
 
+        return (UD_confusion, LR_confusion, FB_confusion)
+
+def plotConfusion(snrList, UDList, LRList, FBList, savePath):
+    plt.figure()
+    plt.plot(snrList, UDList)
+    plt.plot(snrList, LRList)
+    plt.plot(snrList, FBList)
+    plt.xlabel("SNR")
+    plt.ylabel("Prediction")
+    plt.title("Confusion vs SNR")
+    plt.legend(["UD", "LR", "FB"])
+    plt.grid()
+    plt.savefig(savePath+"confusion.png")
+    plt.close()
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing hyperparamters')
     parser.add_argument('audioDir', type=str, help='Directory of audio files')
@@ -207,7 +223,7 @@ if __name__ == "__main__":
     parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
-    parser.add_argument('--valSNRList', default="-10,-5,0,5,10,15,20,25,100", type=str, help='Range of SNR')
+    parser.add_argument('--valSNRList', default="-10,-5,0,5,10,15,20,25", type=str, help='Range of SNR')
     parser.add_argument('--samplePerSNR', default=10, type=int, help='Number of samples per SNR')
     parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
@@ -271,6 +287,9 @@ if __name__ == "__main__":
     # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
     model, val_optim = loadCheckpoint(model=model, optimizer=None, scheduler=None, loadPath=args.modelDir, task=args.task, phase="test", whichBest=args.whichBest)
 
+    UD_confusion = []
+    LR_confusion = []
+    FB_confusion = []
     for valSNR in valSNRList:
         fileCount = 0   # count the number of data samples
         for audioIndex in range(len(path)):
@@ -342,7 +361,7 @@ if __name__ == "__main__":
         test_loss = 0.0
         test_acc = 0.0
         
-        confusion = ConfusionEval(Nsample, args.modelDir, expName="SNR="+str(int(valSNR)))
+        confusion = ConfusionEval(Nsample, savePath = args.modelDir, expName="SNR="+str(int(valSNR)))
         # print("UD, LR, FB: ", confusion.rms_UD, confusion.rms_LR, confusion.rms_FB)
         model.eval()
         with torch.no_grad():
@@ -378,4 +397,14 @@ if __name__ == "__main__":
             print('For SNR: %d Test Loss: %.04f | Test Acc: %.4f%% '
                 % (valSNR, test_loss, test_acc))
                 
-        confusion.report()
+        out = confusion.report()
+        UD_confusion.append(out[0])
+        LR_confusion.append(out[1])
+        FB_confusion.append(out[2])
+    plotConfusion(
+        valSNRList,
+        UD_confusion,
+        LR_confusion,
+        FB_confusion,
+        savePath=args.modelDir
+    )

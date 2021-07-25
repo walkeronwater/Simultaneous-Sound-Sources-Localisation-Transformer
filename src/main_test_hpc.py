@@ -46,7 +46,7 @@ if __name__ == "__main__":
     parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
-    parser.add_argument('--valSNRList', default="-10,-5,0,5,10,15,20,25,100", type=str, help='Range of SNR')
+    parser.add_argument('--valSNRList', default="-10,-5,0,5,10,15,20,25", type=str, help='Range of SNR')
     parser.add_argument('--samplePerSNR', default=10, type=int, help='Number of samples per SNR')
     parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
@@ -220,3 +220,13 @@ if __name__ == "__main__":
                 % (valSNR, test_loss, test_acc))
                 
         confusion.report()
+        UD_confusion.append(out[0])
+        LR_confusion.append(out[1])
+        FB_confusion.append(out[2])
+    plotConfusion(
+        valSNRList,
+        UD_confusion,
+        LR_confusion,
+        FB_confusion,
+        savePath=args.modelDir
+    )
