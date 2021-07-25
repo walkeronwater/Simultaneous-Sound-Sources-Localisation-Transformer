@@ -109,13 +109,8 @@ if __name__ == "__main__":
     Nfreq = cuesShape.Nfreq
     Ntime = cuesShape.Ntime
     Ncues = cuesShape.Ncues
-    # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    # model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    if args.whichModel.lower() == "transformer":
-        model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
-    elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, dropout=args.valDropout, isDebug=False)
-    # num_epochs = 30
+    
+    
     num_epochs = args.numEpoch
     pretrainEpoch = 0
     learning_rate = args.lrRate
@@ -124,26 +119,18 @@ if __name__ == "__main__":
     val_loss_optim = float('inf')
     val_acc_optim = 0.0
 
-    num_warmup_steps = 5
-    num_training_steps = num_epochs+1
-    warmup_proportion = float(num_warmup_steps) / float(num_training_steps)
-
-    # optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    # optimizer = AdamW(model.parameters())
-
-    # scheduler = get_linear_schedule_with_warmup(
-    #     optimizer, num_warmup_steps=num_warmup_steps, 
-    #     num_training_steps=num_training_steps
-    # )
-    
-    # lr_lambda = lambda epoch: learning_rate * np.minimum(
-    #     (epoch + 1) ** -0.5, (epoch + 1) * (num_warmup_steps ** -1.5)
-    # )
-    # scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda, verbose=True)
+    if args.whichModel.lower() == "transformer":
+        model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+        optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    elif args.whichModel.lower() == "cnn":
+        model = CNNModel(task=args.task, dropout=args.valDropout, isDebug=args.isDebug)
+        optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
+    elif args.whichModel.lower() == "pytorchtransformer":
+        model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
+        optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    else:
+        raise SystemExit("No model selected")
     scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
-
-    # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
 
     if not os.path.isdir(args.modelDir):
         os.mkdir(args.modelDir)
@@ -152,8 +139,8 @@ if __name__ == "__main__":
             model, optimizer, scheduler, pretrainEpoch, val_loss_optim = loadCheckpoint(
                 model, optimizer, scheduler, args.modelDir, args.task, phase="train", whichBest=args.whichBest
             )
-            if args.lrRate != 1e-4:
-                optimizer = setLR(args.lrRate, optimizer)
+            # if args.lrRate != 1e-4:
+            #     optimizer = setLR(args.lrRate, optimizer)
             print("Found a pre-trained model in directory", args.modelDir)
         except:
             print("Not found any pre-trained model in directory", args.modelDir)
@@ -163,6 +150,8 @@ if __name__ == "__main__":
         model = nn.DataParallel(model)
     model.to(device)
     
+    # set up early stopping
+    early_stop = EarlyStopping(args.patience)
     for epoch in range(pretrainEpoch, pretrainEpoch + num_epochs):
         print("\nEpoch %d, lr = %f" % ((epoch+1), getLR(optimizer)))
         
@@ -250,7 +239,7 @@ if __name__ == "__main__":
                         args.modelDir + "param_bestValAcc.pth.tar",
                         args.task
                     )
-            scheduler.step(val_loss)
+            scheduler.step()
 
         # save the model with the best validation loss
         saveCurves(
@@ -262,7 +251,21 @@ if __name__ == "__main__":
             args.modelDir + "curve_epoch_" + str(epoch+1) + ".pth.tar",
             args.task
         )
+        
+        early_stop(val_loss)
+        if early_stop.stop:
+            break
 
+        if early_stop.count == 0 or epoch == 0:
+            saveParam(
+                epoch+1,
+                model,
+                optimizer,
+                scheduler,
+                args.modelDir + "param_bestValLoss.pth.tar",
+                args.task
+            )
+        '''
         # early stopping
         if val_loss >= val_loss_optim:
             early_epoch_count += 1
@@ -281,3 +284,4 @@ if __name__ == "__main__":
             
         if (early_epoch_count >= early_epoch):
             break
+        '''

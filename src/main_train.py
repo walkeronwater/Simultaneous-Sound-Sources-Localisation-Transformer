@@ -31,24 +31,6 @@ from model_transformer import *
 from loss import *
 from main_cues import CuesShape
 
-class EarlyStopping:
-    def __init__(self, patience):
-        self.patience = patience
-        self.stop = False
-        self.count = 0
-        self.val_loss_optim = float('inf')
-
-    def __call__(self, val_loss):
-        if self.val_loss_optim < val_loss:
-            self.count += 1
-        else:
-            self.val_loss_optim = val_loss
-            self.count = 0
-
-        if self.count >= self.patience:
-            self.stop = True
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training hyperparamters')
     parser.add_argument('dataDir', type=str, help='Directory of saved cues')
@@ -118,7 +100,6 @@ if __name__ == "__main__":
     Ntime = cuesShape.Ntime
     Ncues = cuesShape.Ncues
 
-    # num_epochs = 30
     num_epochs = args.numEpoch
     pretrainEpoch = 0
     learning_rate = args.lrRate
@@ -127,37 +108,19 @@ if __name__ == "__main__":
     val_loss_optim = float('inf')
     val_acc_optim = 0.0
 
-    num_warmup_steps = 5
-    num_training_steps = num_epochs+1
-    warmup_proportion = float(num_warmup_steps) / float(num_training_steps)
-
-    # optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    
-    # optimizer = AdamW(model.parameters())
-
-    # scheduler = get_linear_schedule_with_warmup(
-    #     optimizer, num_warmup_steps=num_warmup_steps, 
-    #     num_training_steps=num_training_steps
-    # )
-    
-    
-
-    # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True)
-
-    # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
-    # model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
     if args.whichModel.lower() == "transformer":
         model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-        lr_lambda = lambda epoch: learning_rate * np.minimum(
-            (epoch + 1) ** -0.5, (epoch + 1) * (num_warmup_steps ** -1.5)
-        )
-        scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda, verbose=True)
     elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, dropout=args.valDropout, isDebug=False).to(device)
+        model = CNNModel(task=args.task, dropout=args.valDropout, isDebug=args.isDebug).to(device)
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
-        scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
+    elif args.whichModel.lower() == "pytorchtransformer":
+        model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
+        optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    else:
+        raise SystemExit("No model selected")
 
+    scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
     writer = SummaryWriter(f'runs/temp/tryingout_tensorboard')
 
     if not os.path.isdir(args.modelDir):

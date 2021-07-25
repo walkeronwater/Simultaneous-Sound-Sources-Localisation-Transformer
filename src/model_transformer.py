@@ -423,6 +423,99 @@ class DIYModel(nn.Module):
         # out = self.softmaxLayer(out)
         return out
 
+class PytorchTransformer(nn.Module):
+    def __init__(
+        self,
+        task,
+        Ntime, # time windows
+        Nfreq, # frequency bins
+        Ncues,
+        num_layers,
+        numFC,
+        heads,
+        device,
+        forward_expansion,
+        dropout,
+        isDebug
+    ):
+        super(PytorchTransformer, self).__init__()
+        self.task = task
+        Nloc = predNeuron(task)
+        print("Number of neurons in the final layer: ", Nloc)
+        
+        transformerLayers_torch = nn.TransformerEncoderLayer(
+            d_model = Nfreq,
+            nhead = 8,
+            dim_feedforward = 4*Nfreq,
+            dropout = dropout,
+            activation = 'relu'
+        )
+        self.encoder = nn.TransformerEncoder(transformerLayers_torch, num_layers=num_layers)
+
+        if numFC >= 3:
+            self.FClayers = nn.ModuleList(
+                [
+                    nn.Linear(Ntime*Nfreq*Ncues, 256),
+                    nn.BatchNorm1d(256),
+                    nn.ReLU(),
+                    nn.Dropout(0.1),
+                    nn.Linear(256, Nloc),
+                    nn.ReLU()
+                ]
+            )
+            self.FClayers.extend(
+                [
+                    nn.Linear(Nloc, Nloc)
+                    for _ in range(numFC-2)
+                ]
+            )
+        else:
+            self.FClayers = nn.Sequential(
+                nn.Linear(Ntime*Nfreq*Ncues, 256),
+                nn.BatchNorm1d(256),
+                nn.Tanh(),
+                nn.Dropout(0.1),
+                nn.Linear(256, Nloc),
+                nn.Tanh(),
+                nn.Linear(Nloc, Nloc)
+            )
+        if task in ["elevRegression","azimRegression","allRegression"]:
+            self.setRange1 = nn.Hardtanh()
+            self.setRange2 = nn.Hardtanh()
+        self.isDebug = isDebug
+        self.dropout = nn.Dropout(dropout)
+        # self.softmaxLayer = nn.Softmax(dim = -1)
+    def forward(self, cues):
+        encList = []
+        for i in range(cues.shape[-1]):
+            enc = self.encoder(cues[:,:,:,0].permute(2, 0, 1))
+            encList.append(enc)
+
+        if self.isDebug:
+            print("Encoder for one cue shape: ", enc.shape)
+            
+        out = torch.stack(encList)
+        out = out.permute(2,1,3,0)
+
+        out = torch.flatten(out, 1, -1)
+        if self.isDebug:
+            print("Encoder output shape: ", out.shape)
+
+        for layers in self.FClayers:
+            out = layers(out)
+
+        if self.task in ["elevRegression","azimRegression","allRegression"]:
+            out = torch.stack(
+                [
+                    3/8*pi*self.setRange1(out[:,0])+pi/8,
+                    pi*self.setRange2(out[:,1])+pi
+                ], dim=1
+            )
+        
+        # out = self.softmaxLayer(out)
+        return out
+
+
 def saveParam(epoch, model, optimizer, scheduler, savePath, task):
     torch.save({
         'epoch': epoch,
@@ -492,6 +585,23 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase, whichBest
     else:
         raise SystemExit("Task doesn't match")
 
+class EarlyStopping:
+    def __init__(self, patience):
+        self.patience = patience
+        self.stop = False
+        self.count = 0
+        self.val_loss_optim = float('inf')
+
+    def __call__(self, val_loss):
+        if self.val_loss_optim < val_loss:
+            self.count += 1
+        else:
+            self.val_loss_optim = val_loss
+            self.count = 0
+
+        if self.count >= self.patience:
+            self.stop = True
+
 def getLR(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
@@ -516,12 +626,13 @@ if __name__ == "__main__":
     # model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
     # model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
     model = CNNModel(task=task, dropout=0, isDebug=True).to(device)
+    model = PytorchTransformer(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
 
     testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     print("testInput shape: ", testInput.shape)
     # print(testLabel)
 
-    print(testInput.permute(0,3,1,2).shape)
+    # print(testInput.permute(0,3,1,2).shape)
     # raise SystemExit("debug")
     testOutput = model(testInput)
     print("testOutput shape: ",testOutput.shape)
