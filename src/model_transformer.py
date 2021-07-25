@@ -89,6 +89,13 @@ class CNNModel(nn.Module):
                 ], dim=1
             )
         return out
+    
+    # default uniform method provided by Pytorch is Kaiming He uniform
+    # def weight_init(m):
+    #     if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+    #         nn.init.xavier_uniform_(m.weight, gain=nn.init.calculate_gain('relu'))
+    #         nn.init.zeros_(m.bias)
+
 
 
 class SelfAttention(nn.Module):
@@ -507,21 +514,19 @@ if __name__ == "__main__":
     Ncues = 5
     batchSize = 32
     # model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
-    model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
-    # model = CNNModel(task=task, dropout=0, isDebug=True).to(device)
+    # model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
+    model = CNNModel(task=task, dropout=0, isDebug=True).to(device)
 
     testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
-    # testInput = x[0].unsqueeze(0).to(device)
-    # testLabel = x[1].to(device)
-    # print("testInput shape: ", testInput.shape)
+    print("testInput shape: ", testInput.shape)
     # print(testLabel)
 
     print(testInput.permute(0,3,1,2).shape)
     # raise SystemExit("debug")
     testOutput = model(testInput)
     print("testOutput shape: ",testOutput.shape)
-    print("testOutput: ",testOutput)
+    # print("testOutput: ",testOutput)
     # print(torch.max(testOutput, 1))
 
-    # summary(model, (Nfreq, Ntime, Ncues))
+    summary(model, (Nfreq, Ntime, Ncues))
     

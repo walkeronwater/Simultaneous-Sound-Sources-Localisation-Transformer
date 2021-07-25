@@ -31,6 +31,24 @@ from model_transformer import *
 from loss import *
 from main_cues import CuesShape
 
+class EarlyStopping:
+    def __init__(self, patience):
+        self.patience = patience
+        self.stop = False
+        self.count = 0
+        self.val_loss_optim = float('inf')
+
+    def __call__(self, val_loss):
+        if self.val_loss_optim < val_loss:
+            self.count += 1
+        else:
+            self.val_loss_optim = val_loss
+            self.count = 0
+
+        if self.count >= self.patience:
+            self.stop = True
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training hyperparamters')
     parser.add_argument('dataDir', type=str, help='Directory of saved cues')
@@ -46,6 +64,7 @@ if __name__ == "__main__":
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
     parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
+    parser.add_argument('--patience', default=10, type=int, help='Early stopping patience?')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
@@ -67,6 +86,7 @@ if __name__ == "__main__":
     print("Dropout value: ", args.valDropout)
     print("Number of epochs: ", args.numEpoch)
     print("Batch size: ", args.batchSize)
+    print("Early stopping patience: ", args.patience)
     if args.isDebug == "True":
         args.isDebug = True
     else:
@@ -135,7 +155,7 @@ if __name__ == "__main__":
         scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda, verbose=True)
     elif args.whichModel.lower() == "cnn":
         model = CNNModel(task=args.task, dropout=args.valDropout, isDebug=False).to(device)
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+        optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
         scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
 
     writer = SummaryWriter(f'runs/temp/tryingout_tensorboard')
@@ -154,6 +174,9 @@ if __name__ == "__main__":
         except:
             print("Not found any pre-trained model in directory", args.modelDir)
 
+    # set up early stopping
+    early_stop = EarlyStopping(args.patience)
+    # use tensorboard
     step = 1
     for epoch in range(pretrainEpoch, pretrainEpoch + num_epochs):
         print("\nEpoch %d, lr = %f" % ((epoch+1), getLR(optimizer)))
@@ -255,12 +278,28 @@ if __name__ == "__main__":
             args.task
         )
 
+        # update tensorboard
         writer.add_scalar('Training Loss', train_loss, global_step=step)
         writer.add_scalar('Training RMS angle (degree)', train_acc, global_step=step)
         writer.add_scalar('Validation Loss', val_loss, global_step=step)
         writer.add_scalar('Validation RMS angle (degree)', val_acc, global_step=step)
         step += 1
 
+        early_stop(val_loss)
+        if early_stop.stop:
+            break
+
+        if early_stop.count == 0 or epoch == 0:
+            saveParam(
+                epoch+1,
+                model,
+                optimizer,
+                scheduler,
+                args.modelDir + "param_bestValLoss.pth.tar",
+                args.task
+            )
+
+        '''
         # early stopping
         if val_loss >= val_loss_optim:
             early_epoch_count += 1
@@ -279,3 +318,4 @@ if __name__ == "__main__":
             
         if (early_epoch_count >= early_epoch):
             break
+        '''
