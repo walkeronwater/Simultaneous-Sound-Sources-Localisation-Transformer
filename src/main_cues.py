@@ -118,7 +118,7 @@ if __name__ == "__main__":
     parser.add_argument('cuesDir', type=str, help='Directory of cues to be saved')
     parser.add_argument('Nsample', type=int, help='Number of samples?')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
-    parser.add_argument('--valSNRList', default="5,10,15,20,25", type=str, help='Range of SNR')
+    parser.add_argument('--valSNRList', default="-5,0,5,10,15,20,25", type=str, help='Range of SNR')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
