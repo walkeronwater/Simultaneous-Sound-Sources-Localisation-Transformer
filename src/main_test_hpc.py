@@ -112,6 +112,10 @@ if __name__ == "__main__":
     # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
     model, val_optim = loadCheckpoint(model=model, optimizer=None, scheduler=None, loadPath=args.modelDir, task=args.task, phase="test", whichBest=args.whichBest)
     model.to(device)
+    
+    UD_confusion = []
+    LR_confusion = []
+    FB_confusion = []
     for valSNR in valSNRList:
         fileCount = 0   # count the number of data samples
         for audioIndex in range(len(path)):
