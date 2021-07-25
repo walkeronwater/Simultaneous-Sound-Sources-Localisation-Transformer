@@ -153,6 +153,7 @@ class ConfusionEval:
         plt.ylabel("Prediction")
         plt.title("Elevation "+self.expName)
         plt.savefig(self.savePath+self.expName+"_elev.png")
+        plt.close()
 
         x = np.linspace(0, 345, 100)
         y = x
@@ -165,6 +166,7 @@ class ConfusionEval:
         plt.ylabel("Prediction")
         plt.title("Azimuth "+self.expName)
         plt.savefig(self.savePath+self.expName+"_azim.png")
+        plt.close()
 
         x = np.linspace(-90, 90, 100)
         y = x
@@ -177,6 +179,7 @@ class ConfusionEval:
         plt.ylabel("Prediction")
         plt.title("LR confusion "+self.expName)
         plt.savefig(self.savePath+self.expName+"_lr.png")
+        plt.close()
 
         x = np.linspace(-90, 90, 100)
         y = x
@@ -189,6 +192,7 @@ class ConfusionEval:
         plt.ylabel("Prediction")
         plt.title("FB confusion "+self.expName)
         plt.savefig(self.savePath+self.expName+"_fb.png")
+        plt.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing hyperparamters')
