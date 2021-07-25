@@ -203,7 +203,7 @@ def plotConfusion(snrList, UDList, LRList, FBList, savePath):
     plt.plot(snrList, LRList)
     plt.plot(snrList, FBList)
     plt.xlabel("SNR")
-    plt.ylabel("Prediction")
+    plt.ylabel("RMS error of angle (degree)")
     plt.title("Confusion vs SNR")
     plt.legend(["UD", "LR", "FB"])
     plt.grid()
