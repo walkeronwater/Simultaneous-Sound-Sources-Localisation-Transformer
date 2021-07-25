@@ -60,6 +60,12 @@ class ConfusionEval:
         self.target_elev = []
         self.pred_azim = []
         self.target_azim = []
+        self.pred_UD = []
+        self.pred_LR = []
+        self.pred_FB = []
+        self.target_UD = []
+        self.target_LR = []
+        self.target_FB = []
         self.savePath = savePath+"/" if savePath[-1] != "/" else savePath
         self.expName = expName
 
@@ -71,6 +77,12 @@ class ConfusionEval:
         self.target_elev.extend(radian2Degree(target[:,0].squeeze(0)).cpu())
         self.pred_azim.extend(radian2Degree(pred[:,1].squeeze(0)).cpu())
         self.target_azim.extend(radian2Degree(target[:,1].squeeze(0)).cpu())
+        self.pred_UD.extend(radian2Degree(pred[:,0]).cpu())
+        self.pred_LR.extend(radian2Degree(self.LR_loss(pred)).cpu())
+        self.pred_FB.extend(radian2Degree(self.FB_loss(pred)).cpu())
+        self.target_UD.extend(radian2Degree(target[:,0]).cpu())
+        self.target_LR.extend(radian2Degree(self.LR_loss(target)).cpu())
+        self.target_FB.extend(radian2Degree(self.FB_loss(target)).cpu())
 
     def LR_loss(self, output):
         return torch.acos(
@@ -151,10 +163,32 @@ class ConfusionEval:
         plt.yticks(range(0,360,30))
         plt.xlabel("Ground truth")
         plt.ylabel("Prediction")
-        plt.title("Azimuth"+self.expName)
+        plt.title("Azimuth "+self.expName)
         plt.savefig(self.savePath+self.expName+"_azim.png")
 
+        x = np.linspace(-90, 90, 100)
+        y = x
+        plt.figure()
+        plt.scatter(self.pred_LR, self.target_LR)
+        plt.plot(x, y,'-r')
+        plt.xticks(range(-90,91,15))
+        plt.yticks(range(-90,91,15))
+        plt.xlabel("Ground truth")
+        plt.ylabel("Prediction")
+        plt.title("LR confusion "+self.expName)
+        plt.savefig(self.savePath+self.expName+"_lr.png")
 
+        x = np.linspace(-90, 90, 100)
+        y = x
+        plt.figure()
+        plt.scatter(self.pred_FB, self.target_FB)
+        plt.plot(x, y,'-r')
+        plt.xticks(range(-90,91,15))
+        plt.yticks(range(-90,91,15))
+        plt.xlabel("Ground truth")
+        plt.ylabel("Prediction")
+        plt.title("FB confusion "+self.expName)
+        plt.savefig(self.savePath+self.expName+"_fb.png")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing hyperparamters')
@@ -315,11 +349,7 @@ if __name__ == "__main__":
                 if args.task in ["elevRegression","azimRegression","allRegression"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
                 
-                    # confusion.up_down(outputs, labels[:, 1:3])
-                    # confusion.left_right(outputs, labels[:, 1:3])
-                    # confusion.front_back(outputs, labels[:, 1:3])
                     confusion.evaluate(outputs, labels[:, 1:3])
-                    # confusion.regression_plot(outputs, labels[:, 1:3])
                 else:
                     loss = nn.CrossEntropyLoss(outputs, labels)
                 test_sum_loss += loss.item()

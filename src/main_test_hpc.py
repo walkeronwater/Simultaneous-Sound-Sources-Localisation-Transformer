@@ -193,10 +193,7 @@ if __name__ == "__main__":
 
                 if args.task in ["elevRegression","azimRegression","allRegression"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
-                
-                    # confusion.up_down(outputs, labels[:, 1:3])
-                    # confusion.left_right(outputs, labels[:, 1:3])
-                    # confusion.front_back(outputs, labels[:, 1:3])
+                    
                     confusion.evaluate(outputs, labels[:, 1:3])
                 else:
                     loss = nn.CrossEntropyLoss(outputs, labels)
