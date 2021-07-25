@@ -18,7 +18,7 @@ import torch.nn as nn
 from torch import optim
 from torch.utils.data import DataLoader, TensorDataset
 import torch.utils.data
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import ReduceLROnPlateau, LambdaLR, StepLR
 from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
@@ -42,7 +42,6 @@ def data_parallel(module, input, device_ids, output_device=None):
     replicas = replicas[:len(inputs)]
     outputs = nn.parallel.parallel_apply(replicas, inputs)
     return nn.parallel.gather(outputs, output_device)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training hyperparamters')
@@ -137,10 +136,11 @@ if __name__ == "__main__":
     #     num_training_steps=num_training_steps
     # )
     
-    lr_lambda = lambda epoch: learning_rate * np.minimum(
-        (epoch + 1) ** -0.5, (epoch + 1) * (num_warmup_steps ** -1.5)
-    )
-    scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda, verbose=True)
+    # lr_lambda = lambda epoch: learning_rate * np.minimum(
+    #     (epoch + 1) ** -0.5, (epoch + 1) * (num_warmup_steps ** -1.5)
+    # )
+    # scheduler = LambdaLR(optimizer, lr_lambda=lr_lambda, verbose=True)
+    scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
 
     # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
 
