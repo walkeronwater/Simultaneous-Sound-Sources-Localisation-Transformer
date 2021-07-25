@@ -93,9 +93,10 @@ if __name__ == "__main__":
     # train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    Nfreq = CuesShape.Nfreq
-    Ntime = CuesShape.Ntime
-    Ncues = CuesShape.Ncues
+    cuesShape = CuesShape()
+    Nfreq = cuesShape.Nfreq
+    Ntime = cuesShape.Ntime
+    Ncues = cuesShape.Ncues
 
     # num_epochs = 30
     num_epochs = args.numEpoch

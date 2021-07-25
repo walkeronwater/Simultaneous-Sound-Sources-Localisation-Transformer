@@ -105,9 +105,10 @@ if __name__ == "__main__":
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    Nfreq = CuesShape.Nfreq
-    Ntime = CuesShape.Ntime
-    Ncues = CuesShape.Ncues
+    cuesShape = CuesShape()
+    Nfreq = cuesShape.Nfreq
+    Ntime = cuesShape.Ntime
+    Ncues = cuesShape.Ncues
     # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
     # model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
     if args.whichModel.lower() == "transformer":
