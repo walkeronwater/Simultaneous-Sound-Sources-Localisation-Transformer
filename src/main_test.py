@@ -51,11 +51,26 @@ def regressionAcc(output, label, locLabel, device):
     return correct
 
 class ConfusionEval:
-    def __init__(self, numExample):
+    def __init__(self, numExample, savePath, expName):
         self.numExample = numExample
         self.rms_UD = 0.0
         self.rms_LR = 0.0
         self.rms_FB = 0.0
+        self.pred_elev = []
+        self.target_elev = []
+        self.pred_azim = []
+        self.target_azim = []
+        self.savePath = savePath+"/" if savePath[-1] != "/" else savePath
+        self.expName = expName
+
+    def evaluate(self, pred, target):
+        self.rms_UD += torch.sum(torch.square(pred[:,0] - target[:,0])).item()
+        self.rms_LR += torch.sum(torch.square(self.LR_loss(pred) - self.LR_loss(target))).item()
+        self.rms_FB += torch.sum(torch.square(self.FB_loss(pred) - self.FB_loss(target))).item()
+        self.pred_elev.extend(radian2Degree(pred[:,0].squeeze(0)).cpu())
+        self.target_elev.extend(radian2Degree(target[:,0].squeeze(0)).cpu())
+        self.pred_azim.extend(radian2Degree(pred[:,1].squeeze(0)).cpu())
+        self.target_azim.extend(radian2Degree(target[:,1].squeeze(0)).cpu())
 
     def LR_loss(self, output):
         return torch.acos(
@@ -104,6 +119,9 @@ class ConfusionEval:
         #     target_[i] = self.convertFB(target[i,1])
         # self.rms_FB += torch.sum(torch.square(pred_ - target_)).item()
     
+    def regression_plot(self):
+        pass
+
     def report(self):
         print(
             "UD, LR, FB: ",
@@ -111,6 +129,31 @@ class ConfusionEval:
             radian2Degree(np.sqrt(self.rms_LR / self.numExample)),
             radian2Degree(np.sqrt(self.rms_FB / self.numExample))
         )
+
+        x = np.linspace(-45, 90,100)
+        y = x
+        plt.figure()
+        plt.scatter(self.pred_elev, self.target_elev)
+        plt.plot(x, y,'-r')
+        plt.xticks(range(-45,91,15))
+        plt.yticks(range(-45,91,15))
+        plt.xlabel("Ground truth")
+        plt.ylabel("Prediction")
+        plt.title("Elevation "+self.expName)
+        plt.savefig(self.savePath+self.expName+"_elev.png")
+
+        x = np.linspace(0, 345, 100)
+        y = x
+        plt.figure()
+        plt.scatter(self.pred_elev, self.target_elev)
+        plt.plot(x, y,'-r')
+        plt.xticks(range(0,360,30))
+        plt.yticks(range(0,360,30))
+        plt.xlabel("Ground truth")
+        plt.ylabel("Prediction")
+        plt.title("Azimuth"+self.expName)
+        plt.savefig(self.savePath+self.expName+"_azim.png")
+
 
 
 if __name__ == "__main__":
@@ -126,6 +169,7 @@ if __name__ == "__main__":
     parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
+    parser.add_argument('--valSNRList', default="-10,-5,0,5,10,15,20,25,100", type=str, help='Range of SNR')
     parser.add_argument('--samplePerSNR', default=10, type=int, help='Number of samples per SNR')
     parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
@@ -147,6 +191,8 @@ if __name__ == "__main__":
     print("Dropout value: ", args.valDropout)
     print("Number of epochs: ", args.numEpoch)
     print("Batch size: ", args.batchSize)
+    args.valSNRList = [float(item) for item in args.valSNRList.split(',')]
+    print("Range of SNR: ", args.valSNRList)
     print("Number of samples per SNR: ", args.samplePerSNR)
 
     if args.isDebug == "True":
@@ -160,13 +206,14 @@ if __name__ == "__main__":
     Naudio = len(path)
     print("Number of audio files: ", Naudio)
 
-    lenSliceInSec = CuesShape.lenSliceInSec
-    Nfreq = CuesShape.Nfreq
-    Ntime = CuesShape.Ntime
-    Ncues = CuesShape.Ncues
-    Nloc = CuesShape.Nloc
+    cuesShape = CuesShape(valSNRList=args.valSNRList)
+    lenSliceInSec = cuesShape.lenSliceInSec
+    Nfreq = cuesShape.Nfreq
+    Ntime = cuesShape.Ntime
+    Ncues = cuesShape.Ncues
+    Nloc = cuesShape.Nloc
     Nsample = Nloc * args.samplePerSNR
-    valSNRList = [-10,-5,0,5,10,15,20,25,100]
+    valSNRList = cuesShape.valSNRList
 
     # allocate tensors cues and labels in RAM
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
@@ -257,7 +304,7 @@ if __name__ == "__main__":
         test_loss = 0.0
         test_acc = 0.0
         
-        confusion = ConfusionEval(Nsample)
+        confusion = ConfusionEval(Nsample, args.modelDir, expName="SNR="+str(int(valSNR)))
         # print("UD, LR, FB: ", confusion.rms_UD, confusion.rms_LR, confusion.rms_FB)
         model.eval()
         with torch.no_grad():
@@ -268,9 +315,11 @@ if __name__ == "__main__":
                 if args.task in ["elevRegression","azimRegression","allRegression"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
                 
-                    confusion.up_down(outputs, labels[:, 1:3])
-                    confusion.left_right(outputs, labels[:, 1:3])
-                    confusion.front_back(outputs, labels[:, 1:3])
+                    # confusion.up_down(outputs, labels[:, 1:3])
+                    # confusion.left_right(outputs, labels[:, 1:3])
+                    # confusion.front_back(outputs, labels[:, 1:3])
+                    confusion.evaluate(outputs, labels[:, 1:3])
+                    # confusion.regression_plot(outputs, labels[:, 1:3])
                 else:
                     loss = nn.CrossEntropyLoss(outputs, labels)
                 test_sum_loss += loss.item()

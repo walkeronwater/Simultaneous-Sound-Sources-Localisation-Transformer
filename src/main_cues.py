@@ -35,12 +35,12 @@ class CuesShape:
         lenSliceInSec = 0.5,
         valSNRList = [-5,0,5,10,15,20,25]
     ):
-        self.Nfreq=Nfreq
-        self.Ntime=Ntime
-        self.Ncues=Ncues
-        self.Nloc=Nloc
-        self.lenSliceInSec=lenSliceInSec
-        self.valSNRList=valSNRList
+        self.Nfreq = Nfreq
+        self.Ntime = Ntime
+        self.Ncues = Ncues
+        self.Nloc = Nloc
+        self.lenSliceInSec = lenSliceInSec
+        self.valSNRList = valSNRList
 
 def createCues(path, Nsample, CuesShape, dirName):
     Nfreq = CuesShape.Nfreq
