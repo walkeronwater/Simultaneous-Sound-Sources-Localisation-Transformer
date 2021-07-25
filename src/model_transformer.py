@@ -445,7 +445,7 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase, whichBest
         epoch = checkpoint['epoch']
         print("Model is retrieved at epoch ", epoch)
         # try:
-        model.load_state_dict(checkpoint['model'])
+        model.load_state_dict(checkpoint['model'], strict=False)
         # except:
         #     model.load_state_dict(checkpoint['state_dict'])
 
