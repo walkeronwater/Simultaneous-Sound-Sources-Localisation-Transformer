@@ -112,7 +112,7 @@ if __name__ == "__main__":
     # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
     model, val_optim = loadCheckpoint(model=model, optimizer=None, scheduler=None, loadPath=args.modelDir, task=args.task, phase="test", whichBest=args.whichBest)
     model.to(device)
-    
+
     UD_confusion = []
     LR_confusion = []
     FB_confusion = []
@@ -223,7 +223,7 @@ if __name__ == "__main__":
             print('For SNR: %d Test Loss: %.04f | Test Acc: %.4f%% '
                 % (valSNR, test_loss, test_acc))
                 
-        confusion.report()
+        out = confusion.report()
         UD_confusion.append(out[0])
         LR_confusion.append(out[1])
         FB_confusion.append(out[2])
