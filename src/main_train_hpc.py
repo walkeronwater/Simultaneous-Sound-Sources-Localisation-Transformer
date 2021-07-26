@@ -27,6 +27,8 @@ from torchsummary import summary
 from load_data import *
 from utils import *
 from model_transformer import *
+from model_CNN import *
+from model_RNN import *
 from loss import *
 from main_cues import CuesShape
 

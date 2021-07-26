@@ -28,6 +28,8 @@ from torchsummary import summary
 from load_data import *
 from utils import *
 from model_transformer import *
+from model_CNN import *
+from model_RNN import *
 from loss import *
 from main_cues import CuesShape
 
@@ -114,7 +116,7 @@ if __name__ == "__main__":
         model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, Ncues=Ncues, dropout=args.valDropout, isDebug=args.isDebug).to(device)
+        model = CNNModel(task=args.task, Ncues=Ncues, dropout=args.valDropout, device=device, isDebug=args.isDebug).to(device)
         model.apply(weight_init)
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
     elif args.whichModel.lower() == "pytorchtransformer":
