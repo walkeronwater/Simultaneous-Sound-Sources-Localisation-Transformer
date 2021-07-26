@@ -114,7 +114,7 @@ if __name__ == "__main__":
         model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, dropout=args.valDropout, isDebug=args.isDebug).to(device)
+        model = CNNModel(task=args.task, Ncues=Ncues, dropout=args.valDropout, isDebug=args.isDebug).to(device)
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
     elif args.whichModel.lower() == "pytorchtransformer":
         model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
