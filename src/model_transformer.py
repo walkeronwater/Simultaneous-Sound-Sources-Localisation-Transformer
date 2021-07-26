@@ -35,13 +35,13 @@ def predNeuron(task):
         return 2
 
 class CNNModel(nn.Module):
-    def __init__(self, task, dropout, isDebug=False):
+    def __init__(self, task, Ncues, dropout, isDebug=False):
         super(CNNModel, self).__init__()
 
         self.task = task
         Nloc = predNeuron(task)
         self.convLayers = nn.Sequential(
-            nn.Conv2d(5, 32, (5,5), stride=3),
+            nn.Conv2d(Ncues, 32, (5,5), stride=3),
             nn.ReLU(),
             nn.BatchNorm2d(32),
             nn.Conv2d(32, 64, (3,3), stride=2),
@@ -625,7 +625,7 @@ if __name__ == "__main__":
     batchSize = 32
     # model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
     # model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
-    model = CNNModel(task=task, dropout=0, isDebug=True).to(device)
+    model = CNNModel(task=task, Ncues=Ncues, dropout=0, isDebug=True).to(device)
     # model = PytorchTransformer(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
 
     testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
