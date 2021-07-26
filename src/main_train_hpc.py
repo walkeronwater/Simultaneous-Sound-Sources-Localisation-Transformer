@@ -62,6 +62,7 @@ if __name__ == "__main__":
     parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     parser.add_argument('--patience', default=10, type=int, help='Early stopping patience?')
+    parser.add_argument('--Ncues', default=5, type=int, help='Number of cues')
     parser.add_argument('--ngpus', default=0, type=int, help='Number of GPUs')
 
     args = parser.parse_args()
@@ -84,6 +85,7 @@ if __name__ == "__main__":
     print("Number of epochs: ", args.numEpoch)
     print("Batch size: ", args.batchSize)
     print("Early stopping patience: ", args.patience)
+    print("Number of cues: ", args.Ncues)
     if args.isDebug == "True":
         args.isDebug = True
     else:
@@ -109,7 +111,7 @@ if __name__ == "__main__":
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    cuesShape = CuesShape()
+    cuesShape = CuesShape(Ncues=args.Ncues)
     Nfreq = cuesShape.Nfreq
     Ntime = cuesShape.Ntime
     Ncues = cuesShape.Ncues
@@ -127,7 +129,8 @@ if __name__ == "__main__":
         model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, dropout=args.valDropout, isDebug=args.isDebug)
+        model = CNNModel(task=args.task, Ncues=Ncues, dropout=args.valDropout, device=device, isDebug=args.isDebug).to(device)
+        model.apply(weight_init)
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
     elif args.whichModel.lower() == "pytorchtransformer":
         model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
