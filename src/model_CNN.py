@@ -45,7 +45,8 @@ class CNNModel(nn.Module):
             # nn.BatchNorm2d(128)
         )
         self.FCLayers = nn.Sequential(
-            nn.Linear(2560, 1024),
+            # nn.Linear(2560, 1024),
+            nn.Linear(7872, 1024),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(1024, 512),
