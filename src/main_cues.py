@@ -33,7 +33,7 @@ class CuesShape:
         Ncues = 5,
         Nloc = 187,
         lenSliceInSec = 0.5,
-        valSNRList = [-5,0,5,10,15,20,25]
+        valSNRList = [-5,0,5,10,15,20,25,100]
     ):
         self.Nfreq = Nfreq
         self.Ntime = Ntime
@@ -42,13 +42,13 @@ class CuesShape:
         self.lenSliceInSec = lenSliceInSec
         self.valSNRList = valSNRList
 
-def createCues(path, Nsample, CuesShape, dirName):
-    Nfreq = CuesShape.Nfreq
-    Ntime = CuesShape.Ntime
-    Ncues = CuesShape.Ncues
-    Nloc = CuesShape.Nloc
-    lenSliceInSec = CuesShape.lenSliceInSec
-    valSNRList = CuesShape.valSNRList
+def createCues(path, Nsample, cuesShape, dirName):
+    Nfreq = cuesShape.Nfreq
+    Ntime = cuesShape.Ntime
+    Ncues = cuesShape.Ncues
+    Nloc = cuesShape.Nloc
+    lenSliceInSec = cuesShape.lenSliceInSec
+    valSNRList = cuesShape.valSNRList
 
     fileCount = 0
     print("Creating cues in ", dirName)
@@ -91,12 +91,16 @@ def createCues(path, Nsample, CuesShape, dirName):
                     r_l, theta_l  = cartesian2euler(specLeft)
                     r_r, theta_r  = cartesian2euler(specRight)
 
-                    cues = concatCues([ipdCues, ildCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                    if Ncues == 6:
+                        cues = concatCues([ipdCues, ildCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                    elif Ncues == 5:
+                        cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                    elif Ncues == 4:
+                        cues = concatCues([r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                    elif Ncues == 2:
+                        cues = concatCues([ipdCues, ildCues], (Nfreq, Ntime))
 
                     saveCues(cues, locIndex, dirName, fileCount, locLabel)
-
-                    # if fileCount == 1:
-                    #     raise SystemExit("Debugging")
 
                     fileCount += 1
                     if fileCount % (Nloc*len(valSNRList)) == 0:
@@ -118,7 +122,8 @@ if __name__ == "__main__":
     parser.add_argument('cuesDir', type=str, help='Directory of cues to be saved')
     parser.add_argument('Nsample', type=int, help='Number of samples?')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
-    parser.add_argument('--valSNRList', default="-5,0,5,10,15,20,25", type=str, help='Range of SNR')
+    parser.add_argument('--valSNRList', default="-5,0,5,10,15,20,25,30,35", type=str, help='Range of SNR')
+    parser.add_argument('--Ncues', default=5, type=int, help='Number of cues?')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
@@ -129,6 +134,7 @@ if __name__ == "__main__":
     print("Train validation split: ", args.trainValidSplit)
     args.valSNRList = [float(item) for item in args.valSNRList.split(',')]
     print("Range of SNR: ", args.valSNRList)
+    print("Number of cues: ", args.Ncues)
 
     Nsample_train = int(args.trainValidSplit[0]*args.Nsample)
     Nsample_valid = int(args.trainValidSplit[1]*args.Nsample)
@@ -141,7 +147,7 @@ if __name__ == "__main__":
     print("Number of training audio files: ", len(trainAudioPath))
     print("Number of validation audio files: ", len(validAudioPath))
 
-    cuesShape = CuesShape(valSNRList=args.valSNRList)
+    cuesShape = CuesShape(valSNRList=args.valSNRList, Ncues=args.Ncues)
     # print(cuesShape.valSNRList)
     # raise SystemExit('debug')
 
