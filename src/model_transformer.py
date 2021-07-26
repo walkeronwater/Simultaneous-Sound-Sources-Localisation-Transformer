@@ -22,81 +22,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from torchsummary import summary
 
-def predNeuron(task):
-    if task == "elevClass":
-        return 10
-    elif task == "azimClass":
-        return 24
-    elif task == "allClass":
-        return 187
-    elif task == "elevRegression" or task == "azimRegression":
-        return 1
-    elif task == "allRegression":
-        return 2
-
-class CNNModel(nn.Module):
-    def __init__(self, task, Ncues, dropout, isDebug=False):
-        super(CNNModel, self).__init__()
-
-        self.task = task
-        Nloc = predNeuron(task)
-        self.convLayers = nn.Sequential(
-            nn.Conv2d(Ncues, 32, (5,5), stride=3),
-            nn.ReLU(),
-            nn.BatchNorm2d(32),
-            nn.Conv2d(32, 64, (3,3), stride=2),
-            nn.ReLU(),
-            nn.BatchNorm2d(64),
-            nn.Conv2d(64, 96, (3,3), stride=2),
-            nn.ReLU(),
-            nn.BatchNorm2d(96),
-            # nn.Conv2d(96, 128, (2,2), stride=2),
-            # nn.ReLU(),
-            # nn.BatchNorm2d(128)
-        )
-        self.FCLayers = nn.Sequential(
-            nn.Linear(7872, 1024),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(1024, 512),
-            nn.ReLU(),
-            nn.Linear(512, 256),
-            nn.ReLU(),
-            nn.Linear(256, Nloc)
-        )
-        if task in ["elevRegression","azimRegression","allRegression"]:
-            self.setRange1 = nn.Hardtanh()
-            self.setRange2 = nn.Hardtanh()
-        self.isDebug = isDebug
-    def forward(self, cues):
-        out = self.convLayers(cues.permute(0,3,2,1))
-        if self.isDebug:
-            print("Shape after convLayers: ", out.shape)
-        out = torch.flatten(out, 1, -1)
-
-        if self.isDebug:
-            print("Shape after flatten: ", out.shape)
-
-        out = self.FCLayers(out)
-        if self.isDebug:
-            print("Shape after FClayers (output): ", out.shape)
-
-        if self.task in ["elevRegression","azimRegression","allRegression"]:
-            out = torch.stack(
-                [
-                    3/8*pi*self.setRange1(out[:,0])+pi/8,
-                    pi*self.setRange2(out[:,1])+pi
-                ], dim=1
-            )
-        return out
-    
-    # default uniform method provided by Pytorch is Kaiming He uniform
-    # def weight_init(m):
-    #     if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-    #         nn.init.xavier_uniform_(m.weight, gain=nn.init.calculate_gain('relu'))
-    #         nn.init.zeros_(m.bias)
-
-
+from utils_model import *
 
 class SelfAttention(nn.Module):
     def __init__(self, Nfreq, heads):
@@ -143,7 +69,6 @@ class SelfAttention(nn.Module):
 
         out = self.fc_out(out)
         return out
-
 
 class Attention(nn.Module):
     def __init__(self, embedSize):
@@ -516,104 +441,6 @@ class PytorchTransformer(nn.Module):
         return out
 
 
-def saveParam(epoch, model, optimizer, scheduler, savePath, task):
-    torch.save({
-        'epoch': epoch,
-        'model': model.state_dict(),
-        'optimizer': optimizer.state_dict(),
-        'scheduler': scheduler.state_dict(),
-        'task': task
-    }, savePath)
-
-def saveCurves(epoch, tl, ta, vl, va, savePath, task):
-    torch.save({
-        'epoch': epoch,
-        'train_loss': tl,
-        'train_acc': ta,
-        'valid_loss': vl,
-        'valid_acc': va,
-        'task': task
-    }, savePath)
-
-def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase, whichBest=None):
-    if whichBest == "None":
-        checkpoint = torch.load(loadPath+"param.pth.tar")
-    else:
-        checkpoint = torch.load(loadPath+"param"+"_"+whichBest+".pth.tar")
-
-    if checkpoint['task'] == task:
-        epoch = checkpoint['epoch']
-        print("Model is retrieved at epoch ", epoch)
-        # try:
-        model.load_state_dict(checkpoint['model'], strict=False)
-        # except:
-        #     model.load_state_dict(checkpoint['state_dict'])
-
-        trainHistory = glob(os.path.join(loadPath, "curve*"))
-
-        history = {
-            'train_acc': [],
-            'train_loss': [],
-            'valid_acc': [],
-            'valid_loss': []
-        }
-        for i in range(len(trainHistory)):
-            checkpt = torch.load(
-                loadPath+"curve_epoch_"+str(i+1)+".pth.tar"
-            )
-            for idx in history.keys():
-                history[idx].append(checkpt[idx])
-
-        val_loss_optim = history['valid_loss'][epoch-1]
-        print("val_loss_optim: ", val_loss_optim)
-        print("Corresponding validation accuracy: ",
-            history['valid_acc'][epoch-1]
-        )
-
-        if phase == "train":
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            try:
-                scheduler.load_state_dict(checkpoint['scheduler'])
-            except:
-                print("scheduler not found")
-            
-            preTrainEpoch = len(trainHistory)
-            print("Training will start from epoch", preTrainEpoch+1)
-            return model, optimizer, scheduler, preTrainEpoch, val_loss_optim
-        elif phase == "test":
-            return model, val_loss_optim
-    else:
-        raise SystemExit("Task doesn't match")
-
-class EarlyStopping:
-    def __init__(self, patience):
-        self.patience = patience
-        self.stop = False
-        self.count = 0
-        self.val_loss_optim = float('inf')
-
-    def __call__(self, val_loss):
-        if self.val_loss_optim < val_loss:
-            self.count += 1
-        else:
-            self.val_loss_optim = val_loss
-            self.count = 0
-
-        if self.count >= self.patience:
-            self.stop = True
-
-def getLR(optimizer):
-    for param_group in optimizer.param_groups:
-        return param_group['lr']
-
-def setLR(newLR, optimizer):
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = newLR
-    return optimizer
-
-#[TODO] evaluation
-# 
-
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     task = "allRegression"
@@ -625,8 +452,7 @@ if __name__ == "__main__":
     batchSize = 32
     # model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
     # model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
-    model = CNNModel(task=task, Ncues=Ncues, dropout=0, isDebug=True).to(device)
-    # model = PytorchTransformer(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
+    model = PytorchTransformer(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
 
     testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     print("testInput shape: ", testInput.shape)
