@@ -107,7 +107,7 @@ class Preprocess:
             return (seq - np.mean(seq))/(np.std(seq))
         elif self.prep_method.lower() == "normalise":
             return seq/np.linalg.norm(seq)
-        else
+        else:
             return seq
 
 # [TODO] method to log IPD cues and spectral cues
