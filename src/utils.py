@@ -55,12 +55,14 @@ def noiseGenerator(sigSeq, valSNR):
     # assert (
     #     valSNR >= 20
     # ), "Input data needs to be reshaped to (1, length of sequence)"
-    
-    sigSeqPower = 10*np.log10(np.mean(np.power(sigSeq, 2)))
-    noiseSeqPower = np.power(10, (sigSeqPower - valSNR)/10)
-    noiseSeq = np.random.normal(0, np.sqrt(noiseSeqPower), sigSeq.shape)
-    del sigSeqPower, noiseSeqPower
-    return noiseSeq
+    if valSNR >= 100:
+        return 0
+    else:
+        sigSeqPower = 10*np.log10(np.mean(np.power(sigSeq, 2)))
+        noiseSeqPower = np.power(10, (sigSeqPower - valSNR)/10)
+        noiseSeq = np.random.normal(0, np.sqrt(noiseSeqPower), sigSeq.shape)
+        del sigSeqPower, noiseSeqPower
+        return noiseSeq
 
 '''def addNoise(sigPair):
     valSNR = 1
