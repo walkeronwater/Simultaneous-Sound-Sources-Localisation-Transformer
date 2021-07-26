@@ -25,7 +25,7 @@ from torchsummary import summary
 from utils_model import *
 
 class CNNModel(nn.Module):
-    def __init__(self, task, Ncues, dropout, isDebug=False):
+    def __init__(self, task, Ncues, dropout, device, isDebug=False):
         super(CNNModel, self).__init__()
 
         self.task = task
@@ -57,6 +57,7 @@ class CNNModel(nn.Module):
         if task in ["elevRegression","azimRegression","allRegression"]:
             self.setRange1 = nn.Hardtanh()
             self.setRange2 = nn.Hardtanh()
+        self.device = device
         self.isDebug = isDebug
     def forward(self, cues):
         out = self.convLayers(cues.permute(0,3,2,1))
@@ -80,11 +81,12 @@ class CNNModel(nn.Module):
             )
         return out
     
-    # default uniform method provided by Pytorch is Kaiming He uniform
-    # def weight_init(m):
-    #     if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-    #         nn.init.xavier_uniform_(m.weight, gain=nn.init.calculate_gain('relu'))
-    #         nn.init.zeros_(m.bias)
+# default uniform method provided by Pytorch is Kaiming He uniform
+def weight_init(m):
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+        nn.init.xavier_uniform_(m.weight.data)
+        if m.bias is not None:
+            torch.nn.init.zeros_(m.bias)
 
 
 if __name__ == "__main__":
@@ -96,7 +98,8 @@ if __name__ == "__main__":
     Nfreq = 512
     Ncues = 5
     batchSize = 32
-    model = CNNModel(task=task, Ncues=Ncues, dropout=0, isDebug=True).to(device)
+    model = CNNModel(task=task, Ncues=Ncues, dropout=0, device=device, isDebug=True).to(device)
+    model.apply(weight_init)
 
     testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     print("testInput shape: ", testInput.shape)

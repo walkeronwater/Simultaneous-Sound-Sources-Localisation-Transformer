@@ -323,11 +323,12 @@ class DIYModel(nn.Module):
         for i in range(cues.shape[-1]):
             enc = self.encoder(cues[:,:,:,0].permute(0,2,1))
             encList.append(enc)
-
+        
         if self.isDebug:
             print("Encoder for one cue shape: ", enc.shape)
 
         out = torch.stack(encList)
+        
         out = out.permute(1,2,3,0)
 
         out = torch.flatten(out, 1, -1)
