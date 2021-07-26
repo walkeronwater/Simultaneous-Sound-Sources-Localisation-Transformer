@@ -40,12 +40,12 @@ class CNNModel(nn.Module):
             nn.Conv2d(64, 96, (3,3), stride=2),
             nn.ReLU(),
             nn.BatchNorm2d(96),
-            # nn.Conv2d(96, 128, (2,2), stride=2),
-            # nn.ReLU(),
-            # nn.BatchNorm2d(128)
+            nn.Conv2d(96, 128, (2,2), stride=2),
+            nn.ReLU(),
+            nn.BatchNorm2d(128)
         )
         self.FCLayers = nn.Sequential(
-            nn.Linear(7872, 1024),
+            nn.Linear(2560, 1024),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(1024, 512),
