@@ -91,7 +91,7 @@ def createCues(path, Nsample, CuesShape, dirName):
                     r_l, theta_l  = cartesian2euler(specLeft)
                     r_r, theta_r  = cartesian2euler(specRight)
 
-                    cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                    cues = concatCues([ipdCues, ildCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
 
                     saveCues(cues, locIndex, dirName, fileCount, locLabel)
 
