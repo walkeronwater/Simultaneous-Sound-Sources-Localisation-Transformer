@@ -281,7 +281,7 @@ if __name__ == "__main__":
         # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
         model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
     elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, dropout=0, isDebug=False).to(device)
+        model = CNNModel(task=args.task, Ncues=Ncues, dropout=0, device=device, isDebug=False).to(device)
     learning_rate = 1e-4
     # optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
