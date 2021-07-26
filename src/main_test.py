@@ -226,6 +226,7 @@ if __name__ == "__main__":
     parser.add_argument('--valSNRList', default="-10,-5,0,5,10,15,20,25", type=str, help='Range of SNR')
     parser.add_argument('--samplePerSNR', default=10, type=int, help='Number of samples per SNR')
     parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
+    parser.add_argument('--Ncues', default=5, type=int, help='Number of cues')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
@@ -248,6 +249,7 @@ if __name__ == "__main__":
     args.valSNRList = [float(item) for item in args.valSNRList.split(',')]
     print("Range of SNR: ", args.valSNRList)
     print("Number of samples per SNR: ", args.samplePerSNR)
+    print("Number of cues: ", args.Ncues)
 
     if args.isDebug == "True":
         args.isDebug = True
@@ -260,7 +262,7 @@ if __name__ == "__main__":
     Naudio = len(path)
     print("Number of audio files: ", Naudio)
 
-    cuesShape = CuesShape(valSNRList=args.valSNRList)
+    cuesShape = CuesShape(Ncues=args.Ncues, valSNRList=args.valSNRList)
     lenSliceInSec = cuesShape.lenSliceInSec
     Nfreq = cuesShape.Nfreq
     Ntime = cuesShape.Ntime
