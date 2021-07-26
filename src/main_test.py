@@ -329,7 +329,10 @@ if __name__ == "__main__":
                     r_l, theta_l  = cartesian2euler(specLeft)
                     r_r, theta_r  = cartesian2euler(specRight)
 
-                    cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                    if Ncues == 6:
+                        cues = concatCues([ipdCues, ildCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                    elif Ncues == 5:
+                        cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
 
                     cues_[fileCount] = cues
                     if args.task == "allRegression":
