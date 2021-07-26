@@ -42,14 +42,14 @@ class CuesShape:
         self.lenSliceInSec = lenSliceInSec
         self.valSNRList = valSNRList
 
-def createCues(path, Nsample, cuesShape, dirName):
+def createCues(path, Nsample, cuesShape, prep_method, dirName):
     Nfreq = cuesShape.Nfreq
     Ntime = cuesShape.Ntime
     Ncues = cuesShape.Ncues
     Nloc = cuesShape.Nloc
     lenSliceInSec = cuesShape.lenSliceInSec
     valSNRList = cuesShape.valSNRList
-
+    preprocess = Preprocess(prep_method=prep_method)
     fileCount = 0
     print("Creating cues in ", dirName)
     for audioIndex in range(len(path)):
@@ -86,10 +86,14 @@ def createCues(path, Nsample, cuesShape, dirName):
                     specLeft = calSpectrogram(sigLeft + noiseGenerator(sigLeft, valSNR))
                     specRight = calSpectrogram(sigRight + noiseGenerator(sigRight, valSNR))
 
-                    ipdCues = calIPD(specLeft, specRight)
-                    ildCues = calILD(specLeft, specRight)
+                    ipdCues = preprocess(calIPD(specLeft, specRight))
+                    ildCues = preprocess(calILD(specLeft, specRight))
                     r_l, theta_l  = cartesian2euler(specLeft)
                     r_r, theta_r  = cartesian2euler(specRight)
+                    r_l = preprocess(r_l)
+                    theta_l = preprocess(theta_l)
+                    r_r = preprocess(r_r)
+                    theta_r = preprocess(theta_r)
 
                     if Ncues == 6:
                         cues = concatCues([ipdCues, ildCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
@@ -124,6 +128,7 @@ if __name__ == "__main__":
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--valSNRList', default="-5,0,5,10,15,20,25,30,35", type=str, help='Range of SNR')
     parser.add_argument('--Ncues', default=5, type=int, help='Number of cues?')
+    parser.add_argument('--prepMethod', default="None", type=str, help='Preprocessing method')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
@@ -135,6 +140,7 @@ if __name__ == "__main__":
     args.valSNRList = [float(item) for item in args.valSNRList.split(',')]
     print("Range of SNR: ", args.valSNRList)
     print("Number of cues: ", args.Ncues)
+    print("Preprocessing method: ", args.prepMethod)
 
     Nsample_train = int(args.trainValidSplit[0]*args.Nsample)
     Nsample_valid = int(args.trainValidSplit[1]*args.Nsample)
@@ -166,9 +172,9 @@ if __name__ == "__main__":
     # raise SystemExit('debug')
 
     print(trainAudioPath)
-    createCues(trainAudioPath, Nsample_train, cuesShape, dirName=args.cuesDir+"/train/")
+    createCues(trainAudioPath, Nsample_train, cuesShape, args.prepMethod, dirName=args.cuesDir+"/train/")
     print(validAudioPath)
-    createCues(validAudioPath, Nsample_valid, cuesShape, dirName=args.cuesDir+"/valid/")
+    createCues(validAudioPath, Nsample_valid, cuesShape, args.prepMethod, dirName=args.cuesDir+"/valid/")
 
 
     '''

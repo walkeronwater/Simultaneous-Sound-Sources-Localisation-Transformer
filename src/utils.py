@@ -99,9 +99,16 @@ def calILD(seqL, seqR):
 
 # [TODO] method to normalise a sequence which can be broadcasted to a sequence of sequence
 # min-max/standardise/L2 norm for each tensor like an image
-def normalise(seq):
-    # return (seq - np.mean(seq))/(np.std(seq))
-    return seq/np.linalg.norm(seq)
+class Preprocess:
+    def __init__(self, prep_method: str):
+        self.prep_method = prep_method
+    def __call__(self, seq):
+        if self.prep_method.lower() == "standardise":
+            return (seq - np.mean(seq))/(np.std(seq))
+        elif self.prep_method.lower() == "normalise":
+            return seq/np.linalg.norm(seq)
+        else
+            return seq
 
 # [TODO] method to log IPD cues and spectral cues
 '''def cuesLog():'''
@@ -178,7 +185,11 @@ def saveCues(cues, locIndex, dirName, fileCount, locLabel):
     torch.save(cues, dirName+str(fileCount)+'.pt')
 
 if __name__ == "__main__":
-    path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
-    print(locLabel/180.0*pi)
-    print(locIndex2Label(locLabel, 23, "azimRegression"))
+    # path = "./HRTF/IRC*"
+    # hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+    # print(locLabel/180.0*pi)
+    # print(locIndex2Label(locLabel, 23, "azimRegression"))
+
+    preprocess = Preprocess()
+    a = np.arange(0, 9).reshape(3,3)
+    print(Preprocess.normalise(a))
