@@ -47,6 +47,7 @@ if __name__ == "__main__":
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
     parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
     parser.add_argument('--patience', default=10, type=int, help='Early stopping patience?')
+    parser.add_argument('--Ncues', default=5, type=int, help='Number of cues')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
@@ -69,6 +70,7 @@ if __name__ == "__main__":
     print("Number of epochs: ", args.numEpoch)
     print("Batch size: ", args.batchSize)
     print("Early stopping patience: ", args.patience)
+    print("Number of cues: ", args.Ncues)
     if args.isDebug == "True":
         args.isDebug = True
     else:
@@ -95,7 +97,7 @@ if __name__ == "__main__":
     # train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    cuesShape = CuesShape()
+    cuesShape = CuesShape(Ncues=args.Ncues)
     Nfreq = cuesShape.Nfreq
     Ntime = cuesShape.Ntime
     Ncues = cuesShape.Ncues
