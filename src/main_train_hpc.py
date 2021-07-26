@@ -59,6 +59,7 @@ if __name__ == "__main__":
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
     parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
+    parser.add_argument('--patience', default=10, type=int, help='Early stopping patience?')
     parser.add_argument('--ngpus', default=0, type=int, help='Number of GPUs')
 
     args = parser.parse_args()
@@ -80,6 +81,7 @@ if __name__ == "__main__":
     print("Dropout value: ", args.valDropout)
     print("Number of epochs: ", args.numEpoch)
     print("Batch size: ", args.batchSize)
+    print("Early stopping patience: ", args.patience)
     if args.isDebug == "True":
         args.isDebug = True
     else:
