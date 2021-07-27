@@ -257,8 +257,7 @@ if __name__ == "__main__":
         args.isDebug = True
     else:
         args.isDebug = False
-
-    if args.isDebug == "True":
+    if args.isHPC == "True":
         args.isDebug = True
     else:
         args.isDebug = False
@@ -288,10 +287,17 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if args.whichModel.lower() == "transformer":
         # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
-        model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
+        model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
     elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, Ncues=Ncues, dropout=0, device=device, isDebug=False).to(device)
-    learning_rate = 1e-4
+        model = CNNModel(task=args.task, Ncues=Ncues, dropout=0, device=device, isDebug=False)
+
+    if args.isHPC:
+        model = nn.DataParallel(model)
+        model = model.to(device)
+    else:
+        model = model.to(device)
+
+    # learning_rate = 1e-4
     # optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=10, verbose=True)
     model, val_optim = loadCheckpoint(model=model, optimizer=None, scheduler=None, loadPath=args.modelDir, task=args.task, phase="test", whichBest=args.whichBest)
@@ -378,7 +384,6 @@ if __name__ == "__main__":
         test_acc = 0.0
         
         confusion = ConfusionEval(Nsample, savePath = args.modelDir, expName="SNR="+str(int(valSNR)))
-        # print("UD, LR, FB: ", confusion.rms_UD, confusion.rms_LR, confusion.rms_FB)
         model.eval()
         with torch.no_grad():
             for i, (inputs, labels) in enumerate(test_loader, 0):
