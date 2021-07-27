@@ -225,9 +225,11 @@ if __name__ == "__main__":
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
     parser.add_argument('--valSNRList', default="-10,-5,0,5,10,15,20,25", type=str, help='Range of SNR')
     parser.add_argument('--samplePerSNR', default=10, type=int, help='Number of samples per SNR')
-    parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
+    parser.add_argument('--whichBest', default="bestValLoss", type=str, help='Best of acc or loss')
     parser.add_argument('--Ncues', default=5, type=int, help='Number of cues')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
+    parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
+
 
     args = parser.parse_args()
     if args.audioDir[-1] != "/":
@@ -250,6 +252,11 @@ if __name__ == "__main__":
     print("Range of SNR: ", args.valSNRList)
     print("Number of samples per SNR: ", args.samplePerSNR)
     print("Number of cues: ", args.Ncues)
+
+    if args.isDebug == "True":
+        args.isDebug = True
+    else:
+        args.isDebug = False
 
     if args.isDebug == "True":
         args.isDebug = True
@@ -333,6 +340,10 @@ if __name__ == "__main__":
                         cues = concatCues([ipdCues, ildCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
                     elif Ncues == 5:
                         cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                    elif Ncues == 4:
+                        cues = concatCues([r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                    elif Ncues == 2:
+                        cues = concatCues([ipdCues, ildCues], (Nfreq, Ntime))
 
                     cues_[fileCount] = cues
                     if args.task == "allRegression":
