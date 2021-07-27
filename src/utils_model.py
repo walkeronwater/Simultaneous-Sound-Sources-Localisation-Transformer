@@ -34,8 +34,6 @@ def predNeuron(task):
     elif task == "allRegression":
         return 2
 
-
-
 def saveParam(epoch, model, optimizer, scheduler, savePath, task):
     torch.save({
         'epoch': epoch,
