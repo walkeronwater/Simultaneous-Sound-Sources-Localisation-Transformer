@@ -526,7 +526,92 @@ class DIY_parallel(nn.Module):
         # out = self.softmaxLayer(out)
         return out
 
-# class DIY_
+class DIY_multiSound(nn.Module):
+    def __init__(
+        self,
+        task,
+        Ntime, # time windows
+        Nfreq, # frequency bins
+        Ncues,
+        Nsound,
+        num_layers,
+        numFC,
+        heads,
+        device,
+        forward_expansion,
+        dropout,
+        isDebug
+    ):
+        super(DIY_multiSound, self).__init__()
+        self.encoder = Encoder(           
+            Nfreq, # frequency bins
+            num_layers,
+            heads,
+            device,
+            forward_expansion,
+            dropout,
+        )
+        self.task = task
+        Nloc = predNeuron(task)
+        print("Number of neurons in the final layer: ", Nloc)
+        
+        self.FClayers_elev = nn.Sequential(
+            nn.Linear(Ntime*Nfreq*Ncues, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            nn.Dropout(0.1),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, Nsound)
+        )
+        self.FClayers_azim = nn.Sequential(
+            nn.Linear(Ntime*Nfreq*Ncues, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            nn.Dropout(0.1),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, Nsound)
+        )
+
+        if task in ["elevRegression","azimRegression","allRegression"]:
+            self.setRange_elev = nn.Hardtanh()
+            self.setRange_azim = nn.Hardtanh()
+
+        # self.softmaxLayer = nn.Softmax(dim = -1)
+        self.isDebug = isDebug
+    def forward(self, cues):
+        encList = []
+        for i in range(cues.shape[-1]):
+            enc = self.encoder(cues[:,:,:,0].permute(0,2,1))
+            encList.append(enc)
+        
+        if self.isDebug:
+            print("Encoder for one cue shape: ", enc.shape)
+
+        out = torch.stack(encList)
+        
+        out = out.permute(1,2,3,0)
+
+        out_elev = torch.flatten(out, 1, -1)
+        if self.isDebug:
+            print("Encoder output shape: ", out_elev.shape)
+
+        for layers in self.FClayers_elev:
+            out_elev = layers(out_elev)
+        out_elev = 3/8*pi*self.setRange_azim(out_elev)+pi/8
+
+        out_azim = torch.flatten(out, 1, -1)
+        for layers in self.FClayers_azim:
+            out_azim = layers(out_azim)
+        out_azim = pi*self.setRange_azim(out_azim)+pi
+
+        if self.task in ["elevRegression","azimRegression","allRegression"]:
+            out = torch.hstack((out_elev, out_azim))
+
+        # out = self.softmaxLayer(out)
+        return out
+
 
 
 if __name__ == "__main__":
@@ -538,10 +623,12 @@ if __name__ == "__main__":
     Nfreq = 512
     Ncues = 6
     batchSize = 32
+    Nsound = 2
     # model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
     # model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
     # model = PytorchTransformer(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
-    model = DIY_parallel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
+    # model = DIY_parallel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
+    model = DIY_multiSound(task, Ntime, Nfreq, Ncues, Nsound, numEnc, numFC, 8, device, 4, 0, True).to(device)
 
     testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     print("testInput shape: ", testInput.shape)
@@ -554,5 +641,5 @@ if __name__ == "__main__":
     print("testOutput: ",testOutput)
     # print(torch.max(testOutput, 1))
 
-    summary(model, (Nfreq, Ntime, Ncues))
+    # summary(model, (Nfreq, Ntime, Ncues))
     
