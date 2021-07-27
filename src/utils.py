@@ -102,6 +102,12 @@ def calILD(seqL, seqR):
 class Preprocess:
     def __init__(self, prep_method: str):
         self.prep_method = prep_method
+        if self.prep_method.lower() == "standardise":
+            print("Preprocessing method: standardise")
+        elif self.prep_method.lower() == "normalise":
+            print("Preprocessing method: normalise")
+        else:
+            print("Preprocessing method: none")
     def __call__(self, seq):
         if self.prep_method.lower() == "standardise":
             return (seq - np.mean(seq))/(np.std(seq))
