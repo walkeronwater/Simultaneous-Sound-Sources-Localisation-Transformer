@@ -607,7 +607,7 @@ class DIY_multiSound(nn.Module):
         out_azim = pi*self.setRange_azim(out_azim)+pi
 
         if self.task in ["elevRegression","azimRegression","allRegression"]:
-            out = torch.hstack((out_elev, out_azim))
+            out = torch.stack((out_elev[:,0], out_azim[:,0],out_elev[:,1], out_azim[:,1]), dim=1)
 
         # out = self.softmaxLayer(out)
         return out
