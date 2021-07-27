@@ -238,6 +238,15 @@ if __name__ == "__main__":
         args.hrirDir += "/"
     if args.modelDir[-1] != "/":
         args.modelDir += "/"
+    if args.isDebug == "True":
+        args.isDebug = True
+    else:
+        args.isDebug = False
+    if args.isHPC == "True":
+        args.isDebug = True
+    else:
+        args.isDebug = False
+
     print("Audio files directory: ", args.audioDir)
     print("HRIR files directory: ", args.hrirDir)
     print("Model directory: ", args.modelDir)
@@ -252,15 +261,6 @@ if __name__ == "__main__":
     print("Range of SNR: ", args.valSNRList)
     print("Number of samples per SNR: ", args.samplePerSNR)
     print("Number of cues: ", args.Ncues)
-
-    if args.isDebug == "True":
-        args.isDebug = True
-    else:
-        args.isDebug = False
-    if args.isHPC == "True":
-        args.isDebug = True
-    else:
-        args.isDebug = False
 
     path = args.hrirDir + "/IRC*"
     hrirSet, locLabel, fs_HRIR = loadHRIR(path)

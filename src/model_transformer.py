@@ -441,7 +441,7 @@ class PytorchTransformer(nn.Module):
         # out = self.softmaxLayer(out)
         return out
 
-class DIY_2SSL(nn.Module):
+class DIY_parallel(nn.Module):
     def __init__(
         self,
         task,
@@ -456,7 +456,7 @@ class DIY_2SSL(nn.Module):
         dropout,
         isDebug
     ):
-        super(DIY_2SSL, self).__init__()
+        super(DIY_parallel, self).__init__()
         self.encoder = Encoder(           
             Nfreq, # frequency bins
             num_layers,
@@ -526,6 +526,8 @@ class DIY_2SSL(nn.Module):
         # out = self.softmaxLayer(out)
         return out
 
+# class DIY_
+
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -539,7 +541,7 @@ if __name__ == "__main__":
     # model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
     # model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
     # model = PytorchTransformer(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
-    model = DIY_2SSL(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
+    model = DIY_parallel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
 
     testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     print("testInput shape: ", testInput.shape)

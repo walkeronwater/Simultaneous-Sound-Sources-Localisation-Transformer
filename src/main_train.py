@@ -33,6 +33,19 @@ from model_RNN import *
 from loss import *
 from main_cues import CuesShape
 
+def data_parallel(module, input, device_ids, output_device=None):
+    if not device_ids:
+        return module(input)
+
+    if output_device is None:
+        output_device = device_ids[0]
+
+    replicas = nn.parallel.replicate(module, device_ids)
+    inputs = nn.parallel.scatter(input, device_ids)
+    replicas = replicas[:len(inputs)]
+    outputs = nn.parallel.parallel_apply(replicas, inputs)
+    return nn.parallel.gather(outputs, output_device)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Training hyperparamters')
     parser.add_argument('dataDir', type=str, help='Directory of saved cues')
@@ -51,12 +64,21 @@ if __name__ == "__main__":
     parser.add_argument('--patience', default=10, type=int, help='Early stopping patience?')
     parser.add_argument('--Ncues', default=5, type=int, help='Number of cues')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
+    parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
 
     args = parser.parse_args()
     if args.dataDir[-1] != "/":
         args.dataDir += "/"
     if args.modelDir[-1] != "/":
         args.modelDir += "/"
+    if args.isDebug == "True":
+        args.isDebug = True
+    else:
+        args.isDebug = False
+    if args.isHPC == "True":
+        args.isDebug = True
+    else:
+        args.isDebug = False
     
     print("Data directory: ", args.dataDir)
     print("Model directory: ", args.modelDir)
@@ -73,10 +95,6 @@ if __name__ == "__main__":
     print("Batch size: ", args.batchSize)
     print("Early stopping patience: ", args.patience)
     print("Number of cues: ", args.Ncues)
-    if args.isDebug == "True":
-        args.isDebug = True
-    else:
-        args.isDebug = False
 
     # dirName = './saved_cues/'
     dirName = args.dataDir
@@ -113,17 +131,26 @@ if __name__ == "__main__":
     val_acc_optim = 0.0
 
     if args.whichModel.lower() == "transformer":
-        model = DIY_2SSL(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
+        model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+        optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    elif args.whichModel.lower() == "paralleltransformer":
+        model = DIY_parallel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, Ncues=Ncues, dropout=args.valDropout, device=device, isDebug=args.isDebug).to(device)
+        model = CNNModel(task=args.task, Ncues=Ncues, dropout=args.valDropout, device=device, isDebug=args.isDebug)
         model.apply(weight_init)
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
     elif args.whichModel.lower() == "pytorchtransformer":
-        model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug).to(device)
+        model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     else:
         raise SystemExit("No model selected")
+
+    if args.isHPC:
+        if torch.cuda.device_count() > 1:
+            print("Let's use", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model)
+    model = model.to(device)
 
     scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
     writer = SummaryWriter(f'runs/temp/tryingout_tensorboard')
