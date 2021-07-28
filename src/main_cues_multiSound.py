@@ -46,7 +46,7 @@ class CuesShape:
 def mixLoc():
     pass
 
-def createCues(path, Nsample, cuesShape, prep_method, dirName):
+def createCues_multiSound(path, Nsample, cuesShape, prep_method, dirName):
     Nfreq = cuesShape.Nfreq
     Ntime = cuesShape.Ntime
     Ncues = cuesShape.Ncues
@@ -56,66 +56,123 @@ def createCues(path, Nsample, cuesShape, prep_method, dirName):
     preprocess = Preprocess(prep_method=prep_method)
     fileCount = 0
     print("Creating cues in ", dirName)
-    for audioIndex in range(len(path)):
+
+    # loop 1: audio i from 1 -> Naudio
+    for audioIndex_1 in range(len(path)):
         if fileCount == Nsample:
             break
-        print("Audio index: ", audioIndex)
-        audio, fs_audio = sf.read(path[audioIndex])
+        print("Audio 1 index: ", audioIndex_1)
+        audio_1, fs_audio_1 = sf.read(path[audioIndex_1])
         # audio = librosa.resample(audio, fs_audio, fs_HRIR)
-        #[TODO] change fs_HRIR to fs_audio
-        audioSliceList = audioSliceGenerator(audio, fs_HRIR, lenSliceInSec)
 
-        for sliceIndex in range(len(audioSliceList)):
+        #[TODO] change fs_HRIR to fs_audio
+        audioSliceList_1 = audioSliceGenerator(audio_1, fs_HRIR, lenSliceInSec)
+        
+        # loop 2: audioSlice of audio i from 1 -> NaudioSlice
+        for sliceIndex_1 in range(len(audioSliceList_1)):
             if fileCount == Nsample:
                 break
-            audioSlice = audio[audioSliceList[sliceIndex]]
+            audioSlice_1 = audio_1[audioSliceList_1[sliceIndex_1]]
 
-            for locIndex in range(Nloc):
+            # loop 3: audio j from 1 -> Naudio but skip when i==j
+            for audioIndex_2 in range(len(path)):
                 if fileCount == Nsample:
                     break
+                if audioIndex_2 == audioIndex_1:
+                    continue
+                print("Audio 2 index: ", audioIndex_2)
+                audio_2, fs_audio_2 = sf.read(path[audioIndex_2])
+                #[TODO] change fs_HRIR to fs_audio
+                audioSliceList_2 = audioSliceGenerator(audio_2, fs_HRIR, lenSliceInSec)
 
-                # hrirLeft_re = librosa.resample(hrirSet[locIndex, 0], fs_HRIR, fs_audio)
-                # hrirRight_re = librosa.resample(hrirSet[locIndex, 1], fs_HRIR, fs_audio)
-                sigLeft = np.convolve(audioSlice, hrirSet_re[locIndex, 0])
-                sigRight = np.convolve(audioSlice, hrirSet_re[locIndex, 1])
-
-                # print("Location index: ", locIndex)
-                # showSpectrogram(sigLeft, fs_HRIR)
-                # showSpectrogram(sigRight, fs_HRIR)
-                
-                for valSNR in valSNRList:
+                # loop 4: audioSlice of audio j from 1 -> NaudioSlice
+                for sliceIndex_2 in range(len(audioSliceList_2)):
                     if fileCount == Nsample:
                         break
-                
-                    specLeft = calSpectrogram(sigLeft + noiseGenerator(sigLeft, valSNR))
-                    specRight = calSpectrogram(sigRight + noiseGenerator(sigRight, valSNR))
+                    audioSlice_2 = audio_2[audioSliceList_2[sliceIndex_2]]
 
-                    ipdCues = preprocess(calIPD(specLeft, specRight))
-                    ildCues = preprocess(calILD(specLeft, specRight))
-                    r_l, theta_l  = cartesian2euler(specLeft)
-                    r_r, theta_r  = cartesian2euler(specRight)
-                    r_l = preprocess(r_l)
-                    theta_l = preprocess(theta_l)
-                    r_r = preprocess(r_r)
-                    theta_r = preprocess(theta_r)
+                    # loop 5: loc of slice of audio 1 from 0 to 186
+                    for locIndex_1 in range(Nloc):
+                        if fileCount == Nsample:
+                            break
 
-                    if Ncues == 6:
-                        cues = concatCues([ipdCues, ildCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
-                    elif Ncues == 5:
-                        cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
-                    elif Ncues == 4:
-                        cues = concatCues([r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
-                    elif Ncues == 2:
-                        cues = concatCues([ipdCues, ildCues], (Nfreq, Ntime))
+                        # hrirLeft_re = librosa.resample(hrirSet[locIndex_1, 0], fs_HRIR, fs_audio)
+                        # hrirRight_re = librosa.resample(hrirSet[locIndex_1, 1], fs_HRIR, fs_audio)
+                        sigLeft_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 0])
+                        sigRight_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 1])
 
-                    saveCues(cues, locIndex, dirName, fileCount, locLabel)
+                        # loop 6: loc of slice of audio 1 from 5 to 186 (not adjacent locs)
+                        for locIndex_2 in range(Nloc):
+                            if fileCount == Nsample:
+                                break
+                            if locIndex_2 == locIndex_1:
+                                continue
 
-                    fileCount += 1
-                    if fileCount % (Nloc*len(valSNRList)) == 0:
-                        print("# location set ("+str(Nloc*len(valSNRList))+" samples per set): ",
-                            fileCount // (Nloc*len(valSNRList)))
+                            sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_1, 0])
+                            sigRight_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_1, 1])
+
+                            # print("Location index: ", locIndex)
+                            # showSpectrogram(sigLeft, fs_HRIR)
+                            # showSpectrogram(sigRight, fs_HRIR)
+                            specLeft = calSpectrogram(sigLeft_1 + sigLeft_2)
+                            specRight = calSpectrogram(sigRight_1 + sigRight_2)
+
+                            ipdCues = preprocess(calIPD(specLeft, specRight))
+                            ildCues = preprocess(calILD(specLeft, specRight))
+                            r_l, theta_l  = cartesian2euler(specLeft)
+                            r_r, theta_r  = cartesian2euler(specRight)
+                            r_l = preprocess(r_l)
+                            theta_l = preprocess(theta_l)
+                            r_r = preprocess(r_r)
+                            theta_r = preprocess(theta_r)
+
+                            if Ncues == 6:
+                                cues = concatCues([ipdCues, ildCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                            elif Ncues == 5:
+                                cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                            elif Ncues == 4:
+                                cues = concatCues([r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
+                            elif Ncues == 2:
+                                cues = concatCues([ipdCues, ildCues], (Nfreq, Ntime))
+
+                            saveCues_multiSound(cues, locIndex_1, locIndex_2, dirName, fileCount, locLabel)
+
+                            fileCount += 1
 
 
+def saveCues_multiSound(cues, locIndex_1, locIndex_2, dirName, fileCount, locLabel):
+    if fileCount == 0:
+        if os.path.isfile(dirName+'dataLabels.csv'):
+            print("Directory exists -- overwriting")
+            # if input('Delete saved_cues? ') == 'y':
+            #     print('ok')
+            shutil.rmtree(dirName)
+            os.mkdir(dirName)
+        
+        with open(dirName+'dataLabels.csv', 'w') as csvFile:
+            csvFile.write(str(fileCount))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex_1, "elevRegression")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex_1, "azimRegression")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex_2, "elevRegression")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex_2, "azimRegression")))
+            csvFile.write('\n')
+    else:
+        with open(dirName+'dataLabels.csv', 'a') as csvFile:
+            csvFile.write(str(fileCount))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex_1, "elevRegression")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex_1, "azimRegression")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex_2, "elevRegression")))
+            csvFile.write(',')
+            csvFile.write(str(locIndex2Label(locLabel, locIndex_2, "azimRegression")))
+            csvFile.write('\n')
+    torch.save(cues, dirName+str(fileCount)+'.pt')
 
 '''
 # This will create two folders containing data for training, validation. Each dataset will be
@@ -152,7 +209,6 @@ if __name__ == "__main__":
     print("Validation data volume: ", Nsample_valid)
 
     hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
-
     trainAudioPath = glob(os.path.join(args.trainAudioDir+"/*"))
     validAudioPath = glob(os.path.join(args.validAudioDir+"/*"))
     print("Number of training audio files: ", len(trainAudioPath))
@@ -185,9 +241,9 @@ if __name__ == "__main__":
     # raise SystemExit('debug')
 
     print(trainAudioPath)
-    createCues(trainAudioPath, Nsample_train, cuesShape, args.prepMethod, dirName=args.cuesDir+"/train/")
+    createCues_multiSound(trainAudioPath, Nsample_train, cuesShape, args.prepMethod, dirName=args.cuesDir+"/train/")
     print(validAudioPath)
-    createCues(validAudioPath, Nsample_valid, cuesShape, args.prepMethod, dirName=args.cuesDir+"/valid/")
+    createCues_multiSound(validAudioPath, Nsample_valid, cuesShape, args.prepMethod, dirName=args.cuesDir+"/valid/")
 
 
     '''
