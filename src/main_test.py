@@ -229,6 +229,7 @@ if __name__ == "__main__":
     parser.add_argument('--Ncues', default=5, type=int, help='Number of cues')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
+    parser.add_argument('--prepMethod', default="None", type=str, help='Preprocessing method')
 
 
     args = parser.parse_args()
@@ -261,6 +262,7 @@ if __name__ == "__main__":
     print("Range of SNR: ", args.valSNRList)
     print("Number of samples per SNR: ", args.samplePerSNR)
     print("Number of cues: ", args.Ncues)
+    print("Preprocessing method: ", args.prepMethod)
 
     path = args.hrirDir + "/IRC*"
     hrirSet, locLabel, fs_HRIR = loadHRIR(path)
@@ -276,6 +278,7 @@ if __name__ == "__main__":
     Nloc = cuesShape.Nloc
     Nsample = Nloc * args.samplePerSNR
     valSNRList = cuesShape.valSNRList
+    preprocess = Preprocess(prep_method=prep_method)
 
     # allocate tensors cues and labels in RAM
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
@@ -343,11 +346,15 @@ if __name__ == "__main__":
                     specLeft = calSpectrogram(sigLeft + noiseGenerator(sigLeft, valSNR))
                     specRight = calSpectrogram(sigRight + noiseGenerator(sigRight, valSNR))
 
-                    ipdCues = calIPD(specLeft, specRight)
-                    ildCues = calILD(specLeft, specRight)
+                    ipdCues = preprocess(calIPD(specLeft, specRight))
+                    ildCues = preprocess(calILD(specLeft, specRight))
                     r_l, theta_l  = cartesian2euler(specLeft)
                     r_r, theta_r  = cartesian2euler(specRight)
-
+                    r_l = preprocess(r_l)
+                    theta_l = preprocess(theta_l)
+                    r_r = preprocess(r_r)
+                    theta_r = preprocess(theta_r)
+                    
                     if Ncues == 6:
                         cues = concatCues([ipdCues, ildCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
                     elif Ncues == 5:

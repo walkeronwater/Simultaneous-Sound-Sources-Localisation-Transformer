@@ -152,6 +152,7 @@ def locIndex2Label(locLabel, locIndex, task):
         )
     return labels
 
+# save cues as pt files and write labels in a csv file
 def saveCues(cues, locIndex, dirName, fileCount, locLabel):
     if fileCount == 0:
         if os.path.isfile(dirName+'dataLabels.csv'):
