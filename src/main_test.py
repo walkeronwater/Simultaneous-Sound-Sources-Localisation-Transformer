@@ -286,10 +286,16 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if args.whichModel.lower() == "transformer":
-        # model = FC3(args.task, Ntime, Nfreq, Ncues, args.numEnc, 8, device, 4, args.valDropout, args.isDebug).to(device)
         model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+    elif args.whichModel.lower() == "paralleltransformer":
+        model = DIY_parallel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
     elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, Ncues=Ncues, dropout=0, device=device, isDebug=False)
+        model = CNNModel(task=args.task, Ncues=Ncues, dropout=args.valDropout, device=device, isDebug=args.isDebug)
+    elif args.whichModel.lower() == "pytorchtransformer":
+        model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+    else:
+        raise SystemExit("No model selected")
+
 
     if args.isHPC:
         model = nn.DataParallel(model)
