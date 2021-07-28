@@ -12,6 +12,10 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import torch.utils.data
 
+# from nvidia.dali import pipeline_def, Pipeline
+# import nvidia.dali.fn as fn
+# import nvidia.dali.types as types
+
 def loadHRIR(path):
     names = []
     names += glob(path)
@@ -47,8 +51,8 @@ def loadHRIR(path):
     azim = l['azim_v'][0][0]
     fs_HRIR = m['l_eq_hrir_S']['sampling_hz'][0][0][0][0]
 
-    locLabel = np.hstack((elev, azim))
-    print("locLabel shape: ", locLabel.shape, " (order: elev, azim)")
+    locLabel = np.hstack((elev, azim)) 
+    print("locLabel shape: ", locLabel.shape, " (order: elev, azim)") # locLabel shape: (187, 2)
     # print(locLabel[0:5])
 
     # 0: left-ear 1: right-ear
@@ -56,7 +60,7 @@ def loadHRIR(path):
                             np.reshape(hrirSet_r, (1,) + hrirSet_r.shape)))
     hrirSet = np.transpose(hrirSet, (1,0,2))
     print("hrirSet shape: ", hrirSet.shape)
-
+    
     return hrirSet, locLabel, fs_HRIR
 
 class MultiEpochsDataLoader(torch.utils.data.DataLoader):
@@ -88,10 +92,11 @@ class _RepeatSampler(object):
         while True:
             yield from iter(self.sampler)
 class MyDataset(torch.utils.data.Dataset):
-    def __init__(self, filePath, task, isDebug=False):
+    def __init__(self, filePath, task, Nsound, isDebug=False):
         super(MyDataset, self).__init__()
         self.filePath = filePath
         self.task = task
+        self.Nsound = Nsound
         self.annotation = pd.read_csv(filePath+"dataLabels.csv", header=None)
         self.isDebug = isDebug
 
@@ -99,22 +104,26 @@ class MyDataset(torch.utils.data.Dataset):
         return int(self.annotation.iloc[-1, 0] + 1)
     
     def __getitem__(self, pathIndex):
-        data = torch.load(self.filePath+str(pathIndex)+".pt")
-        if self.task == "allClass":
-            labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1]))
-        elif self.task == "elevClass":
-            labels = torch.tensor(int(self.annotation.iloc[pathIndex, 2]))
-        elif self.task == "azimClass":
-            labels = torch.tensor(int(self.annotation.iloc[pathIndex, 3]))
-        elif self.task == "elevRegression":
-            labels = torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32)
-        elif self.task == "azimRegression":
-            labels = torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)
-        elif self.task == "allRegression":
-            labels = torch.stack([
-                torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32),
-                torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)]
-            )
+        if self.Nsound == 1:
+            data = torch.load(self.filePath+str(pathIndex)+".pt")
+            if self.task == "allClass":
+                labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1]))
+            elif self.task == "elevClass":
+                labels = torch.tensor(int(self.annotation.iloc[pathIndex, 2]))
+            elif self.task == "azimClass":
+                labels = torch.tensor(int(self.annotation.iloc[pathIndex, 3]))
+            elif self.task == "elevRegression":
+                labels = torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32)
+            elif self.task == "azimRegression":
+                labels = torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)
+            elif self.task == "allRegression":
+                labels = torch.stack([
+                    torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32),
+                    torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)]
+                )
+        else:
+            data = torch.load(self.filePath+str(pathIndex)+".pt")
+            labels = torch.tensor(self.annotation.iloc[pathIndex, 1:5].values, dtype=torch.float32)
 
         if self.isDebug:
             print("pathIndex: ", pathIndex)
@@ -143,15 +152,52 @@ def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
 
     return train_loader, valid_loader
 
+# batch_size = 8
+# class SimplePipeline(Pipeline):
+#     def __init__(self, filePath, batch_size, num_threads, device_id):
+#         super(SimplePipeline, self).__init__(batch_size, num_threads, device_id, seed = 12)
+#         self.input = ops.FileReader(file_root = filePath)
+#         # instead of path to file directory file with pairs image_name image_label_value can be provided
+#         # self.input = ops.FileReader(file_root = image_dir, file_list = image_dir + '/file_list.txt')
+#         self.decode = ops.ImageDecoder(device = 'cpu', output_type = types.RGB)
+
+#     def define_graph(self):
+#         jpegs, labels = self.input()
+#         images = self.decode(jpegs)
+#         return (images, labels)
+
+# @pipeline_def
+# def caffe_pipeline(num_gpus):
+#     device_id = Pipeline.current().device_id
+#     jpegs, labels = fn.readers.caffe(
+#         name='Reader', path=lmdb_folder, random_shuffle=True, shard_id=device_id, num_shards=num_gpus)
+#     images = fn.decoders.image(jpegs, device='mixed')
+#     images = fn.resize(
+#         images,
+#         resize_shorter=fn.random.uniform(range=(256, 480)),
+#         interp_type=types.INTERP_LINEAR)
+#     images = fn.crop_mirror_normalize(
+#             images,
+#             crop_pos_x=fn.random.uniform(range=(0.0, 1.0)),
+#             crop_pos_y=fn.random.uniform(range=(0.0, 1.0)),
+#             dtype=types.FLOAT,
+#             crop=(227, 227),
+#             mean=[128., 128., 128.],
+#             std=[1., 1., 1.])
+
+#     return images, labels
+
+
 
 if __name__ == "__main__":
     # path = "./HRTF/IRC*"
     # hrirSet, locLabel, fs_HRIR = loadHRIR(path)
 
-    dataset = MyDataset("./saved_cues_temp/", "azimClass", isDebug=True)
-    train_loader, valid_loader = splitDataset(32, [0.8, 0.2], 0, dataset)
+    # dataset = MyDataset("./saved_cues_temp/", "azimClass", isDebug=True)
+    # train_loader, valid_loader = splitDataset(32, [0.8, 0.2], 0, dataset)
 
-    for i, data in enumerate(train_loader):
-        inputs, labels = data
+    # for i, data in enumerate(train_loader):
+    #     inputs, labels = data
     # for i in range(25):
     #     print(dataset[i][1].shape)
+    pass
