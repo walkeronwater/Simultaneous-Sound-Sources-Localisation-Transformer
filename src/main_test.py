@@ -243,9 +243,9 @@ if __name__ == "__main__":
     else:
         args.isDebug = False
     if args.isHPC == "True":
-        args.isDebug = True
+        args.isHPC = True
     else:
-        args.isDebug = False
+        args.isHPC = False
 
     print("Audio files directory: ", args.audioDir)
     print("HRIR files directory: ", args.hrirDir)

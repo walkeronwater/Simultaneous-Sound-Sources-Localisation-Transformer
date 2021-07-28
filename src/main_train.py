@@ -76,9 +76,9 @@ if __name__ == "__main__":
     else:
         args.isDebug = False
     if args.isHPC == "True":
-        args.isDebug = True
+        args.isHPC = True
     else:
-        args.isDebug = False
+        args.isHPC = False
     
     print("Data directory: ", args.dataDir)
     print("Model directory: ", args.modelDir)
