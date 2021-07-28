@@ -53,6 +53,7 @@ if __name__ == "__main__":
     parser.add_argument('numWorker', type=int, help='Number of workers')
     parser.add_argument('task', type=str, help='Task')
     parser.add_argument('whichModel', type=str, help='whichModel')
+    parser.add_argument('Nsound', type=int, help='Number of sound')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
@@ -95,6 +96,7 @@ if __name__ == "__main__":
     print("Batch size: ", args.batchSize)
     print("Early stopping patience: ", args.patience)
     print("Number of cues: ", args.Ncues)
+    print("Number of sound: ", args.Nsound)
 
     # dirName = './saved_cues/'
     dirName = args.dataDir
@@ -102,8 +104,8 @@ if __name__ == "__main__":
         os.path.isdir(dirName)
     ), "Data directory doesn't exist."
 
-    train_dataset = MyDataset(dirName+"/train/", args.task, args.isDebug)
-    valid_dataset = MyDataset(dirName+"/valid/", args.task, args.isDebug)
+    train_dataset = MyDataset(dirName+"/train/", args.task, args.Nsound, args.isDebug)
+    valid_dataset = MyDataset(dirName+"/valid/", args.task, args.Nsound, args.isDebug)
     print("Dataset length: ", train_dataset.__len__())
     print("Dataset length: ", valid_dataset.__len__())
 
@@ -121,6 +123,7 @@ if __name__ == "__main__":
     Nfreq = cuesShape.Nfreq
     Ntime = cuesShape.Ntime
     Ncues = cuesShape.Ncues
+    Nsound = args.Nsound
 
     num_epochs = args.numEpoch
     pretrainEpoch = 0
@@ -143,8 +146,12 @@ if __name__ == "__main__":
     elif args.whichModel.lower() == "pytorchtransformer":
         model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    elif args.whichModel.lower() == "multisound":
+        model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+        optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     else:
         raise SystemExit("No model selected")
+    # raise SystemExit("debug")
 
     if args.isHPC:
         if torch.cuda.device_count() > 1:
@@ -191,12 +198,15 @@ if __name__ == "__main__":
             
             # print("Ouput shape: ", outputs.shape)
             # print("Label shape: ", labels.shape)
-            if args.task in ["elevRegression","azimRegression","allRegression"]:
-                loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
+            if Nsound == 1:
+                if args.task in ["elevRegression","azimRegression","allRegression"]:
+                    loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
+                else:
+                    loss = nn.CrossEntropyLoss(outputs, labels)
+                if args.isDebug:
+                    print("Loss", loss.shape)
             else:
-                loss = nn.CrossEntropyLoss(outputs, labels)
-            if args.isDebug:
-                print("Loss", loss.shape)
+                loss = torch.sqrt(torch.mean(torch.square(cost_multiSound(outputs, labels))))
             train_sum_loss += loss.item()
             optimizer.zero_grad()
             loss.backward()
@@ -230,10 +240,13 @@ if __name__ == "__main__":
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 
                 outputs = model(inputs)
-                if args.task in ["elevRegression","azimRegression","allRegression"]:
-                    val_loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
+                if Nsound == 1:
+                    if args.task in ["elevRegression","azimRegression","allRegression"]:
+                        val_loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
+                    else:
+                        val_loss = nn.CrossEntropyLoss(outputs, labels)
                 else:
-                    val_loss = nn.CrossEntropyLoss(outputs, labels)
+                    val_loss = torch.sqrt(torch.mean(torch.square(cost_multiSound(outputs, labels))))
                 val_sum_loss += val_loss.item()
 
                 if not (args.task in ["elevRegression","azimRegression","allRegression"]):

@@ -23,10 +23,10 @@ def tempLoss(output, target):
     return torch.sqrt(torch.square(output[:, 0] - target[:, 0]) + torch.square(output[:, 1] - target[:, 1]))
 
 
-def costFunc(output, target):
+def cost_multiSound(output, target):
     # output and target should be of size (batch size, 4)
-    a=tempLoss(output[:, 0:2], target[:, 0:2]) + tempLoss(output[:, 2:4], target[:, 2:4])
-    print("a: ",a)
+    # a=tempLoss(output[:, 0:2], target[:, 0:2]) + tempLoss(output[:, 2:4], target[:, 2:4])
+    # print("a: ",a)
     return torch.min(
         DoALoss(output[:, 0:2], target[:, 0:2]) + DoALoss(output[:, 2:4], target[:, 2:4]),
         DoALoss(output[:, 0:2], target[:, 2:4]) + DoALoss(output[:, 2:4], target[:, 0:2])
@@ -48,6 +48,6 @@ if __name__ == "__main__":
     )
     print(outputs.shape)
     # loss = nn.MSELoss(outputs, labels)
-    loss = costFunc(outputs, labels)
+    loss = cost_multiSound(outputs, labels)
 
     print(loss)
