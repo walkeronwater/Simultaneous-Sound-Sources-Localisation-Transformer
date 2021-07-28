@@ -85,7 +85,7 @@ class ConfusionEval:
         self.target_FB.extend(radian2Degree(self.FB_loss(target)).cpu())
 
     def LR_loss(self, output):
-        return torch.acos(
+        angle_diff = torch.acos(
             F.hardtanh(
                 torch.sqrt(
                     torch.square(torch.cos(output[:, 0])) * torch.square(torch.cos(output[:, 1]))
@@ -93,9 +93,14 @@ class ConfusionEval:
                 ), min_val=-1, max_val=1
             )
         )
+        for i in range(angle_diff.shape[0]):
+            if pi < output[i, 1] < pi*2:
+                angle_diff[i] = -angle_diff[i]
+                # print("LR: ",radian2Degree(angle_diff[i]))
+        return angle_diff
 
     def FB_loss(self, output):
-        return torch.acos(
+        angle_diff = torch.acos(
             F.hardtanh(
                 torch.sqrt(
                     torch.square(torch.cos(output[:, 0])) * torch.square(torch.sin(output[:, 1]))
@@ -103,6 +108,11 @@ class ConfusionEval:
                 ), min_val=-1, max_val=1
             )
         )
+        for i in range(angle_diff.shape[0]):
+            if pi/2 <= output[i, 1] <= pi*3/2:
+                angle_diff[i] = -angle_diff[i]
+                # print("FB: ",radian2Degree(angle_diff[i]))
+        return angle_diff
 
     def up_down(self, pred, target):
         # print(target.shape)
@@ -143,7 +153,7 @@ class ConfusionEval:
             FB_confusion
         )
 
-        x = np.linspace(-45, 90,100)
+        x = np.linspace(-45, 90, 100)
         y = x
         plt.figure()
         plt.scatter(self.pred_elev, self.target_elev)
@@ -299,12 +309,9 @@ if __name__ == "__main__":
     else:
         raise SystemExit("No model selected")
 
-
     if args.isHPC:
         model = nn.DataParallel(model)
-        model = model.to(device)
-    else:
-        model = model.to(device)
+    model = model.to(device)
 
     # learning_rate = 1e-4
     # optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
@@ -382,7 +389,7 @@ if __name__ == "__main__":
         else:
             dataset = TensorDataset(cues_, labels_.long())
 
-        test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=True, num_workers=args.numWorker)
+        test_loader = DataLoader(dataset=dataset, batch_size=32, shuffle=False, num_workers=args.numWorker)
 
         # test phase
         
