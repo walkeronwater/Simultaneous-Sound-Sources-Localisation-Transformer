@@ -278,7 +278,7 @@ if __name__ == "__main__":
     Nloc = cuesShape.Nloc
     Nsample = Nloc * args.samplePerSNR
     valSNRList = cuesShape.valSNRList
-    preprocess = Preprocess(prep_method=prep_method)
+    preprocess = Preprocess(prep_method=args.prepMethod)
 
     # allocate tensors cues and labels in RAM
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
