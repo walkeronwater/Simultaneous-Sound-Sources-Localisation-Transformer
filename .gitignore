@@ -1,0 +1,6 @@
+src/__pycache__/
+src/model/*temp
+src/model/temp/
+src/*dali
+.vscode
+src/runs/temp/
