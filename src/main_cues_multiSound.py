@@ -185,7 +185,8 @@ if __name__ == "__main__":
     parser.add_argument('validAudioDir', type=str, help='Directory of audio files for validation')
     parser.add_argument('hrirDir', type=str, help='Directory of HRIR files')
     parser.add_argument('cuesDir', type=str, help='Directory of cues to be saved')
-    parser.add_argument('Nsample', type=int, help='Number of samples?')
+    parser.add_argument('Nsound', type=int, help='Number of sound')
+    parser.add_argument('Nsample', type=int, help='Number of samples')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--valSNRList', default="-5,0,5,10,15,20,25,30,35", type=str, help='Range of SNR')
     parser.add_argument('--Ncues', default=5, type=int, help='Number of cues?')
@@ -202,6 +203,8 @@ if __name__ == "__main__":
     print("Range of SNR: ", args.valSNRList)
     print("Number of cues: ", args.Ncues)
     print("Preprocessing method: ", args.prepMethod)
+    print("Number of sound: ", args.Nsound)
+    print("Number of samples: ", args.Nsample)
 
     Nsample_train = int(args.trainValidSplit[0]*args.Nsample)
     Nsample_valid = int(args.trainValidSplit[1]*args.Nsample)

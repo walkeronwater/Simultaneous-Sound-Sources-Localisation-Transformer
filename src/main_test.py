@@ -51,7 +51,7 @@ def regressionAcc(output, label, locLabel, device):
     return correct
 
 class ConfusionEval:
-    def __init__(self, numExample, savePath, expName):
+    def __init__(self, numExample, savePath, expName, isSave=True):
         self.numExample = numExample
         self.rms_UD = 0.0
         self.rms_LR = 0.0
@@ -68,6 +68,7 @@ class ConfusionEval:
         self.target_FB = []
         self.savePath = savePath+"/" if savePath[-1] != "/" else savePath
         self.expName = expName
+        self.isSave = isSave
 
     def evaluate(self, pred, target):
         self.rms_UD += torch.sum(torch.square(pred[:,0] - target[:,0])).item()
@@ -163,7 +164,8 @@ class ConfusionEval:
         plt.xlabel("Ground truth")
         plt.ylabel("Prediction")
         plt.title("Elevation "+self.expName)
-        plt.savefig(self.savePath+self.expName+"_elev.png")
+        if self.isSave:
+            plt.savefig(self.savePath+self.expName+"_elev.png")
         plt.close()
 
         x = np.linspace(0, 345, 100)
@@ -176,7 +178,8 @@ class ConfusionEval:
         plt.xlabel("Ground truth")
         plt.ylabel("Prediction")
         plt.title("Azimuth "+self.expName)
-        plt.savefig(self.savePath+self.expName+"_azim.png")
+        if self.isSave:
+            plt.savefig(self.savePath+self.expName+"_azim.png")
         plt.close()
 
         x = np.linspace(-90, 90, 100)
@@ -189,7 +192,8 @@ class ConfusionEval:
         plt.xlabel("Ground truth")
         plt.ylabel("Prediction")
         plt.title("LR confusion "+self.expName)
-        plt.savefig(self.savePath+self.expName+"_lr.png")
+        if self.isSave:
+            plt.savefig(self.savePath+self.expName+"_lr.png")
         plt.close()
 
         x = np.linspace(-90, 90, 100)
@@ -202,23 +206,25 @@ class ConfusionEval:
         plt.xlabel("Ground truth")
         plt.ylabel("Prediction")
         plt.title("FB confusion "+self.expName)
-        plt.savefig(self.savePath+self.expName+"_fb.png")
+        if self.isSave:
+            plt.savefig(self.savePath+self.expName+"_fb.png")
         plt.close()
 
         return (UD_confusion, LR_confusion, FB_confusion)
 
-def plotConfusion(snrList, UDList, LRList, FBList, savePath):
-    plt.figure()
-    plt.plot(snrList, UDList)
-    plt.plot(snrList, LRList)
-    plt.plot(snrList, FBList)
-    plt.xlabel("SNR")
-    plt.ylabel("RMS error of angle (degree)")
-    plt.title("Confusion vs SNR")
-    plt.legend(["UD", "LR", "FB"])
-    plt.grid()
-    plt.savefig(savePath+"confusion.png")
-    plt.close()
+def plotConfusion(snrList, UDList, LRList, FBList, savePath, isSave=True):
+    if isSave:
+        plt.figure()
+        plt.plot(snrList, UDList)
+        plt.plot(snrList, LRList)
+        plt.plot(snrList, FBList)
+        plt.xlabel("SNR")
+        plt.ylabel("RMS error of angle (degree)")
+        plt.title("Confusion vs SNR")
+        plt.legend(["UD", "LR", "FB"])
+        plt.grid()
+        plt.savefig(savePath+"confusion.png")
+        plt.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing hyperparamters')
@@ -240,6 +246,7 @@ if __name__ == "__main__":
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--prepMethod', default="None", type=str, help='Preprocessing method')
+    parser.add_argument('--isSave', default="True", type=str, help='Save the plots?')
 
 
     args = parser.parse_args()
@@ -257,6 +264,10 @@ if __name__ == "__main__":
         args.isHPC = True
     else:
         args.isHPC = False
+    if args.isSave == "True":
+        args.isSave = True
+    else:
+        args.isSave = False
 
     print("Audio files directory: ", args.audioDir)
     print("HRIR files directory: ", args.hrirDir)
@@ -403,12 +414,14 @@ if __name__ == "__main__":
         test_loss = 0.0
         test_acc = 0.0
         
-        confusion = ConfusionEval(Nsample, savePath = args.modelDir, expName="SNR="+str(int(valSNR)))
+        confusion = ConfusionEval(Nsample, savePath = args.modelDir, expName="SNR="+str(int(valSNR)), isSave=args.isSave)
         model.eval()
         with torch.no_grad():
             for i, (inputs, labels) in enumerate(test_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 outputs = model(inputs)
+                print("outputs:", outputs)
+                print("labels:", labels)
 
                 if args.task in ["elevRegression","azimRegression","allRegression"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
@@ -447,5 +460,6 @@ if __name__ == "__main__":
         UD_confusion,
         LR_confusion,
         FB_confusion,
-        savePath=args.modelDir
+        savePath=args.modelDir,
+        isSave=args.isSave
     )

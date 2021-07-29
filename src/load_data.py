@@ -63,6 +63,39 @@ def loadHRIR(path):
     
     return hrirSet, locLabel, fs_HRIR
 
+class LocRegion:
+    def __init__(self, locLabel):
+        self.locLabel = locLabel
+        
+        self.high_left = []
+        self.high_right = []
+        self.low_left = []
+        self.low_right = []
+        for i in range(self.locLabel.shape[0]):
+            if self.locLabel[i, 0] > 0 and 0 < self.locLabel[i, 1] < 180:
+                self.high_left.append(i)
+            elif self.locLabel[i, 0] < 0 and 0 < self.locLabel[i, 1] < 180:
+                self.low_left.append(i)
+            elif self.locLabel[i, 0] > 0 and 0 < self.locLabel[i, 1] > 180:
+                self.high_right.append(i)
+            elif self.locLabel[i, 0] < 0 and 0 < self.locLabel[i, 1] > 180:
+                self.low_right.append(i)
+    
+    def getLocRegion(self):
+        return (self.high_left, self.low_left, self.high_right, self.low_right)
+
+    def whichRegion(self, locIndex):
+        if locIndex in self.high_left:
+            return "HL"
+        elif locIndex in self.low_left:
+            return "LL"
+        elif locIndex in self.high_right:
+            return "HR"
+        elif locIndex in self.low_left:
+            return "LR"
+        else:
+            return "None"
+
 class MultiEpochsDataLoader(torch.utils.data.DataLoader):
 
     def __init__(self, *args, **kwargs):
@@ -190,8 +223,8 @@ def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
 
 
 if __name__ == "__main__":
-    # path = "./HRTF/IRC*"
-    # hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+    path = "./HRTF/IRC*"
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
 
     # dataset = MyDataset("./saved_cues_temp/", "azimClass", isDebug=True)
     # train_loader, valid_loader = splitDataset(32, [0.8, 0.2], 0, dataset)
@@ -200,4 +233,9 @@ if __name__ == "__main__":
     #     inputs, labels = data
     # for i in range(25):
     #     print(dataset[i][1].shape)
-    pass
+
+    loc_region = LocRegion(locLabel)
+    
+    high_left, low_left, high_right, low_right = loc_region.getLocRegion()
+
+    print(loc_region.whichRegion(123))

@@ -21,6 +21,8 @@ from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
 from torchsummary import summary
+from graphviz import Source
+from torchviz import make_dot
 
 from utils_model import *
 
@@ -599,7 +601,7 @@ class DIY_multiSound(nn.Module):
 
         for layers in self.FClayers_elev:
             out_elev = layers(out_elev)
-        out_elev = 3/8*pi*self.setRange_azim(out_elev)+pi/8
+        out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
 
         out_azim = torch.flatten(out, 1, -1)
         for layers in self.FClayers_azim:
@@ -640,6 +642,8 @@ if __name__ == "__main__":
     print("testOutput shape: ",testOutput.shape)
     print("testOutput: ",testOutput)
     # print(torch.max(testOutput, 1))
+    print(model)
+    make_dot(testOutput.mean(), params=dict(model.named_parameters())).render("transformer_multi_sound", format="png")
 
     # summary(model, (Nfreq, Ntime, Ncues))
     
