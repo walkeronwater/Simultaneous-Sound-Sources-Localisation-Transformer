@@ -27,6 +27,7 @@ def cost_multiSound(output, target):
     # output and target should be of size (batch size, 4)
     # a=tempLoss(output[:, 0:2], target[:, 0:2]) + tempLoss(output[:, 2:4], target[:, 2:4])
     # print("a: ",a)
+    # print(output[:, 2:4])
     return torch.min(
         DoALoss(output[:, 0:2], target[:, 0:2]) + DoALoss(output[:, 2:4], target[:, 2:4]),
         DoALoss(output[:, 0:2], target[:, 2:4]) + DoALoss(output[:, 2:4], target[:, 0:2])
@@ -36,14 +37,18 @@ if __name__ == "__main__":
     outputs = torch.tensor(
         [
             [0, 0, 0, 1],
-            # [1, 1, 1, 1]
+            [1, 1, 1, 1],
+            [0.2, 0.7, 0.3, 1],
+            [1, 1.8, 1, 2]
         ]
     )
 
     labels = torch.tensor(
         [
             [1, 1, 1, 2],
-            # [1.5, 0, 1.3, 0]
+            [1.5, 0, 1.3, 0],
+            [1, 1.2, 0, 2],
+            [1.4, 3, 1.9, 3],
         ]
     )
     print(outputs.shape)

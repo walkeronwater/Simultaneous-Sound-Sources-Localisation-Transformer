@@ -165,8 +165,8 @@ class MyDataset(torch.utils.data.Dataset):
             labels = torch.stack(
                     [
                         torch.tensor(self.annotation.iloc[pathIndex, 1], dtype=torch.float32),
-                        torch.tensor(self.annotation.iloc[pathIndex, 3], dtype=torch.float32),
                         torch.tensor(self.annotation.iloc[pathIndex, 2], dtype=torch.float32),
+                        torch.tensor(self.annotation.iloc[pathIndex, 3], dtype=torch.float32),
                         torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32)
                     ]
                 )

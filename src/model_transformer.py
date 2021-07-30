@@ -574,9 +574,8 @@ class DIY_multiSound(nn.Module):
 
         self.test_layer_elev = nn.Linear(Ntime*Nfreq*Ncues, Nsound)
         self.test_layer_azim = nn.Linear(Ntime*Nfreq*Ncues, Nsound)
-        if task in ["elevRegression","azimRegression","allRegression"]:
-            self.setRange_elev = nn.Hardtanh()
-            self.setRange_azim = nn.Hardtanh()
+        self.setRange_elev = nn.Hardtanh()
+        self.setRange_azim = nn.Hardtanh()
 
         # self.softmaxLayer = nn.Softmax(dim = -1)
         self.isDebug = isDebug
@@ -599,7 +598,7 @@ class DIY_multiSound(nn.Module):
 
         for layers in self.FClayers_elev:
             out_elev = layers(out_elev)
-        # out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
+        out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
 
         out_azim = torch.flatten(out, 1, -1)
         for layers in self.FClayers_azim:
@@ -609,8 +608,8 @@ class DIY_multiSound(nn.Module):
         # out_elev = self.test_layer_elev(out_elev)
         # out_azim = self.test_layer_azim(out_azim)
 
-        out = torch.hstack((out_elev, out_azim))
-        # out = torch.stack((out_elev[:,0], out_azim[:,0],out_elev[:,1], out_azim[:,1]), dim=1)
+        # out = torch.hstack((out_elev, out_azim))
+        out = torch.stack((out_elev[:,0], out_azim[:,0],out_elev[:,1], out_azim[:,1]), dim=1)
 
         # out = self.softmaxLayer(out)
         return out

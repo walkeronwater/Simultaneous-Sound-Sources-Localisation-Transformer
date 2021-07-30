@@ -66,6 +66,7 @@ if __name__ == "__main__":
     parser.add_argument('--Ncues', default=5, type=int, help='Number of cues')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
+    parser.add_argument('--isContinue', default="True", type=str, help='Continue training?')
 
     args = parser.parse_args()
     if args.dataDir[-1] != "/":
@@ -80,6 +81,10 @@ if __name__ == "__main__":
         args.isHPC = True
     else:
         args.isHPC = False
+    if args.isContinue == "True":
+        args.isContinue = True
+    else:
+        args.isContinue = False
     
     print("Data directory: ", args.dataDir)
     print("Model directory: ", args.modelDir)
@@ -165,7 +170,7 @@ if __name__ == "__main__":
 
     if not os.path.isdir(args.modelDir):
         os.mkdir(args.modelDir)
-    else:
+    if args.isContinue:
         try:
             model, optimizer, scheduler, pretrainEpoch, val_loss_optim = loadCheckpoint(
                 model, optimizer, scheduler, args.modelDir, args.task, phase="train", whichBest=args.whichBest
@@ -313,8 +318,8 @@ if __name__ == "__main__":
                 args.modelDir + "param_bestValLoss.pth.tar",
                 args.task
             )
-    # print("Ouput: ", outputs)
-    # print("Label: ", labels)
+        print("Ouput: ", outputs[0:10])
+        # print("Label: ", labels)
 
     '''
     # early stopping
