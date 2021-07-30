@@ -105,7 +105,11 @@ def createCues_multiSound(path, Nsample, cuesShape, prep_method, dirName):
                         for locIndex_2 in range(Nloc):
                             if fileCount == Nsample:
                                 break
-                            if locIndex_2 == locIndex_1:
+                            region_1 = loc_region.whichRegion(locIndex_1)
+                            region_2 = loc_region.whichRegion(locIndex_2)
+                            if region_1[-1] == region_2[-1]:
+                                continue
+                            elif region_1 == "None" or region_2 == "None":
                                 continue
 
                             sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_1, 0])
@@ -230,6 +234,8 @@ if __name__ == "__main__":
         hrirSet_re[i, 1] = librosa.resample(hrirSet[i, 1], fs_HRIR, fs_audio)
     print(hrirSet_re.shape)
     del temp, hrirSet
+
+    loc_region = LocRegion(locLabel)
     
     dirName = args.cuesDir
 
