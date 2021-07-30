@@ -20,6 +20,9 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
+from numba import jit, njit
+from numba.experimental import jitclass
+import time
 
 from load_data import *
 from utils import *
@@ -143,7 +146,6 @@ def createCues_multiSound(path, Nsample, cuesShape, prep_method, dirName):
 
                             fileCount += 1
 
-
 def saveCues_multiSound(cues, locIndex_1, locIndex_2, dirName, fileCount, locLabel):
     if fileCount == 0:
         if os.path.isfile(dirName+'dataLabels.csv'):
@@ -250,7 +252,10 @@ if __name__ == "__main__":
     # raise SystemExit('debug')
 
     print(trainAudioPath)
+
+    start_time = time.time()
     createCues_multiSound(trainAudioPath, Nsample_train, cuesShape, args.prepMethod, dirName=args.cuesDir+"/train/")
+    print("Time elapsed: ", time.time()-start_time)
     print(validAudioPath)
     createCues_multiSound(validAudioPath, Nsample_valid, cuesShape, args.prepMethod, dirName=args.cuesDir+"/valid/")
 

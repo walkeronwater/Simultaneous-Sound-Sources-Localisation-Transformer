@@ -556,19 +556,19 @@ class DIY_multiSound(nn.Module):
         self.FClayers_elev = nn.Sequential(
             nn.Linear(Ntime*Nfreq*Ncues, 256),
             nn.BatchNorm1d(256),
-            nn.LeakyReLU(),
+            nn.Tanh(),
             nn.Dropout(0.1),
             nn.Linear(256, 256),
-            nn.LeakyReLU(),
+            nn.Tanh(),
             nn.Linear(256, Nsound)
         )
         self.FClayers_azim = nn.Sequential(
             nn.Linear(Ntime*Nfreq*Ncues, 256),
             nn.BatchNorm1d(256),
-            nn.LeakyReLU(),
+            nn.Tanh(),
             nn.Dropout(0.1),
             nn.Linear(256, 256),
-            nn.LeakyReLU(),
+            nn.Tanh(),
             nn.Linear(256, Nsound)
         )
 
@@ -594,23 +594,23 @@ class DIY_multiSound(nn.Module):
         out = out.permute(1,2,3,0)
 
         out_elev = torch.flatten(out, 1, -1)
-        # if self.isDebug:
-        #     print("Encoder output shape: ", out_elev.shape)
+        if self.isDebug:
+            print("Encoder output shape: ", out_elev.shape)
 
-        # for layers in self.FClayers_elev:
-        #     out_elev = layers(out_elev)
+        for layers in self.FClayers_elev:
+            out_elev = layers(out_elev)
         # out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
 
         out_azim = torch.flatten(out, 1, -1)
-        # for layers in self.FClayers_azim:
-        #     out_azim = layers(out_azim)
-        # out_azim = pi*self.setRange_azim(out_azim)+pi
+        for layers in self.FClayers_azim:
+            out_azim = layers(out_azim)
+        out_azim = pi*self.setRange_azim(out_azim)+pi
 
-        out_elev = self.test_layer_elev(out_elev)
-        out_azim = self.test_layer_azim(out_azim)
+        # out_elev = self.test_layer_elev(out_elev)
+        # out_azim = self.test_layer_azim(out_azim)
 
-        if self.task in ["elevRegression","azimRegression","allRegression"]:
-            out = torch.stack((out_elev[:,0], out_azim[:,0],out_elev[:,1], out_azim[:,1]), dim=1)
+        out = torch.hstack((out_elev, out_azim))
+        # out = torch.stack((out_elev[:,0], out_azim[:,0],out_elev[:,1], out_azim[:,1]), dim=1)
 
         # out = self.softmaxLayer(out)
         return out
@@ -648,8 +648,9 @@ if __name__ == "__main__":
     print("testOutput shape: ",testOutput.shape)
     print("testOutput: ",testOutput)
     # print(torch.max(testOutput, 1))
-    print(model)
-    make_dot(testOutput.mean(), params=dict(model.named_parameters())).render("transformer_multi_sound", format="png")
+
+    # print(model)
+    # make_dot(testOutput.mean(), params=dict(model.named_parameters())).render("transformer_multi_sound", format="png")
 
     # summary(model, (Nfreq, Ntime, Ncues))
     

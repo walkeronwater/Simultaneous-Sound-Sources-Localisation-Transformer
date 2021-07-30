@@ -21,6 +21,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
+from numba import jit, njit
+from numba.experimental import jitclass
 
 from load_data import *
 
@@ -108,6 +110,7 @@ class Preprocess:
             print("Preprocessing method: normalise")
         else:
             print("Preprocessing method: none")
+            
     def __call__(self, seq):
         if self.prep_method.lower() == "standardise":
             return (seq - np.mean(seq))/(np.std(seq))

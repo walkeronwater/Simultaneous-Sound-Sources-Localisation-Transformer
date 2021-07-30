@@ -11,6 +11,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import torch.utils.data
+from numba import jit, njit
+from numba.experimental import jitclass
 
 # from nvidia.dali import pipeline_def, Pipeline
 # import nvidia.dali.fn as fn
@@ -137,8 +139,8 @@ class MyDataset(torch.utils.data.Dataset):
         return int(self.annotation.iloc[-1, 0] + 1)
     
     def __getitem__(self, pathIndex):
+        data = torch.load(self.filePath+str(pathIndex)+".pt")
         if self.Nsound == 1:
-            data = torch.load(self.filePath+str(pathIndex)+".pt")
             if self.task == "allClass":
                 labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1]))
             elif self.task == "elevClass":
@@ -150,15 +152,25 @@ class MyDataset(torch.utils.data.Dataset):
             elif self.task == "azimRegression":
                 labels = torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)
             elif self.task == "allRegression":
-                labels = torch.stack([
-                    torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32),
-                    torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)]
+                labels = torch.stack(
+                    [
+                        torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32),
+                        torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)
+                    ]
                 )
             elif self.task.lower() == "multisound":
                 labels = torch.tensor(self.annotation.iloc[pathIndex, 1:3].values, dtype=torch.float32)
         else:
-            data = torch.load(self.filePath+str(pathIndex)+".pt")
-            labels = torch.tensor(self.annotation.iloc[pathIndex, 1:5].values, dtype=torch.float32)
+            # labels = torch.tensor(self.annotation.iloc[pathIndex, 1:5].values, dtype=torch.float32)
+            labels = torch.stack(
+                    [
+                        torch.tensor(self.annotation.iloc[pathIndex, 1], dtype=torch.float32),
+                        torch.tensor(self.annotation.iloc[pathIndex, 3], dtype=torch.float32),
+                        torch.tensor(self.annotation.iloc[pathIndex, 2], dtype=torch.float32),
+                        torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32)
+                    ]
+                )
+
 
         if self.isDebug:
             print("pathIndex: ", pathIndex)

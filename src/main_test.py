@@ -305,6 +305,8 @@ if __name__ == "__main__":
     cues_ = torch.zeros((Nsample, Nfreq, Ntime, Ncues))
     if args.task == "allRegression":
         labels_ = torch.zeros((Nsample,3), dtype=torch.float32)
+    elif args.task == "multisound":
+        labels_ = torch.zeros((Nsample,2), dtype=torch.float32)
     else:
         labels_ = torch.zeros((Nsample,))
 
@@ -386,6 +388,13 @@ if __name__ == "__main__":
                     if args.task == "allRegression":
                         labels_[fileCount][0] = locIndex
                         labels_[fileCount][1:3] = locIndex2Label(locLabel, locIndex, args.task)
+                    elif args.task == "multisound":
+                        labels_[fileCount] = torch.tensor(
+                            [
+                                locIndex2Label(locLabel, locIndex, "elevRegression"),
+                                locIndex2Label(locLabel, locIndex, "azimRegression"),
+                            ]
+                        )
                     else:
                         labels_[fileCount] = locIndex2Label(locLabel, locIndex, args.task)
 
@@ -395,7 +404,7 @@ if __name__ == "__main__":
                     #           fileCount // (Nloc*len(valSNRList)))
 
         # create tensor dataset from data loaded in RAM
-        if args.task == "allRegression":
+        if args.task in ["allRegression", "multisound"]:
             dataset = TensorDataset(cues_, labels_)
         else:
             dataset = TensorDataset(cues_, labels_.long())
@@ -427,11 +436,13 @@ if __name__ == "__main__":
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
                 
                     confusion.evaluate(outputs, labels[:, 1:3])
+                elif args.task == "multisound":
+                    loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
                 else:
                     loss = nn.CrossEntropyLoss(outputs, labels)
                 test_sum_loss += loss.item()
 
-                if not (args.task in ["elevRegression","azimRegression","allRegression"]):
+                if not (args.task in ["elevRegression","azimRegression","allRegression","multisound"]):
                     _, predicted = torch.max(outputs.data, 1)
                     test_total += labels.size(0)
                     test_correct += predicted.eq(labels.data).sum().item()
@@ -442,7 +453,7 @@ if __name__ == "__main__":
                     # test_total += labels.shape[0]
                     # test_correct += regressionAcc(outputs, labels, locLabel, device)
         test_loss = test_sum_loss / (i+1)
-        if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
+        if args.task in ["elevRegression","azimRegression","allRegression","multisound"]:
             test_acc = radian2Degree(test_loss)
             print('For SNR: %d Test Loss: %.04f | RMS angle (degree): %.04f '
                 % (valSNR, test_loss, test_acc))
