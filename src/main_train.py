@@ -61,7 +61,7 @@ if __name__ == "__main__":
     parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
-    parser.add_argument('--whichBest', default="None", type=str, help='Best of acc or loss')
+    parser.add_argument('--whichBest', default="bestValLoss", type=str, help='Best of acc or loss')
     parser.add_argument('--patience', default=10, type=int, help='Early stopping patience?')
     parser.add_argument('--Ncues', default=5, type=int, help='Number of cues')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
@@ -148,6 +148,7 @@ if __name__ == "__main__":
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     elif args.whichModel.lower() == "multisound":
         model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+        # model.apply(weight_init)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     else:
         raise SystemExit("No model selected")
@@ -195,11 +196,11 @@ if __name__ == "__main__":
             # print(labels)
             # print("Input shape: ",inputs.shape)
             outputs = model(inputs)
-            
-            # print("Ouput shape: ", outputs.shape)
-            # print("Label shape: ", labels.shape)
+            # print("Ouput: ", outputs)
+            # print("Label: ", labels)
+            # raise SystemExit("debug")
             if Nsound == 1:
-                if args.task in ["elevRegression","azimRegression","allRegression"]:
+                if args.task in ["elevRegression","azimRegression","allRegression","multisound"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
                 else:
                     loss = nn.CrossEntropyLoss(outputs, labels)
@@ -210,15 +211,18 @@ if __name__ == "__main__":
             train_sum_loss += loss.item()
             optimizer.zero_grad()
             loss.backward()
+            # for name, p in model.named_parameters():
+            #     print(name, p.grad.norm().item())
+            # raise SystemExit("debug")
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
             optimizer.step()
 
-            if not (args.task in ["elevRegression","azimRegression","allRegression"]):
+            if not (args.task in ["elevRegression","azimRegression","allRegression","multisound"]):
                 _, predicted = torch.max(outputs.data, 1)
                 train_total += labels.size(0)
                 train_correct += predicted.eq(labels.data).sum().item()
         train_loss = train_sum_loss / (i+1)
-        if args.task in ["elevRegression","azimRegression","allRegression"]:
+        if args.task in ["elevRegression","azimRegression","allRegression","multisound"]:
             train_acc = radian2Degree(train_loss)
             print('Training Loss: %.04f | RMS angle (degree): %.04f '
                 % (train_loss, train_acc))
@@ -240,8 +244,11 @@ if __name__ == "__main__":
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                 
                 outputs = model(inputs)
+                # print("Ouput: ", outputs)
+                # print("Label: ", labels)
+                # raise SystemExit("debug")
                 if Nsound == 1:
-                    if args.task in ["elevRegression","azimRegression","allRegression"]:
+                    if args.task in ["elevRegression","azimRegression","allRegression","multisound"]:
                         val_loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
                     else:
                         val_loss = nn.CrossEntropyLoss(outputs, labels)
@@ -249,12 +256,12 @@ if __name__ == "__main__":
                     val_loss = torch.sqrt(torch.mean(torch.square(cost_multiSound(outputs, labels))))
                 val_sum_loss += val_loss.item()
 
-                if not (args.task in ["elevRegression","azimRegression","allRegression"]):
+                if not (args.task in ["elevRegression","azimRegression","allRegression","multisound"]):
                     _, predicted = torch.max(outputs.data, 1)
                     val_total += labels.size(0)
                     val_correct += predicted.eq(labels.data).sum().item()
             val_loss = val_sum_loss / (i+1)
-            if args.task in ["elevRegression","azimRegression","allRegression"]:
+            if args.task in ["elevRegression","azimRegression","allRegression","multisound"]:
                 val_acc = radian2Degree(val_loss)
                 print('Validation Loss: %.04f | RMS angle (degree): %.04f '
                     % (val_loss, val_acc))
@@ -306,24 +313,26 @@ if __name__ == "__main__":
                 args.modelDir + "param_bestValLoss.pth.tar",
                 args.task
             )
+    # print("Ouput: ", outputs)
+    # print("Label: ", labels)
 
-        '''
-        # early stopping
-        if val_loss >= val_loss_optim:
-            early_epoch_count += 1
-        else:
-            val_loss_optim = val_loss
-            early_epoch_count = 0
+    '''
+    # early stopping
+    if val_loss >= val_loss_optim:
+        early_epoch_count += 1
+    else:
+        val_loss_optim = val_loss
+        early_epoch_count = 0
 
-            saveParam(
-                epoch+1,
-                model,
-                optimizer,
-                scheduler,
-                args.modelDir + "param_bestValLoss.pth.tar",
-                args.task
-            )
-            
-        if (early_epoch_count >= early_epoch):
-            break
-        '''
+        saveParam(
+            epoch+1,
+            model,
+            optimizer,
+            scheduler,
+            args.modelDir + "param_bestValLoss.pth.tar",
+            args.task
+        )
+        
+    if (early_epoch_count >= early_epoch):
+        break
+    '''

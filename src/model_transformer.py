@@ -407,9 +407,8 @@ class PytorchTransformer(nn.Module):
                 nn.Tanh(),
                 nn.Linear(Nloc, Nloc)
             )
-        if task in ["elevRegression","azimRegression","allRegression"]:
-            self.setRange1 = nn.Hardtanh()
-            self.setRange2 = nn.Hardtanh()
+        self.setRange1 = nn.Hardtanh()
+        self.setRange2 = nn.Hardtanh()
         self.isDebug = isDebug
         self.dropout = nn.Dropout(dropout)
         # self.softmaxLayer = nn.Softmax(dim = -1)
@@ -432,13 +431,12 @@ class PytorchTransformer(nn.Module):
         for layers in self.FClayers:
             out = layers(out)
 
-        if self.task in ["elevRegression","azimRegression","allRegression"]:
-            out = torch.stack(
-                [
-                    3/8*pi*self.setRange1(out[:,0])+pi/8,
-                    pi*self.setRange2(out[:,1])+pi
-                ], dim=1
-            )
+        out = torch.stack(
+            [
+                3/8*pi*self.setRange1(out[:,0])+pi/8,
+                pi*self.setRange2(out[:,1])+pi
+            ], dim=1
+        )
         
         # out = self.softmaxLayer(out)
         return out
@@ -490,9 +488,8 @@ class DIY_parallel(nn.Module):
             nn.Linear(256, 1)
         )
 
-        if task in ["elevRegression","azimRegression","allRegression"]:
-            self.setRange_elev = nn.Hardtanh()
-            self.setRange_azim = nn.Hardtanh()
+        self.setRange_elev = nn.Hardtanh()
+        self.setRange_azim = nn.Hardtanh()
 
         # self.softmaxLayer = nn.Softmax(dim = -1)
         self.isDebug = isDebug
@@ -515,15 +512,14 @@ class DIY_parallel(nn.Module):
 
         for layers in self.FClayers_elev:
             out_elev = layers(out_elev)
-        out_elev = 3/8*pi*self.setRange_azim(out_elev)+pi/8
+        out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
 
         out_azim = torch.flatten(out, 1, -1)
         for layers in self.FClayers_azim:
             out_azim = layers(out_azim)
         out_azim = pi*self.setRange_azim(out_azim)+pi
 
-        if self.task in ["elevRegression","azimRegression","allRegression"]:
-            out = torch.hstack((out_elev, out_azim))
+        out = torch.hstack((out_elev, out_azim))
 
         # out = self.softmaxLayer(out)
         return out
@@ -560,22 +556,24 @@ class DIY_multiSound(nn.Module):
         self.FClayers_elev = nn.Sequential(
             nn.Linear(Ntime*Nfreq*Ncues, 256),
             nn.BatchNorm1d(256),
-            nn.Tanh(),
+            nn.LeakyReLU(),
             nn.Dropout(0.1),
             nn.Linear(256, 256),
-            nn.Tanh(),
+            nn.LeakyReLU(),
             nn.Linear(256, Nsound)
         )
         self.FClayers_azim = nn.Sequential(
             nn.Linear(Ntime*Nfreq*Ncues, 256),
             nn.BatchNorm1d(256),
-            nn.Tanh(),
+            nn.LeakyReLU(),
             nn.Dropout(0.1),
             nn.Linear(256, 256),
-            nn.Tanh(),
+            nn.LeakyReLU(),
             nn.Linear(256, Nsound)
         )
 
+        self.test_layer_elev = nn.Linear(Ntime*Nfreq*Ncues, Nsound)
+        self.test_layer_azim = nn.Linear(Ntime*Nfreq*Ncues, Nsound)
         if task in ["elevRegression","azimRegression","allRegression"]:
             self.setRange_elev = nn.Hardtanh()
             self.setRange_azim = nn.Hardtanh()
@@ -596,17 +594,20 @@ class DIY_multiSound(nn.Module):
         out = out.permute(1,2,3,0)
 
         out_elev = torch.flatten(out, 1, -1)
-        if self.isDebug:
-            print("Encoder output shape: ", out_elev.shape)
+        # if self.isDebug:
+        #     print("Encoder output shape: ", out_elev.shape)
 
-        for layers in self.FClayers_elev:
-            out_elev = layers(out_elev)
-        out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
+        # for layers in self.FClayers_elev:
+        #     out_elev = layers(out_elev)
+        # out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
 
         out_azim = torch.flatten(out, 1, -1)
-        for layers in self.FClayers_azim:
-            out_azim = layers(out_azim)
-        out_azim = pi*self.setRange_azim(out_azim)+pi
+        # for layers in self.FClayers_azim:
+        #     out_azim = layers(out_azim)
+        # out_azim = pi*self.setRange_azim(out_azim)+pi
+
+        out_elev = self.test_layer_elev(out_elev)
+        out_azim = self.test_layer_azim(out_azim)
 
         if self.task in ["elevRegression","azimRegression","allRegression"]:
             out = torch.stack((out_elev[:,0], out_azim[:,0],out_elev[:,1], out_azim[:,1]), dim=1)
@@ -614,6 +615,11 @@ class DIY_multiSound(nn.Module):
         # out = self.softmaxLayer(out)
         return out
 
+def weight_init(m):
+    if isinstance(m, nn.Linear):
+        nn.init.xavier_uniform_(m.weight.data)
+        if m.bias is not None:
+            torch.nn.init.zeros_(m.bias)
 
 
 if __name__ == "__main__":

@@ -154,6 +154,8 @@ class MyDataset(torch.utils.data.Dataset):
                     torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32),
                     torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)]
                 )
+            elif self.task.lower() == "multisound":
+                labels = torch.tensor(self.annotation.iloc[pathIndex, 1:3].values, dtype=torch.float32)
         else:
             data = torch.load(self.filePath+str(pathIndex)+".pt")
             labels = torch.tensor(self.annotation.iloc[pathIndex, 1:5].values, dtype=torch.float32)
