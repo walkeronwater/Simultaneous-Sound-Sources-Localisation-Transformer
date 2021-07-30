@@ -115,8 +115,8 @@ def createCues_multiSound(path, Nsample, cuesShape, prep_method, dirName):
                             elif region_1 == "None" or region_2 == "None":
                                 continue
 
-                            sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_1, 0])
-                            sigRight_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_1, 1])
+                            sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 0])
+                            sigRight_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 1])
 
                             # print("Location index: ", locIndex)
                             # showSpectrogram(sigLeft, fs_HRIR)
