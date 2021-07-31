@@ -114,6 +114,9 @@ def createCues_multiSound(path, Nsample, cuesShape, prep_method, dirName):
                                 continue
                             elif region_1 == "None" or region_2 == "None":
                                 continue
+                            # mix only the different locations at the same elevation
+                            elif locLabel[locIndex_1, 0] != locLabel[locIndex_2, 0]:
+                                continue
 
                             sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 0])
                             sigRight_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 1])
