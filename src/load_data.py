@@ -93,7 +93,7 @@ class LocRegion:
             return "LL"
         elif locIndex in self.high_right:
             return "HR"
-        elif locIndex in self.low_left:
+        elif locIndex in self.low_right:
             return "LR"
         else:
             return "None"
