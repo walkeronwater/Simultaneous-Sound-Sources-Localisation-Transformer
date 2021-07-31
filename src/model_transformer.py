@@ -133,6 +133,7 @@ class TransformerBlock(nn.Module):
 class Encoder(nn.Module):
     def __init__(
         self,
+        # Ntime,
         Nfreq, # frequency bins
         num_layers,
         heads,
@@ -156,11 +157,12 @@ class Encoder(nn.Module):
                 for _ in range(num_layers)
             ]
         )
-
+        # self.position_embedding = nn.Embedding(max_length, Nfreq)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         Ntime, Nfreq = x.shape[-2], x.shape[-1]
+
         # positions = torch.arange(0, seq_length).expand(N, seq_length).to(self.device)
         out = self.dropout(x)
 
@@ -572,10 +574,10 @@ class DIY_multiSound(nn.Module):
             nn.Linear(256, Nsound)
         )
 
-        self.test_layer_elev = nn.Linear(Ntime*Nfreq*Ncues, Nsound)
-        self.test_layer_azim = nn.Linear(Ntime*Nfreq*Ncues, Nsound)
-        self.setRange_elev = nn.Hardtanh()
-        self.setRange_azim = nn.Hardtanh()
+        # self.test_layer_elev = nn.Linear(Ntime*Nfreq*Ncues, Nsound)
+        # self.test_layer_azim = nn.Linear(Ntime*Nfreq*Ncues, Nsound)
+        # self.setRange_elev = nn.Hardtanh()
+        # self.setRange_azim = nn.Hardtanh()
 
         # self.softmaxLayer = nn.Softmax(dim = -1)
         self.isDebug = isDebug
@@ -598,12 +600,12 @@ class DIY_multiSound(nn.Module):
 
         for layers in self.FClayers_elev:
             out_elev = layers(out_elev)
-        out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
+        # out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
 
         out_azim = torch.flatten(out, 1, -1)
         for layers in self.FClayers_azim:
             out_azim = layers(out_azim)
-        out_azim = pi*self.setRange_azim(out_azim)+pi
+        # out_azim = pi*self.setRange_azim(out_azim)+pi
 
         # out_elev = self.test_layer_elev(out_elev)
         # out_azim = self.test_layer_azim(out_azim)
