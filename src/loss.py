@@ -20,7 +20,7 @@ def DoALoss(output, target):
     return torch.absolute(loss)
 
 def cost_manhattan(output, target):
-    torch.stack(torch.sin(target[:, 0]) torch.cos(target[:, 0]))
+    # torch.stack(torch.sin(target[:, 0]) torch.cos(target[:, 0]))
 
     return torch.sqrt(torch.square(output[:, 0] - target[:, 0]) + torch.square(output[:, 2] - target[:, 2])) + torch.sqrt(torch.square(output[:, 1] - target[:, 1]) + torch.square(output[:, 3] - target[:, 3]))
 
