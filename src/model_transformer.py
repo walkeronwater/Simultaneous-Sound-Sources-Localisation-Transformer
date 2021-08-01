@@ -540,7 +540,8 @@ class DIY_parallel(nn.Module):
         # out = self.softmaxLayer(out)
         return out
 
-
+'''
+# trained for submit_0108
 class DIY_multiSound(nn.Module):
     def __init__(
         self,
@@ -638,8 +639,8 @@ class DIY_multiSound(nn.Module):
 
         # out = self.softmaxLayer(out)
         return out
-
 '''
+
 class DIY_multiSound(nn.Module):
     def __init__(
         self,
@@ -654,16 +655,19 @@ class DIY_multiSound(nn.Module):
         device,
         forward_expansion,
         dropout,
-        isDebug
+        isDebug,
+        batchSize
     ):
         super(DIY_multiSound, self).__init__()
-        self.encoder = Encoder(           
+        self.encoder = Encoder(          
+            Ntime, 
             Nfreq, # frequency bins
             num_layers,
             heads,
             device,
             forward_expansion,
             dropout,
+            batchSize
         )
 
         self.convLayers = nn.Sequential(
@@ -689,28 +693,29 @@ class DIY_multiSound(nn.Module):
             # nn.Linear(7872, 256),
             nn.Linear(Ntime*Nfreq*Ncues, 256),
             nn.BatchNorm1d(256),
-            # nn.Tanh(),
-            nn.ReLU(),
+            nn.Tanh(),
+            # nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(256, 256),
-            # nn.Tanh(),
-            nn.ReLU(),
-            # nn.Linear(256, 256),
-            # nn.Tanh(),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
             nn.Linear(256, Nsound, bias=False)
         )
+
         self.FClayers_azim = nn.Sequential(
             # nn.Linear(7872, 256),
             nn.Linear(Ntime*Nfreq*Ncues, 256),
             nn.BatchNorm1d(256),
-            # nn.Tanh(),
-            nn.ReLU(),
+            nn.Tanh(),
+            # nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(256, 256),
-            # nn.Tanh(),
-            nn.ReLU(),
-            # nn.Linear(256, 256),
-            # nn.Tanh(),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
             nn.Linear(256, Nsound, bias=False)
         )
 
@@ -758,7 +763,7 @@ class DIY_multiSound(nn.Module):
 
         # out = self.softmaxLayer(out)
         return out
-'''
+
 def weight_init(m):
     if isinstance(m, nn.Linear):
         nn.init.xavier_uniform_(m.weight.data)
