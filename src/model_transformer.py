@@ -556,24 +556,24 @@ class DIY_multiSound(nn.Module):
         print("Number of neurons in the final layer: ", Nloc)
         
         self.FClayers_elev = nn.Sequential(
-            nn.Linear(Ntime*Nfreq*Ncues, 1024),
-            nn.BatchNorm1d(1024),
+            nn.Linear(Ntime*Nfreq*Ncues, 256),
+            nn.BatchNorm1d(256),
             nn.Tanh(),
-            nn.Dropout(0.1),
-            nn.Linear(1024, 512),
+            nn.Dropout(dropout),
+            nn.Linear(256, 256),
             nn.Tanh(),
-            nn.Linear(512, 256),
+            nn.Linear(256, 256),
             nn.Tanh(),
             nn.Linear(256, Nsound)
         )
         self.FClayers_azim = nn.Sequential(
-            nn.Linear(Ntime*Nfreq*Ncues, 1024),
-            nn.BatchNorm1d(1024),
+            nn.Linear(Ntime*Nfreq*Ncues, 256),
+            nn.BatchNorm1d(256),
             nn.Tanh(),
-            nn.Dropout(0.1),
-            nn.Linear(1024, 512),
+            nn.Dropout(dropout),
+            nn.Linear(256, 256),
             nn.Tanh(),
-            nn.Linear(512, 256),
+            nn.Linear(256, 256),
             nn.Tanh(),
             nn.Linear(256, Nsound)
         )
