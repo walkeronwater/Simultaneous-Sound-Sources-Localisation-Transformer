@@ -141,17 +141,17 @@ class MyDataset(torch.utils.data.Dataset):
     def __getitem__(self, pathIndex):
         data = torch.load(self.filePath+str(pathIndex)+".pt")
         if self.Nsound == 1:
-            if self.task == "allClass":
+            if self.task.lower() == "allclass":
                 labels = torch.tensor(int(self.annotation.iloc[pathIndex, 1]))
-            elif self.task == "elevClass":
+            elif self.task.lower() == "elevclass":
                 labels = torch.tensor(int(self.annotation.iloc[pathIndex, 2]))
-            elif self.task == "azimClass":
+            elif self.task.lower() == "azimclass":
                 labels = torch.tensor(int(self.annotation.iloc[pathIndex, 3]))
-            elif self.task == "elevRegression":
+            elif self.task.lower() == "elevregression":
                 labels = torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32)
-            elif self.task == "azimRegression":
+            elif self.task.lower() == "azimregression":
                 labels = torch.tensor(self.annotation.iloc[pathIndex, 5], dtype=torch.float32)
-            elif self.task == "allRegression":
+            elif self.task.lower() == "allregression":
                 labels = torch.stack(
                     [
                         torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32),
@@ -159,7 +159,7 @@ class MyDataset(torch.utils.data.Dataset):
                     ]
                 )
             elif self.task.lower() == "multisound":
-                labels = torch.tensor(self.annotation.iloc[pathIndex, 1:3].values, dtype=torch.float32)
+                labels = torch.tensor(self.annotation.iloc[pathIndex, 3:5].values, dtype=torch.float32)
         else:
             # labels = torch.tensor(self.annotation.iloc[pathIndex, 1:5].values, dtype=torch.float32)
             labels = torch.stack(

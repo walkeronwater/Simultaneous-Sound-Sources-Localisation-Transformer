@@ -32,6 +32,72 @@ from loss import *
 from main_train import *
 from main_cues import *
 
+class ConfusionEval_multiSound:
+    def __init__(self):
+        self.pred_elev_1 = []
+        self.pred_elev_2 = []
+        self.target_elev_1 = []
+        self.target_elev_2 = []
+        self.pred_azim_1 = []
+        self.pred_azim_2 = []
+        self.target_azim_1 = []
+        self.target_azim_2 = []
+
+    def evaluate(self, pred, target):
+        self.pred_elev_1.extend(radian2Degree(pred[:,0].squeeze(0)).cpu())
+        self.pred_azim_1.extend(radian2Degree(pred[:,1].squeeze(0)).cpu())
+        self.pred_elev_2.extend(radian2Degree(pred[:,2].squeeze(0)).cpu())
+        self.pred_azim_2.extend(radian2Degree(pred[:,3].squeeze(0)).cpu())
+        self.target_elev_1.extend(radian2Degree(target[:,0].squeeze(0)).cpu())
+        self.target_azim_1.extend(radian2Degree(target[:,1].squeeze(0)).cpu())
+        self.target_elev_2.extend(radian2Degree(target[:,2].squeeze(0)).cpu())
+        self.target_azim_2.extend(radian2Degree(target[:,3].squeeze(0)).cpu())
+
+    def report(self):
+        x = np.linspace(-45, 90, 100)
+        y = x
+        plt.figure()
+        plt.scatter(self.target_elev_1, self.pred_elev_1, color='green')
+        plt.plot(x, y,'-r')
+        plt.xticks(range(-45,91,15))
+        plt.yticks(range(-45,91,15))
+        plt.xlabel("Ground truth")
+        plt.ylabel("Prediction")
+        plt.title("Elevation")
+        plt.show()
+
+        plt.figure()
+        plt.scatter(self.target_elev_2, self.pred_elev_2, color='blue')
+        plt.plot(x, y,'-r')
+        plt.xticks(range(-45,91,15))
+        plt.yticks(range(-45,91,15))
+        plt.xlabel("Ground truth")
+        plt.ylabel("Prediction")
+        plt.title("Elevation")
+        plt.show()
+
+        x = np.linspace(0, 345, 100)
+        y = x
+        plt.figure()
+        plt.scatter(self.target_azim_1, self.pred_azim_1, color='green')
+        plt.plot(x, y,'-r')
+        plt.xticks(range(0,360,30))
+        plt.yticks(range(0,360,30))
+        plt.xlabel("Ground truth")
+        plt.ylabel("Prediction")
+        plt.title("Azimuth")
+        plt.show()
+        
+        plt.figure()
+        plt.scatter(self.target_azim_2, self.pred_azim_2, color='blue')
+        plt.plot(x, y,'-r')
+        plt.xticks(range(0,360,30))
+        plt.yticks(range(0,360,30))
+        plt.xlabel("Ground truth")
+        plt.ylabel("Prediction")
+        plt.title("Azimuth")
+        plt.show()
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing hyperparamters')
     parser.add_argument('audioDir', type=str, help='Directory of audio files')
@@ -144,7 +210,9 @@ if __name__ == "__main__":
         model = nn.DataParallel(model)
     model = model.to(device)
     model, val_optim = loadCheckpoint(model=model, optimizer=None, scheduler=None, loadPath=args.modelDir, task=args.task, phase="test", whichBest=args.whichBest)
-    
+    # print(model.parameters())
+    # raise SystemExit("debug")
+
     fileCount = 0
     # loop 1: audio i from 1 -> Naudio
     for audioIndex_1 in range(len(path)):
@@ -194,11 +262,15 @@ if __name__ == "__main__":
                         for locIndex_2 in range(Nloc):
                             if fileCount == Nsample:
                                 break
-                            if locIndex_2 == locIndex_1 or loc_region.whichRegion(locIndex_1) == loc_region.whichRegion(locIndex_2):
+                            region_1 = loc_region.whichRegion(locIndex_1)
+                            region_2 = loc_region.whichRegion(locIndex_2)
+                            if region_1[-1] == region_2[-1]:
+                                continue
+                            elif region_1 == "None" or region_2 == "None":
                                 continue
 
-                            sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_1, 0])
-                            sigRight_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_1, 1])
+                            sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 0])
+                            sigRight_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 1])
 
                             # print("Location index: ", locIndex)
                             # showSpectrogram(sigLeft, fs_HRIR)
@@ -246,14 +318,14 @@ if __name__ == "__main__":
     test_loss = 0.0
     test_acc = 0.0
     
+    confusion = ConfusionEval_multiSound()
     model.eval()
     with torch.no_grad():
         for i, (inputs, labels) in enumerate(test_loader, 0):
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
             outputs = model(inputs)
-            print("inputs:", inputs.shape)
-            print("outputs:", outputs)
-            print("labels:", labels)
+            confusion.evaluate(outputs, labels)
+            # print("inputs:", inputs.shape)
             loss = torch.sqrt(torch.mean(torch.square(cost_multiSound(outputs, labels))))
             test_sum_loss += loss.item()
 
@@ -261,10 +333,13 @@ if __name__ == "__main__":
                 _, predicted = torch.max(outputs.data, 1)
                 test_total += labels.size(0)
                 test_correct += predicted.eq(labels.data).sum().item()
-            raise SystemExit("debug")
 
+    print("outputs:", outputs[0:10])
+    print("labels:", labels[0:10])
     test_loss = test_sum_loss / (i+1)
     if args.task == "elevRegression" or args.task == "azimRegression" or args.task == "allRegression":
         test_acc = radian2Degree(test_loss)
         print('Test Loss: %.04f | RMS angle (degree): %.04f '
             % (test_loss, test_acc))
+
+    confusion.report()

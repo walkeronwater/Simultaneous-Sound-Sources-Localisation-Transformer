@@ -19,9 +19,10 @@ def DoALoss(output, target):
 
     return torch.absolute(loss)
 
-def tempLoss(output, target):
-    return torch.sqrt(torch.square(output[:, 0] - target[:, 0]) + torch.square(output[:, 1] - target[:, 1]))
+def cost_manhattan(output, target):
+    torch.stack(torch.sin(target[:, 0]) torch.cos(target[:, 0]))
 
+    return torch.sqrt(torch.square(output[:, 0] - target[:, 0]) + torch.square(output[:, 2] - target[:, 2])) + torch.sqrt(torch.square(output[:, 1] - target[:, 1]) + torch.square(output[:, 3] - target[:, 3]))
 
 def cost_multiSound(output, target):
     # output and target should be of size (batch size, 4)
@@ -36,23 +37,20 @@ def cost_multiSound(output, target):
 if __name__ == "__main__":
     outputs = torch.tensor(
         [
-            [0, 0, 0, 1],
-            [1, 1, 1, 1],
-            [0.2, 0.7, 0.3, 1],
-            [1, 1.8, 1, 2]
+            [0, 0, 0, 3.14],
+            [0, 0, 0, 3.14]
         ]
     )
 
     labels = torch.tensor(
         [
-            [1, 1, 1, 2],
-            [1.5, 0, 1.3, 0],
-            [1, 1.2, 0, 2],
-            [1.4, 3, 1.9, 3],
+            [0, 3.14, 0, 3.14],
+            [0, 3.14, 0, 3.14]
         ]
     )
     print(outputs.shape)
     # loss = nn.MSELoss(outputs, labels)
     loss = cost_multiSound(outputs, labels)
+    loss = cost_manhattan(outputs, labels)
 
     print(loss)

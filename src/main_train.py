@@ -67,6 +67,7 @@ if __name__ == "__main__":
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--isContinue', default="True", type=str, help='Continue training?')
+    parser.add_argument('--isSave', default="True", type=str, help='Save checkpoints?')
 
     args = parser.parse_args()
     if args.dataDir[-1] != "/":
@@ -85,6 +86,10 @@ if __name__ == "__main__":
         args.isContinue = True
     else:
         args.isContinue = False
+    if args.isSave == "True":
+        args.isSave = True
+    else:
+        args.isSave = False
     
     print("Data directory: ", args.dataDir)
     print("Model directory: ", args.modelDir)
@@ -213,6 +218,7 @@ if __name__ == "__main__":
                     print("Loss", loss.shape)
             else:
                 loss = torch.sqrt(torch.mean(torch.square(cost_multiSound(outputs, labels))))
+                # loss = torch.sqrt(torch.mean(torch.square(cost_manhattan(outputs, labels))))
             train_sum_loss += loss.item()
             optimizer.zero_grad()
             loss.backward()
@@ -236,6 +242,9 @@ if __name__ == "__main__":
             print('Training Loss: %.04f | Training Acc: %.4f%% '
                 % (train_loss, train_acc))
         
+        print("Training Ouput: ", outputs[0:10])
+        print("Training Label: ", labels[0:10])
+
         val_correct = 0.0
         val_total = 0.0
         val_sum_loss = 0.0
@@ -259,6 +268,7 @@ if __name__ == "__main__":
                         val_loss = nn.CrossEntropyLoss(outputs, labels)
                 else:
                     val_loss = torch.sqrt(torch.mean(torch.square(cost_multiSound(outputs, labels))))
+                    # val_loss = torch.sqrt(torch.mean(torch.square(cost_manhattan(outputs, labels))))
                 val_sum_loss += val_loss.item()
 
                 if not (args.task in ["elevRegression","azimRegression","allRegression","multisound"]):
@@ -277,26 +287,28 @@ if __name__ == "__main__":
                 if val_acc > val_acc_optim or ((val_acc == val_acc_optim) and (val_loss <= val_loss_optim)):
                     val_acc_optim = val_acc
                     # for classfication, we also save the model with the best validation accuracy
-                    saveParam(
-                        epoch+1,
-                        model,
-                        optimizer,
-                        scheduler,
-                        args.modelDir + "param_bestValAcc.pth.tar",
-                        args.task
-                    )
+                    if args.isSave:
+                        saveParam(
+                            epoch+1,
+                            model,
+                            optimizer,
+                            scheduler,
+                            args.modelDir + "param_bestValAcc.pth.tar",
+                            args.task
+                        )
             # scheduler.step(val_loss)
             scheduler.step()
 
-        saveCurves(
-            epoch+1, 
-            train_loss, 
-            train_acc, 
-            val_loss, 
-            val_acc,
-            args.modelDir + "curve_epoch_" + str(epoch+1) + ".pth.tar",
-            args.task
-        )
+        if args.isSave:
+            saveCurves(
+                epoch+1, 
+                train_loss, 
+                train_acc, 
+                val_loss, 
+                val_acc,
+                args.modelDir + "curve_epoch_" + str(epoch+1) + ".pth.tar",
+                args.task
+            )
 
         # update tensorboard
         writer.add_scalar('Training Loss', train_loss, global_step=step)
@@ -309,7 +321,7 @@ if __name__ == "__main__":
         if early_stop.stop:
             break
 
-        if early_stop.count == 0 or epoch == 0:
+        if (early_stop.count == 0 or epoch == 0) and args.isSave:
             saveParam(
                 epoch+1,
                 model,
@@ -318,8 +330,6 @@ if __name__ == "__main__":
                 args.modelDir + "param_bestValLoss.pth.tar",
                 args.task
             )
-        print("Ouput: ", outputs[0:10])
-        # print("Label: ", labels)
 
     '''
     # early stopping
