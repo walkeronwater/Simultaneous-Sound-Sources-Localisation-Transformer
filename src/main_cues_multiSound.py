@@ -128,7 +128,6 @@ def createCues_multiSound(path, Nsample, cuesShape, prep_method, dirName):
                             specRight = calSpectrogram(sigRight_1 + sigRight_2)
 
                             ipdCues = preprocess(calIPD(specLeft, specRight))
-                            ildCues = preprocess(calILD(specLeft, specRight))
                             r_l, theta_l  = cartesian2euler(specLeft)
                             r_r, theta_r  = cartesian2euler(specRight)
                             r_l = preprocess(r_l)
@@ -137,12 +136,14 @@ def createCues_multiSound(path, Nsample, cuesShape, prep_method, dirName):
                             theta_r = preprocess(theta_r)
 
                             if Ncues == 6:
+                                ildCues = preprocess(calILD(specLeft, specRight))
                                 cues = concatCues([ipdCues, ildCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
                             elif Ncues == 5:
                                 cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
                             elif Ncues == 4:
                                 cues = concatCues([r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
                             elif Ncues == 2:
+                                ildCues = preprocess(calILD(specLeft, specRight))
                                 cues = concatCues([ipdCues, ildCues], (Nfreq, Ntime))
 
                             saveCues_multiSound(cues, locIndex_1, locIndex_2, dirName, fileCount, locLabel)

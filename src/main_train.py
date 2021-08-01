@@ -157,7 +157,7 @@ if __name__ == "__main__":
         model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     elif args.whichModel.lower() == "multisound":
-        model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+        model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug, args.batchSize)
         # model.apply(weight_init)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     else:
@@ -242,8 +242,8 @@ if __name__ == "__main__":
             print('Training Loss: %.04f | Training Acc: %.4f%% '
                 % (train_loss, train_acc))
         
-        print("Training Ouput: ", outputs[0:10])
-        print("Training Label: ", labels[0:10])
+        # print("Training Ouput: ", outputs[0:10])
+        # print("Training Label: ", labels[0:10])
 
         val_correct = 0.0
         val_total = 0.0
