@@ -159,9 +159,9 @@ class Encoder(nn.Module):
             ]
         )
         # fixed positional encoding
-        self.positional_encodings = torch.linspace(0, 1, Ntime)
-        self.positional_encodings = self.positional_encodings.repeat((batchSize, Nfreq, 1))
-        self.positional_encodings = self.positional_encodings.permute(0, 2, 1).to(device)
+        # self.positional_encodings = torch.linspace(0, 1, Ntime)
+        # self.positional_encodings = self.positional_encodings.repeat((batchSize, Nfreq, 1))
+        # self.positional_encodings = self.positional_encodings.permute(0, 2, 1).to(device)
         # learnable postional embedding
         # self.position_embedding = nn.Embedding(max_length, Nfreq)
 
@@ -172,8 +172,12 @@ class Encoder(nn.Module):
 
         # positions = torch.arange(0, seq_length).expand(N, seq_length).to(self.device)
         
+        positional_encodings = torch.linspace(0, 1, Ntime)
+        positional_encodings = positional_encodings.repeat((N, Nfreq, 1))
+        positional_encodings = positional_encodings.permute(0, 2, 1).to(self.device)
+
         # print("positional encoding shape: ", self.positional_encodings.shape)
-        out = x + self.positional_encodings
+        out = x + positional_encodings
         out = self.dropout(out)
 
         # In the Encoder the query, key, value are all the same, it's in the
