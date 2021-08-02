@@ -154,21 +154,17 @@ if __name__ == "__main__":
         model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     elif args.whichModel.lower() == "paralleltransformer":
-        model = DIY_parallel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
-        optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    elif args.whichModel.lower() == "cnn":
-        model = CNNModel(task=args.task, Ncues=Ncues, dropout=args.valDropout, device=device, isDebug=args.isDebug)
-        model.apply(weight_init)
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
-    elif args.whichModel.lower() == "pytorchtransformer":
-        model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
-        optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    elif args.whichModel.lower() == "multisound":
-        model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+        if args.Nsound == 1:
+            model = DIY_parallel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+        else:
+            model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
         # model.apply(weight_init)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    elif args.whichModel.lower() == "multisoundcnn":
-        model = CNN_multiSound(
+    elif args.whichModel.lower() == "cnn":
+        if args.Nsound == 1:
+            model = CNNModel(task=args.task, Ncues=Ncues, dropout=args.valDropout, device=device, isDebug=args.isDebug)
+        else:
+            model = CNN_multiSound(
             task=args.task,
             Ntime=Ntime,
             Nfreq=Nfreq,
@@ -177,9 +173,23 @@ if __name__ == "__main__":
             dropout=args.valDropout,
             device=device,
             isDebug=args.isDebug
-        )
+            )
         model.apply(weight_init)
         optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
+    elif args.whichModel.lower() == "pytorchtransformer":
+        if args.Nsound == 1:
+            model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+        else:
+            model = Pytorch_transformer_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+        optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    # elif args.whichModel.lower() == "multisound":
+    #     model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
+    #     # model.apply(weight_init)
+    #     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    # elif args.whichModel.lower() == "multisoundcnn":
+        
+    #     model.apply(weight_init)
+    #     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
     else:
         raise SystemExit("No model selected")
     # raise SystemExit("debug")

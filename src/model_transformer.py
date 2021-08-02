@@ -767,6 +767,53 @@ class DIY_multiSound(nn.Module):
         # out = self.softmaxLayer(out)
         return out
 
+class Pytorch_transformer_multiSound(nn.Module):
+    def __init__(
+        self,
+        task,
+        Ntime, # time windows
+        Nfreq, # frequency bins
+        Ncues,
+        Nsound,
+        num_layers,
+        numFC,
+        heads,
+        device,
+        forward_expansion,
+        dropout,
+        isDebug
+    ):
+        super(Pytorch_transformer_multiSound, self).__init__()
+        
+        transformerLayers_torch = nn.TransformerEncoderLayer(
+            d_model = Nfreq,
+            nhead = 8,
+            dim_feedforward = 4*Nfreq,
+            dropout = dropout,
+            activation = 'relu'
+        )
+        self.encoder = nn.TransformerEncoder(transformerLayers_torch, num_layers=num_layers)
+
+        self.decoder_FC = DecoderFC(task, Ntime*Nfreq*Ncues, Nsound, dropout, isDebug)
+
+        self.isDebug = isDebug
+
+    def forward(self, cues):
+        encList = []
+        for i in range(cues.shape[-1]):
+            enc = self.encoder(cues[:,:,:,0].permute(2, 0, 1))
+            encList.append(enc)
+
+        if self.isDebug:
+            print("Encoder for one cue shape: ", enc.shape)
+            
+        out = torch.stack(encList)
+        out = out.permute(2,1,3,0)
+
+        if self.isDebug:
+            print("Encoder output shape: ", out.shape)
+
+        return self.decoder_FC(out)
 class DecoderFC(nn.Module):
     def __init__(
         self,
