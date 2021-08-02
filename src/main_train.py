@@ -160,6 +160,19 @@ if __name__ == "__main__":
         model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug, args.batchSize)
         # model.apply(weight_init)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
+    elif args.whichModel.lower() == "multisoundcnn":
+        model = CNN_multiSound(
+            task=args.task,
+            Ntime=Ntime,
+            Nfreq=Nfreq,
+            Ncues=Ncues,
+            Nsound=Nsound,
+            dropout=args.valDropout,
+            device=device,
+            isDebug=args.isDebug
+        )
+        model.apply(weight_init)
+        optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
     else:
         raise SystemExit("No model selected")
     # raise SystemExit("debug")

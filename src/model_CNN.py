@@ -23,6 +23,7 @@ import torch.nn.functional as F
 from torchsummary import summary
 
 from utils_model import *
+from model_transformer import DecoderFC
 
 class CNNModel(nn.Module):
     def __init__(self, task, Ncues, dropout, device, isDebug=False):
@@ -81,7 +82,87 @@ class CNNModel(nn.Module):
                 ], dim=1
             )
         return out
-    
+
+class CNN_multiSound(nn.Module):
+    def __init__(
+        self,
+        task,
+        Ntime,
+        Nfreq,
+        Ncues,
+        Nsound,
+        dropout,
+        device,
+        isDebug=False
+    ):
+        super(CNN_multiSound, self).__init__()
+
+        self.task = task
+        Nloc = predNeuron(task)
+        self.convLayers = nn.Sequential(
+            nn.Conv2d(Ncues, 32, (5,5), stride=3),
+            nn.ReLU(),
+            nn.BatchNorm2d(32),
+            nn.Conv2d(32, 64, (3,3), stride=2),
+            nn.ReLU(),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(64, 96, (3,3), stride=2),
+            nn.ReLU(),
+            nn.BatchNorm2d(96),
+            # nn.Conv2d(96, 128, (2,2), stride=2),
+            # nn.ReLU(),
+            # nn.BatchNorm2d(128)
+        )
+        self.FClayers_elev = nn.Sequential(
+            # nn.Linear(7872, 256),
+            nn.Linear(Ntime*Nfreq*Ncues, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, Nsound, bias=False)
+        )
+
+        self.FClayers_azim = nn.Sequential(
+            # nn.Linear(7872, 256),
+            nn.Linear(Ntime*Nfreq*Ncues, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, Nsound, bias=False)
+        )
+
+        self.decoder_FC = DecoderFC(
+            task=task,
+            flattenShape=7872,
+            Nsound=Nsound,
+            dropout=dropout,
+            device=device
+        )
+
+        self.device = device
+        self.isDebug = isDebug
+    def forward(self, cues):
+        out = self.convLayers(cues.permute(0,3,2,1))
+        if self.isDebug:
+            print("Shape after convLayers: ", out.shape)
+        out = torch.flatten(out, 1, -1)
+
+        if self.isDebug:
+            print("Shape after flatten: ", out.shape)
+
+        return self.decoder_FC(out)
 # default uniform method provided by Pytorch is Kaiming He uniform
 def weight_init(m):
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
@@ -98,8 +179,20 @@ if __name__ == "__main__":
     Ntime = 44
     Nfreq = 512
     Ncues = 5
+    Nsound = 2
     batchSize = 32
-    model = CNNModel(task=task, Ncues=Ncues, dropout=0, device=device, isDebug=True).to(device)
+    dropout = 0
+    # model = CNNModel(task=task, Ncues=Ncues, dropout=dropout, device=device, isDebug=True).to(device)
+    model = CNN_multiSound(
+        task=task,
+        Ntime=Ntime,
+        Nfreq=Nfreq,
+        Ncues=Ncues,
+        Nsound=Nsound,
+        dropout=dropout,
+        device=device,
+        isDebug=False
+    ).to(device)
     model.apply(weight_init)
 
     testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)

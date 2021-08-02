@@ -764,6 +764,69 @@ class DIY_multiSound(nn.Module):
         # out = self.softmaxLayer(out)
         return out
 
+class DecoderFC(nn.Module):
+    def __init__(
+        self,
+        task,
+        flattenShape,
+        Nsound,
+        dropout,
+        device,
+        isDebug=False
+    ):
+        super(DecoderFC, self).__init__()
+
+        self.FClayers_elev = nn.Sequential(
+            # nn.Linear(7872, 256),
+            nn.Linear(flattenShape, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, Nsound, bias=False)
+        )
+        self.FClayers_azim = nn.Sequential(
+            # nn.Linear(7872, 256),
+            nn.Linear(flattenShape, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, Nsound, bias=False)
+        )
+        self.setRange_elev = nn.Hardtanh(-pi/4, pi/2)
+        self.setRange_azim = nn.Hardtanh(0, pi*2)
+
+    def forward(self, x):
+        out_elev = torch.flatten(x, 1, -1)
+        out_azim = torch.flatten(x, 1, -1)
+
+        for layers in self.FClayers_elev:
+            out_elev = layers(out_elev)
+        # out_elev = self.test_layer_elev(out_elev)
+        out_elev = self.setRange_elev(out_elev)
+
+        for layers in self.FClayers_azim:
+            out_azim = layers(out_azim)
+        # out_azim = self.test_layer_azim(out_azim)
+        out_azim = self.setRange_azim(out_azim)
+
+        out = torch.stack((out_elev[:,0], out_azim[:,0],out_elev[:,1], out_azim[:,1]), dim=1)
+        return out
+
+
+
+
 def weight_init(m):
     if isinstance(m, nn.Linear):
         nn.init.xavier_uniform_(m.weight.data)
