@@ -397,37 +397,39 @@ class PytorchTransformer(nn.Module):
         )
         self.encoder = nn.TransformerEncoder(transformerLayers_torch, num_layers=num_layers)
 
-        if numFC >= 3:
-            self.FClayers = nn.ModuleList(
-                [
-                    nn.Linear(Ntime*Nfreq*Ncues, 256),
-                    nn.BatchNorm1d(256),
-                    nn.ReLU(),
-                    nn.Dropout(0.1),
-                    nn.Linear(256, Nloc),
-                    nn.ReLU()
-                ]
-            )
-            self.FClayers.extend(
-                [
-                    nn.Linear(Nloc, Nloc)
-                    for _ in range(numFC-2)
-                ]
-            )
-        else:
-            self.FClayers = nn.Sequential(
-                nn.Linear(Ntime*Nfreq*Ncues, 256),
-                nn.BatchNorm1d(256),
-                nn.Tanh(),
-                nn.Dropout(0.1),
-                nn.Linear(256, Nloc),
-                nn.Tanh(),
-                nn.Linear(Nloc, Nloc)
-            )
-        self.setRange1 = nn.Hardtanh()
-        self.setRange2 = nn.Hardtanh()
+        
+        self.decoder_FC = DecoderFC(task, Ntime*Nfreq*Ncues, Nsound, dropout, isDebug)
+        
+        # if numFC >= 3:
+        #     self.FClayers = nn.ModuleList(
+        #         [
+        #             nn.Linear(Ntime*Nfreq*Ncues, 256),
+        #             nn.BatchNorm1d(256),
+        #             nn.ReLU(),
+        #             nn.Dropout(0.1),
+        #             nn.Linear(256, Nloc),
+        #             nn.ReLU()
+        #         ]
+        #     )
+        #     self.FClayers.extend(
+        #         [
+        #             nn.Linear(Nloc, Nloc)
+        #             for _ in range(numFC-2)
+        #         ]
+        #     )
+        # else:
+        #     self.FClayers = nn.Sequential(
+        #         nn.Linear(Ntime*Nfreq*Ncues, 256),
+        #         nn.BatchNorm1d(256),
+        #         nn.Tanh(),
+        #         nn.Dropout(0.1),
+        #         nn.Linear(256, Nloc),
+        #         nn.Tanh(),
+        #         nn.Linear(Nloc, Nloc)
+        #     )
+        # self.setRange1 = nn.Hardtanh()
+        # self.setRange2 = nn.Hardtanh()
         self.isDebug = isDebug
-        self.dropout = nn.Dropout(dropout)
         # self.softmaxLayer = nn.Softmax(dim = -1)
     def forward(self, cues):
         encList = []
