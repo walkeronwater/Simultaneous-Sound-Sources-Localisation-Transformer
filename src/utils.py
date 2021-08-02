@@ -321,6 +321,12 @@ def saveCues(cues, locIndex, dirName, fileCount, locLabel):
             csvFile.write('\n')
     torch.save(cues, dirName+str(fileCount)+'.pt')
 
+def radian2Degree(val):
+    return val/pi*180
+
+def degree2Radian(val):
+    return val/180*pi
+
 if __name__ == "__main__":
     class CuesShape:
         def __init__(

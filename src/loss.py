@@ -4,11 +4,7 @@ import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
 
-def radian2Degree(val):
-    return val/pi*180
-
-def degree2Radian(val):
-    return val/180*pi
+from utils import radian2Degree, degree2Radian
 
 def DoALoss(output, target):
     # target should be (elev, azim)

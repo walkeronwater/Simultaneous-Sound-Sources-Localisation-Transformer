@@ -27,6 +27,7 @@ from torchsummary import summary
 
 from load_data import *
 from utils import *
+from utils_model import *
 from model_transformer import *
 from model_CNN import *
 from model_RNN import *
@@ -108,6 +109,8 @@ if __name__ == "__main__":
     print("Number of cues: ", args.Ncues)
     print("Number of sound: ", args.Nsound)
 
+    path = "./HRTF/IRC*"
+    _, locLabel, _ = loadHRIR(path)
     # dirName = './saved_cues/'
     dirName = args.dataDir
     assert (
