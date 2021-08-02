@@ -48,7 +48,7 @@ class CuesShape:
 #[TODO]
 def mixLoc():
     pass
-
+'''
 def createCues_multiSound(path, Nsample, cuesShape, prep_method, dirName):
     Nfreq = cuesShape.Nfreq
     Ntime = cuesShape.Ntime
@@ -183,6 +183,89 @@ def saveCues_multiSound(cues, locIndex_1, locIndex_2, dirName, fileCount, locLab
             csvFile.write(str(locIndex2Label(locLabel, locIndex_2, "azimRegression")))
             csvFile.write('\n')
     torch.save(cues, dirName+str(fileCount)+'.pt')
+'''
+
+@jit(nopython=True)
+def conv(seq1, seq2):
+    return np.convolve(seq1, seq2)
+
+
+def createCues_(path, Nsample, cuesShape, prep_method, dirName, locLabel):
+    cuesShape = CuesShape()
+    Nfreq = cuesShape.Nfreq
+    Ntime = cuesShape.Ntime
+    Ncues = cuesShape.Ncues
+    Nloc = cuesShape.Nloc
+    lenSliceInSec = cuesShape.lenSliceInSec
+    binaural_cues = BinauralCues(prep_method=prep_method, fs_audio=fs_audio)
+    save_cues = SaveCues(savePath=dirName, locLabel=locLabel)
+
+    for audioIndex_1 in range(len(path)):
+        if save_cues.fileCount == Nsample:
+            break
+        print("Audio 1 index: ", audioIndex_1)
+        audio_1, fs_audio_1 = sf.read(path[audioIndex_1])
+
+        #[TODO] change fs_HRIR to fs_audio
+        audioSliceList_1 = audioSliceGenerator(audio_1, fs_HRIR, lenSliceInSec)
+        
+        # loop 2: audioSlice of audio i from 1 -> NaudioSlice
+        for sliceIndex_1 in range(len(audioSliceList_1)):
+            if save_cues.fileCount == Nsample:
+                break
+            audioSlice_1 = audio_1[audioSliceList_1[sliceIndex_1]]
+
+            # loop 3: audio j from 1 -> Naudio but skip when i==j
+            for audioIndex_2 in range(len(path)):
+                if save_cues.fileCount == Nsample:
+                    break
+                if audioIndex_2 == audioIndex_1:
+                    continue
+                print("Audio 2 index: ", audioIndex_2)
+                audio_2, fs_audio_2 = sf.read(path[audioIndex_2])
+                #[TODO] change fs_HRIR to fs_audio
+                audioSliceList_2 = audioSliceGenerator(audio_2, fs_HRIR, lenSliceInSec)
+
+                # loop 4: audioSlice of audio j from 1 -> NaudioSlice
+                for sliceIndex_2 in range(len(audioSliceList_2)):
+                    if save_cues.fileCount == Nsample:
+                        break
+                    audioSlice_2 = audio_2[audioSliceList_2[sliceIndex_2]]
+
+                    # loop 5: loc of slice of audio 1 from 0 to 186
+                    for locIndex_1 in loc_region.low_left + loc_region.high_left:
+                        if save_cues.fileCount == Nsample:
+                            break
+
+                        # sigLeft_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 0])
+                        # sigRight_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 1])
+                        sigLeft_1 = conv(audioSlice_1, hrirSet_re[locIndex_1, 0])
+                        sigRight_1 = conv(audioSlice_1, hrirSet_re[locIndex_1, 1])
+
+                        # loop 6: loc of slice of audio 1 from 5 to 186 (not adjacent locs)
+                        for locIndex_2 in loc_region.low_right + loc_region.high_right:
+                            if save_cues.fileCount == Nsample:
+                                break
+                            
+                            # region_1 = loc_region.whichRegion(locIndex_1)
+                            # region_2 = loc_region.whichRegion(locIndex_2)
+                            # if region_1[-1] == region_2[-1]:
+                            #     continue
+                            # elif region_1 == "None" or region_2 == "None":
+                            #     continue
+                            # mix only the different locations at the same elevation
+                            # elif locLabel[locIndex_1, 0] != locLabel[locIndex_2, 0]:
+                            #     continue
+                            
+                            # sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 0])
+                            # sigRight_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 1])
+                            sigLeft_2 = conv(audioSlice_2, hrirSet_re[locIndex_2, 0])
+                            sigRight_2 = conv(audioSlice_2, hrirSet_re[locIndex_2, 1])
+
+                            ipd, magL, phaseL, magR, phaseR = binaural_cues(sigLeft_1+sigLeft_2, sigRight_1+sigRight_2)
+                            save_cues([ipd, magL, phaseL, magR, phaseR], [locIndex_1, locIndex_2])
+
+
 
 '''
 # This will create two folders containing data for training, validation. Each dataset will be
@@ -200,7 +283,7 @@ if __name__ == "__main__":
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--valSNRList', default="-5,0,5,10,15,20,25,30,35", type=str, help='Range of SNR')
     parser.add_argument('--Ncues', default=5, type=int, help='Number of cues?')
-    parser.add_argument('--prepMethod', default="None", type=str, help='Preprocessing method')
+    parser.add_argument('--prepMethod', default="normalise", type=str, help='Preprocessing method')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
@@ -242,6 +325,8 @@ if __name__ == "__main__":
     del temp, hrirSet
 
     loc_region = LocRegion(locLabel)
+    # print(loc_region.low_right + loc_region.high_right)
+    # raise SystemExit("dbug")
     
     dirName = args.cuesDir
 
@@ -258,11 +343,26 @@ if __name__ == "__main__":
     print(trainAudioPath)
 
     start_time = time.time()
-    createCues_multiSound(trainAudioPath, Nsample_train, cuesShape, args.prepMethod, dirName=args.cuesDir+"/train/")
+    # createCues_multiSound(trainAudioPath, Nsample_train, cuesShape, args.prepMethod, dirName=args.cuesDir+"/train/")
+    createCues_(
+        path=trainAudioPath, 
+        Nsample=Nsample_train,
+        cuesShape=cuesShape,
+        prep_method=args.prepMethod,
+        dirName=args.cuesDir+"/train/",
+        locLabel=locLabel
+    )
     print("Time elapsed: ", time.time()-start_time)
     print(validAudioPath)
-    createCues_multiSound(validAudioPath, Nsample_valid, cuesShape, args.prepMethod, dirName=args.cuesDir+"/valid/")
-
+    # createCues_multiSound(validAudioPath, Nsample_valid, cuesShape, args.prepMethod, dirName=args.cuesDir+"/valid/")
+    createCues_(
+        path=validAudioPath, 
+        Nsample=Nsample_valid,
+        cuesShape=cuesShape,
+        prep_method=args.prepMethod,
+        dirName=args.cuesDir+"/valid/",
+        locLabel=locLabel
+    )
 
     '''
     for audioIndex in range(len(trainAudioPath)):
