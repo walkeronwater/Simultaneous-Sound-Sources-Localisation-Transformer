@@ -139,8 +139,7 @@ class Encoder(nn.Module):
         heads,
         device,
         forward_expansion,
-        dropout,
-        batchSize
+        dropout
     ):
 
         super(Encoder, self).__init__()
@@ -202,7 +201,8 @@ class FC3(nn.Module):
         isDebug
     ):
         super(FC3, self).__init__()
-        self.encoder = Encoder(           
+        self.encoder = Encoder(     
+            Ntime,      
             Nfreq, # frequency bins
             num_layers,
             heads,
@@ -282,13 +282,14 @@ class DIYModel(nn.Module):
         isDebug
     ):
         super(DIYModel, self).__init__()
-        self.encoder = Encoder(           
+        self.encoder = Encoder(      
+            Ntime,     
             Nfreq, # frequency bins
             num_layers,
             heads,
             device,
             forward_expansion,
-            dropout,
+            dropout
         )
         self.task = task
         Nloc = predNeuron(task)
@@ -473,7 +474,8 @@ class DIY_parallel(nn.Module):
         isDebug
     ):
         super(DIY_parallel, self).__init__()
-        self.encoder = Encoder(           
+        self.encoder = Encoder(
+            Ntime,
             Nfreq, # frequency bins
             num_layers,
             heads,
@@ -571,8 +573,7 @@ class DIY_multiSound(nn.Module):
             heads,
             device,
             forward_expansion,
-            dropout,
-            batchSize
+            dropout
         )
 
         self.task = task
@@ -659,8 +660,7 @@ class DIY_multiSound(nn.Module):
         device,
         forward_expansion,
         dropout,
-        isDebug,
-        batchSize
+        isDebug
     ):
         super(DIY_multiSound, self).__init__()
         self.encoder = Encoder(          
@@ -670,8 +670,7 @@ class DIY_multiSound(nn.Module):
             heads,
             device,
             forward_expansion,
-            dropout,
-            batchSize
+            dropout
         )
 
         self.convLayers = nn.Sequential(

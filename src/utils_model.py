@@ -102,7 +102,7 @@ class MyDataset(torch.utils.data.Dataset):
             label = []
             for i in self.annotation.iloc[pathIndex].values[1:]:
                 label.extend(self.locLabel[i])
-            print(label)
+            # print(label)
             labels = degree2Radian(torch.tensor(label, dtype=torch.float32))
             # labels = torch.tensor(self.annotation.iloc[pathIndex].values[1:], dtype=torch.float32)
 
@@ -132,10 +132,6 @@ def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
     valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
 
     return train_loader, valid_loader
-
-
-
-
 
 def predNeuron(task):
     if task == "elevClass":
@@ -281,5 +277,4 @@ if __name__ == "__main__":
     for i, (inputs, labels) in enumerate(train_loader):
         print(labels)
         print(labels.shape)
-        raise SystemExit("dbg")
 

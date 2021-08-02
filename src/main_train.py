@@ -117,8 +117,8 @@ if __name__ == "__main__":
         os.path.isdir(dirName)
     ), "Data directory doesn't exist."
 
-    train_dataset = MyDataset(dirName+"/train/", args.task, args.Nsound, args.isDebug)
-    valid_dataset = MyDataset(dirName+"/valid/", args.task, args.Nsound, args.isDebug)
+    train_dataset = MyDataset(dirName+"/train/", args.task, args.Nsound, locLabel, args.isDebug)
+    valid_dataset = MyDataset(dirName+"/valid/", args.task, args.Nsound, locLabel, args.isDebug)
     print("Dataset length: ", train_dataset.__len__())
     print("Dataset length: ", valid_dataset.__len__())
 
@@ -129,8 +129,12 @@ if __name__ == "__main__":
     valid_loader = MultiEpochsDataLoader(
         dataset=valid_dataset, batch_size=args.batchSize, shuffle=False, num_workers=args.numWorker, persistent_workers=isPersistent
     )
-    # train_loader, valid_loader = splitDataset(args.batchSize, trainValidSplit, args.numWorker, dataset)
-
+    
+    # for i, (inputs, labels) in enumerate(train_loader):
+    #     print(labels)
+    #     print(labels.shape)
+    #     raise SystemExit("dbg")
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     cuesShape = CuesShape(Ncues=args.Ncues)
     Nfreq = cuesShape.Nfreq
@@ -160,7 +164,7 @@ if __name__ == "__main__":
         model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     elif args.whichModel.lower() == "multisound":
-        model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug, args.batchSize)
+        model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
         # model.apply(weight_init)
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
     elif args.whichModel.lower() == "multisoundcnn":
@@ -217,6 +221,7 @@ if __name__ == "__main__":
         train_acc = 0.0
         model.train()
         for i, (inputs, labels) in enumerate(train_loader, 0):
+
             num_batches = len(train_loader)
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
             # print(labels)
