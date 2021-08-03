@@ -226,7 +226,7 @@ class FC3(nn.Module):
     def forward(self, cues):
         encList = []
         for i in range(cues.shape[-1]):
-            enc = self.encoder(cues[:,:,:,0].permute(0,2,1))
+            enc = self.encoder(cues[:,:,:,i].permute(0,2,1))
             encList.append(enc)
 
         if self.isDebug:
@@ -340,7 +340,7 @@ class DIYModel(nn.Module):
     def forward(self, cues):
         encList = []
         for i in range(cues.shape[-1]):
-            enc = self.encoder(cues[:,:,:,0].permute(0,2,1))
+            enc = self.encoder(cues[:,:,:,i].permute(0,2,1))
             encList.append(enc)
         
         if self.isDebug:
@@ -434,7 +434,7 @@ class PytorchTransformer(nn.Module):
     def forward(self, cues):
         encList = []
         for i in range(cues.shape[-1]):
-            enc = self.encoder(cues[:,:,:,0].permute(2, 0, 1))
+            enc = self.encoder(cues[:,:,:,i].permute(2, 0, 1))
             encList.append(enc)
 
         if self.isDebug:
@@ -608,7 +608,7 @@ class DIY_parallel_multiSound(nn.Module):
     def forward(self, cues):
         encList = []
         for i in range(cues.shape[-1]):
-            enc = self.encoder(cues[:, :, :, 0].permute(0, 2, 1))
+            enc = self.encoder(cues[:, :, :, i].permute(0, 2, 1))
             encList.append(enc)
 
         if self.isDebug:
@@ -707,7 +707,7 @@ class DIY_multiSound(nn.Module):
     def forward(self, cues):
         encList = []
         for i in range(cues.shape[-1]):
-            enc = self.encoder(cues[:,:,:,0].permute(0,2,1))
+            enc = self.encoder(cues[:,:,:,i].permute(0,2,1))
             encList.append(enc)
         
         if self.isDebug:
@@ -897,7 +897,7 @@ class Pytorch_transformer_multiSound(nn.Module):
     def forward(self, cues):
         encList = []
         for i in range(cues.shape[-1]):
-            enc = self.encoder(cues[:,:,:,0].permute(2, 0, 1))
+            enc = self.encoder(cues[:,:,:,i].permute(2, 0, 1))
             encList.append(enc)
 
         if self.isDebug:
