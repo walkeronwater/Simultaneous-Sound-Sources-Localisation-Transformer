@@ -57,6 +57,7 @@ if __name__ == "__main__":
     parser.add_argument('task', type=str, help='Task')
     parser.add_argument('whichModel', type=str, help='whichModel')
     parser.add_argument('Nsound', type=int, help='Number of sound')
+    parser.add_argument('whichDec', type=str, help='Which decoder structure')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
@@ -110,6 +111,7 @@ if __name__ == "__main__":
     print("Early stopping patience: ", args.patience)
     print("Number of cues: ", args.Ncues)
     print("Number of sound: ", args.Nsound)
+    print("Decoder structure: ", args.whichDec)
 
     path = "./HRTF/IRC*"
     _, locLabel, _ = loadHRIR(path)
@@ -168,7 +170,8 @@ if __name__ == "__main__":
             device=device,
             forward_expansion=4,
             dropout=0.1,
-            isDebug=False
+            isDebug=False,
+            whichDec=args.whichDec
         )
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 

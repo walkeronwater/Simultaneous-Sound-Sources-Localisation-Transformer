@@ -1019,13 +1019,13 @@ class Enc_DIY(nn.Module):
         out = out.permute(1, 2, 3, 0)
         return out
 
-class Dec_2branch_2src_reg(nn.Module):
+class Dec_2branch_src_reg(nn.Module):
     def __init__(
         self,
         enc_out_size,
         dropout
     ):
-        super(Dec_2branch_2src_reg, self).__init__()
+        super(Dec_2branch_src_reg, self).__init__()
 
         self.FClayers_src1 = nn.Sequential(
             nn.Linear(enc_out_size, 256),
@@ -1066,6 +1066,56 @@ class Dec_2branch_2src_reg(nn.Module):
         out = torch.cat([out_src1, out_src2], dim=-1)
         return out
 
+class Dec_2branch_ea_reg(nn.Module):
+    def __init__(
+        self,
+        enc_out_size,
+        dropout
+    ):
+        super(Dec_2branch_ea_reg, self).__init__()
+
+        self.FClayers_elev = nn.Sequential(
+            nn.Linear(enc_out_size, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, 2)
+        )
+
+        self.FClayers_azim = nn.Sequential(
+            nn.Linear(enc_out_size, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, 2)
+        )
+    def forward(self, enc_out):
+        out_elev = torch.flatten(enc_out, 1, -1)
+        out_azim = torch.flatten(enc_out, 1, -1)
+
+        for layers in self.FClayers_elev:
+            out_elev = layers(out_elev)
+        for layers in self.FClayers_azim:
+            out_azim = layers(out_azim)
+
+        out = torch.stack(
+            (out_elev[:, 0], out_azim[:, 0], out_elev[:, 1], out_azim[:, 1])
+            , dim=-1
+        )
+        return out
+
 class TransformerModel(nn.Module):
     def __init__(
         self,
@@ -1080,7 +1130,8 @@ class TransformerModel(nn.Module):
         device,
         forward_expansion,
         dropout,
-        isDebug
+        isDebug,
+        whichDec
     ):
         super(TransformerModel, self).__init__()
 
@@ -1099,10 +1150,18 @@ class TransformerModel(nn.Module):
             isDebug
         )
 
-        self.dec = Dec_2branch_2src_reg(
-            enc_out_size=Nfreq*Ntime*Ncues,
-            dropout=dropout
-        )
+        if whichDec.lower() == "ea":
+            self.dec = Dec_2branch_ea_reg(
+                enc_out_size=Nfreq*Ntime*Ncues,
+                dropout=dropout
+            )
+        elif whichDec.lower() == "src":
+            self.dec = Dec_2branch_src_reg(
+                enc_out_size=Nfreq * Ntime * Ncues,
+                dropout=dropout
+            )
+        else:
+            raise SystemError("Invalid decoder structure")
 
     def forward(self, inputs):
         enc_out = self.enc(inputs)
@@ -1143,7 +1202,10 @@ if __name__ == "__main__":
         device=device,
         forward_expansion=4,
         dropout=0.1,
-        isDebug=False).to(device)
+        isDebug=False,
+        whichDec="ea"
+    ).to(device)
+
     testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     print("testInput shape: ", testInput.shape)
     # print(testLabel)
