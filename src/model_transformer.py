@@ -1101,6 +1101,9 @@ class Dec_2branch_ea_reg(nn.Module):
             nn.Tanh(),
             nn.Linear(256, 2)
         )
+
+        self.clamp_elev = nn.Hardtanh(-pi/4, pi/2)
+        self.clamp_azim = nn.Hardtanh(0, pi*2)
     def forward(self, enc_out):
         out_elev = torch.flatten(enc_out, 1, -1)
         out_azim = torch.flatten(enc_out, 1, -1)
@@ -1109,6 +1112,9 @@ class Dec_2branch_ea_reg(nn.Module):
             out_elev = layers(out_elev)
         for layers in self.FClayers_azim:
             out_azim = layers(out_azim)
+
+        out_elev = self.clamp_elev(out_elev)
+        out_azim = self.clamp_azim(out_azim)
 
         out = torch.stack(
             (out_elev[:, 0], out_azim[:, 0], out_elev[:, 1], out_azim[:, 1])
