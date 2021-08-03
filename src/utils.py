@@ -76,6 +76,40 @@ def noiseGenerator(sigSeq, valSNR):
             noiseLeft = noiseGenerator(np.expand_dims(sigPairList[0][i,locIndex,0], axis=0), valSNR)
             noiseRight = noiseGenerator(np.expand_dims(sigPairList[0][i,locIndex,1], axis=0), valSNR)'''
 
+def calSpectrogram(seq, fs):
+    Nfft = 1023
+    Zxx = librosa.stft(seq, n_fft=Nfft, hop_length=512)
+    return Zxx
+
+# utility methods for binaural cue extraction
+def cartesian2euler(spec):
+    # x = seq.real
+    # y = seq.imag
+    # r = np.sqrt(x**2+y**2)
+    # theta = np.angle(np.divide(y, x, where=x!=0))
+    # theta = np.arctan(
+    #     np.divide(y, x, where=x!=0)
+    # )
+    # return r, np.unwrap(theta)
+    mag = np.abs(spec)
+    phase = np.angle(spec)
+    phase = unwrap_phase(phase)
+    return mag, phase
+
+def calIPD(specL, specR):
+    # ipd = np.angle(np.divide(seqL, seqR, out=np.zeros_like(seqL), where=np.absolute(seqR)!=0))
+    ipd = np.angle(np.divide(specL, specR, out=np.zeros_like(specL), where=np.absolute(specR)!=0))
+    ipd = unwrap_phase(ipd)
+    return ipd
+
+def calIPD_unwrap(seqL, seqR):
+    ipd = np.angle(np.divide(seqL, seqR, out=np.zeros_like(seqL), where=np.absolute(seqR)!=0))
+    return unwrap_phase(ipd)
+
+def calILD(seqL, seqR):
+    ild = 20*np.log10(np.divide(np.absolute(seqL), np.absolute(seqR), out=np.zeros_like(np.absolute(seqL)), where=np.absolute(seqR)!=0))
+    return ild
+
 
 # [TODO] method to normalise a sequence which can be broadcasted to a sequence of sequence
 # min-max/standardise/L2 norm for each tensor like an image
@@ -111,15 +145,15 @@ class BinauralCues:
     def calSpectrogram(self, seq, fs):
         Nfft = 1023
         Zxx = librosa.stft(seq, n_fft=Nfft, hop_length=512)
-        Nfreq = librosa.fft_frequencies(sr=fs, n_fft=Nfft)
-        length = seq.shape[0] / fs
-        Ntime = np.linspace(0., length, seq.shape[0])
-        Ntime = librosa.frames_to_time(range(0, Zxx.shape[1]), sr=fs, hop_length=512, n_fft=Nfft)
         if not self.flag:
+            Nfreq = librosa.fft_frequencies(sr=fs, n_fft=Nfft)
+            length = seq.shape[0] / fs
+            Ntime = np.linspace(0., length, seq.shape[0])
+            Ntime = librosa.frames_to_time(range(0, Zxx.shape[1]), sr=fs, hop_length=512, n_fft=Nfft)
             self.Nfreq = Nfreq
             self.Ntime = Ntime
             self.flag = True
-        return Nfreq, Ntime, Zxx
+        return Zxx
 
     def calIPD(self, specL, specR):
         ipd = np.angle(np.divide(specL, specR, out=np.zeros_like(specL), where=np.absolute(specR)!=0))
@@ -150,8 +184,8 @@ class BinauralCues:
         return mag, phase
 
     def __call__(self, sigL, sigR):
-        Nfreq, Ntime, specL = self.calSpectrogram(sigL, self.fs_audio)
-        _, _, specR = self.calSpectrogram(sigR, self.fs_audio)
+        specL = self.calSpectrogram(sigL, self.fs_audio)
+        specR = self.calSpectrogram(sigR, self.fs_audio)
         ipd = self.calIPD(specL, specR)
         magL, phaseL = self.cartesian2euler(specL)
         magR, phaseR = self.cartesian2euler(specR)

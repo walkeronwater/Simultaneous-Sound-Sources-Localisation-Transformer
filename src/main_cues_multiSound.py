@@ -45,9 +45,6 @@ class CuesShape:
         self.lenSliceInSec = lenSliceInSec
         self.valSNRList = valSNRList
 
-#[TODO]
-def mixLoc():
-    pass
 '''
 def createCues_multiSound(path, Nsample, cuesShape, prep_method, dirName):
     Nfreq = cuesShape.Nfreq
@@ -124,8 +121,8 @@ def createCues_multiSound(path, Nsample, cuesShape, prep_method, dirName):
                             # print("Location index: ", locIndex)
                             # showSpectrogram(sigLeft, fs_HRIR)
                             # showSpectrogram(sigRight, fs_HRIR)
-                            specLeft = calSpectrogram(sigLeft_1 + sigLeft_2)
-                            specRight = calSpectrogram(sigRight_1 + sigRight_2)
+                            specLeft = calSpectrogram(sigLeft_1 + sigLeft_2, fs_audio)
+                            specRight = calSpectrogram(sigRight_1 + sigRight_2, fs_audio)
 
                             ipdCues = preprocess(calIPD(specLeft, specRight))
                             r_l, theta_l  = cartesian2euler(specLeft)
@@ -185,9 +182,9 @@ def saveCues_multiSound(cues, locIndex_1, locIndex_2, dirName, fileCount, locLab
     torch.save(cues, dirName+str(fileCount)+'.pt')
 '''
 
-@jit(nopython=True)
-def conv(seq1, seq2):
-    return np.convolve(seq1, seq2)
+# @jit(nopython=True)
+# def conv(seq1, seq2):
+#     return np.convolve(seq1, seq2)
 
 
 def createCues_(path, Nsample, cuesShape, prep_method, dirName, locLabel):
@@ -237,10 +234,10 @@ def createCues_(path, Nsample, cuesShape, prep_method, dirName, locLabel):
                         if save_cues.fileCount == Nsample:
                             break
 
-                        # sigLeft_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 0])
-                        # sigRight_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 1])
-                        sigLeft_1 = conv(audioSlice_1, hrirSet_re[locIndex_1, 0])
-                        sigRight_1 = conv(audioSlice_1, hrirSet_re[locIndex_1, 1])
+                        sigLeft_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 0])
+                        sigRight_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 1])
+                        # sigLeft_1 = conv(audioSlice_1, hrirSet_re[locIndex_1, 0])
+                        # sigRight_1 = conv(audioSlice_1, hrirSet_re[locIndex_1, 1])
 
                         # loop 6: loc of slice of audio 1 from 5 to 186 (not adjacent locs)
                         for locIndex_2 in loc_region.low_right + loc_region.high_right:
@@ -257,10 +254,10 @@ def createCues_(path, Nsample, cuesShape, prep_method, dirName, locLabel):
                             # elif locLabel[locIndex_1, 0] != locLabel[locIndex_2, 0]:
                             #     continue
                             
-                            # sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 0])
-                            # sigRight_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 1])
-                            sigLeft_2 = conv(audioSlice_2, hrirSet_re[locIndex_2, 0])
-                            sigRight_2 = conv(audioSlice_2, hrirSet_re[locIndex_2, 1])
+                            sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 0])
+                            sigRight_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 1])
+                            # sigLeft_2 = conv(audioSlice_2, hrirSet_re[locIndex_2, 0])
+                            # sigRight_2 = conv(audioSlice_2, hrirSet_re[locIndex_2, 1])
 
                             ipd, magL, phaseL, magR, phaseR = binaural_cues(sigLeft_1+sigLeft_2, sigRight_1+sigRight_2)
                             save_cues([ipd, magL, phaseL, magR, phaseR], [locIndex_1, locIndex_2])
