@@ -262,8 +262,8 @@ if __name__ == "__main__":
 
 
     train_dataset = MyDataset(
-        filePath="./saved_0208_temp/train/",
-        task="allRegression",
+        filePath="./saved_0308_temp/train/",
+        task="allclass",
         Nsound=2,
         locLabel=locLabel
     )
@@ -276,7 +276,33 @@ if __name__ == "__main__":
         persistent_workers=False
     )
 
+    labels = torch.tensor(
+        [
+            [1, 4],
+            [1, 5],
+        ]
+    )
+    print(labels.size(0))
+    # labels = labels.unsqueeze(0)
+    target = torch.zeros(labels.size(0), 187).scatter_(1, labels, 1.)
+    print(target.shape)
+
+
+    outputs = torch.rand((32, 187))
+    # outputs = torch.nn.functional.one_hot(outputs.to(torch.int64), num_classes=187)
+    # outputs = torch.argmax(outputs, dim=1)
+    print(outputs.shape)
+    criterion = torch.nn.BCEWithLogitsLoss()
     for i, (inputs, labels) in enumerate(train_loader):
         print(labels)
-        print(labels.shape)
+        labels_hot = torch.zeros(labels.size(0), 187).scatter_(1, labels.to(torch.int64), 1.).float()
 
+        print("label_hot shape", labels_hot.shape)
+
+        _, hit = torch.topk(labels_hot, k=2, dim=1)
+        hit, _ = torch.sort(hit, dim=1, descending=False)
+        print("convert back", hit)
+
+        loss = criterion(outputs.float(), labels_hot)
+        print(loss)
+        raise SystemExit('dbg')

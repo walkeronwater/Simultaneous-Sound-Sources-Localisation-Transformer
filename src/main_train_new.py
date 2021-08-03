@@ -184,8 +184,8 @@ if __name__ == "__main__":
 
     # Define training hyperparmeters:
     # learning rate scheduler
-    scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
-
+    # scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
+    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True)
     # Load checkpoint to resume training
     if not os.path.isdir(args.modelDir):
         os.mkdir(args.modelDir)
@@ -206,6 +206,7 @@ if __name__ == "__main__":
     # use tensorboard
     writer = SummaryWriter(f'runs/temp/tryingout_tensorboard')
     step = 1
+    criterion = nn.BCEWithLogitsLoss()
     for epoch in range(pretrainEpoch, pretrainEpoch + num_epochs):
         print("\nEpoch %d, lr = %f" % ((epoch + 1), getLR(optimizer)))
 
@@ -242,7 +243,9 @@ if __name__ == "__main__":
                     loss = torch.sqrt(torch.mean(torch.square(cost_multiSound(outputs, labels))))
                     # loss = torch.sqrt(torch.mean(torch.square(cost_manhattan(outputs, labels))))
                 else:
-                    loss = nn.CrossEntropyLoss(outputs, labels)
+                    labels_hot = torch.zeros(labels.size(0), 187).to(device)
+                    labels_hot = labels_hot.scatter_(1, labels.to(torch.int64), 1.).float()
+                    loss = criterion(outputs.float(), labels_hot)
             train_sum_loss += loss.item()
             optimizer.zero_grad()
             loss.backward()
@@ -253,16 +256,27 @@ if __name__ == "__main__":
             optimizer.step()
 
             if not (args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]):
-                _, predicted = torch.max(outputs.data, 1)
-                train_total += labels.size(0)
-                train_correct += predicted.eq(labels.data).sum().item()
+                if Nsound == 1:
+                    _, predicted = torch.max(outputs.data, 1)
+                    train_total += labels.size(0)
+                    train_correct += predicted.eq(labels.data).sum().item()
+                else:
+                    # _, predicted = torch.topk(outputs, k=2, dim=1)
+                    # predicted, _ = torch.sort(predicted, dim=1, descending=False)
+                    train_acc = 0.0
+
         train_loss = train_sum_loss / (i + 1)
         if args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]:
             train_acc = radian2Degree(train_loss)
             print('Training Loss: %.04f | RMS angle (degree): %.04f '
                   % (train_loss, train_acc))
         else:
-            train_acc = round(100.0 * train_correct / train_total, 2)
+            if Nsound == 1:
+                train_acc = round(100.0 * train_correct / train_total, 2)
+            else:
+                # _, predicted = torch.topk(outputs, k=2, dim=1)
+                # predicted, _ = torch.sort(predicted, dim=1, descending=False)
+                train_acc = 0.0
             print('Training Loss: %.04f | Training Acc: %.4f%% '
                   % (train_loss, train_acc))
 
@@ -282,20 +296,23 @@ if __name__ == "__main__":
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
 
                 outputs = model(inputs)
-                # print("Ouput: ", outputs)
-                # print("Label: ", labels)
-                # raise SystemExit("debug")
+
                 if Nsound == 1:
                     if args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]:
                         val_loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
                     else:
                         val_loss = nn.CrossEntropyLoss(outputs, labels)
                 else:
-                    val_loss = torch.sqrt(torch.mean(torch.square(cost_multiSound(outputs, labels))))
-                    # val_loss = torch.sqrt(torch.mean(torch.square(cost_manhattan(outputs, labels))))
+                    if args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]:
+                        val_loss = torch.sqrt(torch.mean(torch.square(cost_multiSound(outputs, labels))))
+                        # loss = torch.sqrt(torch.mean(torch.square(cost_manhattan(outputs, labels))))
+                    else:
+                        labels_hot = torch.zeros(labels.size(0), 187).to(device)
+                        labels_hot = labels_hot.scatter_(1, labels.to(torch.int64), 1.).float()
+                        val_loss = criterion(outputs.float(), labels_hot)
                 val_sum_loss += val_loss.item()
 
-                if not (args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]):
+                if Nsound == 1 and (not (args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"])):
                     _, predicted = torch.max(outputs.data, 1)
                     val_total += labels.size(0)
                     val_correct += predicted.eq(labels.data).sum().item()
@@ -305,7 +322,10 @@ if __name__ == "__main__":
                 print('Validation Loss: %.04f | RMS angle (degree): %.04f '
                       % (val_loss, val_acc))
             else:
-                val_acc = round(100.0 * val_correct / val_total, 2)
+                if Nsound == 1:
+                    val_acc = round(100.0 * val_correct / val_total, 2)
+                else:
+                    val_acc = 0.0
                 print('Validation Loss: %.04f | Validation Acc: %.4f%% '
                       % (val_loss, val_acc))
                 if val_acc > val_acc_optim or ((val_acc == val_acc_optim) and (val_loss <= val_loss_optim)):
@@ -320,8 +340,8 @@ if __name__ == "__main__":
                             args.modelDir + "param_bestValAcc.pth.tar",
                             args.task
                         )
-            # scheduler.step(val_loss)
-            scheduler.step()
+            scheduler.step(val_loss)
+            # scheduler.step()
 
         if args.isSave:
             saveCurves(

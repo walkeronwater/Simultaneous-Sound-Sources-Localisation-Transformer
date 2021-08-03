@@ -1019,6 +1019,34 @@ class Enc_DIY(nn.Module):
         out = out.permute(1, 2, 3, 0)
         return out
 
+class Dec_1branch_cls(nn.Module):
+    def __init__(
+        self,
+        enc_out_size,
+        dropout
+    ):
+        super(Dec_1branch_cls, self).__init__()
+        self.FClayers = nn.Sequential(
+            nn.Linear(enc_out_size, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 187)
+        )
+
+    def forward(self, enc_out):
+        out_src = torch.flatten(enc_out, 1, -1)
+        out_src = self.FClayers(out_src)
+        return out_src
+
+
 class Dec_2branch_src_reg(nn.Module):
     def __init__(
         self,
@@ -1030,28 +1058,30 @@ class Dec_2branch_src_reg(nn.Module):
         self.FClayers_src1 = nn.Sequential(
             nn.Linear(enc_out_size, 256),
             nn.BatchNorm1d(256),
-            nn.Tanh(),
-            # nn.ReLU(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(256, 256),
-            nn.Tanh(),
-            # nn.ReLU(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(256, 256),
-            nn.Tanh(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(256, 2)
         )
 
         self.FClayers_src2 = nn.Sequential(
             nn.Linear(enc_out_size, 256),
             nn.BatchNorm1d(256),
-            nn.Tanh(),
-            # nn.ReLU(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(256, 256),
-            nn.Tanh(),
-            # nn.ReLU(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(256, 256),
-            nn.Tanh(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(256, 2)
         )
     def forward(self, enc_out):
@@ -1077,28 +1107,30 @@ class Dec_2branch_ea_reg(nn.Module):
         self.FClayers_elev = nn.Sequential(
             nn.Linear(enc_out_size, 256),
             nn.BatchNorm1d(256),
-            nn.Tanh(),
-            # nn.ReLU(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(256, 256),
-            nn.Tanh(),
-            # nn.ReLU(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(256, 256),
-            nn.Tanh(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(256, 2)
         )
 
         self.FClayers_azim = nn.Sequential(
             nn.Linear(enc_out_size, 256),
             nn.BatchNorm1d(256),
-            nn.Tanh(),
-            # nn.ReLU(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(256, 256),
-            nn.Tanh(),
-            # nn.ReLU(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(256, 256),
-            nn.Tanh(),
+            # nn.Tanh(),
+            nn.ReLU(),
             nn.Linear(256, 2)
         )
 
@@ -1166,6 +1198,11 @@ class TransformerModel(nn.Module):
                 enc_out_size=Nfreq * Ntime * Ncues,
                 dropout=dropout
             )
+        elif whichDec.lower() == "cls":
+            self.dec = Dec_1branch_cls(
+                enc_out_size=Nfreq * Ntime * Ncues,
+                dropout=dropout
+            )
         else:
             raise SystemError("Invalid decoder structure")
 
@@ -1209,7 +1246,7 @@ if __name__ == "__main__":
         forward_expansion=4,
         dropout=0.1,
         isDebug=False,
-        whichDec="ea"
+        whichDec="cls"
     ).to(device)
 
     testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
