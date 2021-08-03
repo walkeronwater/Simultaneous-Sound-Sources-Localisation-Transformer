@@ -29,7 +29,7 @@ from load_data import *
 
 # method to generate audio slices for a given length requirement
 # with a hardcoded power threshold
-def audioSliceGenerator(audioSeq, sampleRate, lenSliceInSec, isDebug=False):
+def audioSliceGenerator(audioSeq, sampleRate, lenSliceInSec, threshold=0.01, isDebug=False):
     lenAudio = audioSeq.size
     lenSlice = round(sampleRate * lenSliceInSec)
     # audioSliceList = [range(lenSlice*i, lenSlice *(i+1)) for i in range(lenAudio//lenSlice)]
@@ -45,7 +45,7 @@ def audioSliceGenerator(audioSeq, sampleRate, lenSliceInSec, isDebug=False):
         # print("slice power", np.mean(np.power(sliced, 2)))
         if isDebug:
             powerList.append(np.mean(np.power(sliced, 2)))
-        if np.mean(np.power(sliced, 2)) > 0.01:
+        if np.mean(np.power(sliced, 2)) > threshold:
             audioSliceList.append(range(lenSlice*i, lenSlice *(i+1)))
     if isDebug:
         return audioSliceList, powerList
@@ -362,71 +362,89 @@ def degree2Radian(val):
     return val/180*pi
 
 if __name__ == "__main__":
-    class CuesShape:
-        def __init__(
-            self,
-            Nfreq = 512,
-            Ntime = 44,
-            Ncues = 5,
-            Nloc = 187,
-            lenSliceInSec = 0.5,
-            valSNRList = [-5,0,5,10,15,20,25,30,35]
-        ):
-            self.Nfreq = Nfreq
-            self.Ntime = Ntime
-            self.Ncues = Ncues
-            self.Nloc = Nloc
-            self.lenSliceInSec = lenSliceInSec
-            self.valSNRList = valSNRList
+    # class CuesShape:
+    #     def __init__(
+    #         self,
+    #         Nfreq = 512,
+    #         Ntime = 44,
+    #         Ncues = 5,
+    #         Nloc = 187,
+    #         lenSliceInSec = 0.5,
+    #         valSNRList = [-5,0,5,10,15,20,25,30,35]
+    #     ):
+    #         self.Nfreq = Nfreq
+    #         self.Ntime = Ntime
+    #         self.Ncues = Ncues
+    #         self.Nloc = Nloc
+    #         self.lenSliceInSec = lenSliceInSec
+    #         self.valSNRList = valSNRList
 
     path = "./HRTF/IRC*"
     hrirSet, locLabel, fs_HRIR = loadHRIR(path)
     print(hrirSet.shape)
 
-    trainAudioPath = glob(os.path.join("./audio_train/*"))
+    # trainAudioPath = glob(os.path.join("./audio_train/*"))
 
-    _, fs_audio = sf.read(trainAudioPath[0])
-    temp = librosa.resample(hrirSet[0, 0], fs_HRIR, fs_audio)
-    hrirSet_re = np.empty(hrirSet.shape[0:2]+temp.shape)
-    for i in range(hrirSet.shape[0]):
-        hrirSet_re[i, 0] = librosa.resample(hrirSet[i, 0], fs_HRIR, fs_audio)
-        hrirSet_re[i, 1] = librosa.resample(hrirSet[i, 1], fs_HRIR, fs_audio)
-    print(hrirSet_re.shape)
-    del temp, hrirSet
+    # _, fs_audio = sf.read(trainAudioPath[0])
+    # temp = librosa.resample(hrirSet[0, 0], fs_HRIR, fs_audio)
+    # hrirSet_re = np.empty(hrirSet.shape[0:2]+temp.shape)
+    # for i in range(hrirSet.shape[0]):
+    #     hrirSet_re[i, 0] = librosa.resample(hrirSet[i, 0], fs_HRIR, fs_audio)
+    #     hrirSet_re[i, 1] = librosa.resample(hrirSet[i, 1], fs_HRIR, fs_audio)
+    # print(hrirSet_re.shape)
+    # del temp, hrirSet
 
-    cuesShape = CuesShape()
-    lenSliceInSec = 0.5
-    normalise = Preprocess(prep_method="normalise")
-    standardise = Preprocess(prep_method="standardise")
+    # cuesShape = CuesShape()
+    # lenSliceInSec = 0.5
+    # normalise = Preprocess(prep_method="normalise")
+    # standardise = Preprocess(prep_method="standardise")
 
-    audio_1, fs_audio_1 = sf.read(trainAudioPath[0])
-    audio_2, fs_audio_2 = sf.read(trainAudioPath[1])
-    audioSliceList_1 = audioSliceGenerator(audio_1, fs_HRIR, lenSliceInSec)
-    audioSliceList_2 = audioSliceGenerator(audio_2, fs_HRIR, lenSliceInSec)
+    # audio_1, fs_audio_1 = sf.read(trainAudioPath[0])
+    # audio_2, fs_audio_2 = sf.read(trainAudioPath[1])
+    # audioSliceList_1 = audioSliceGenerator(audio_1, fs_HRIR, lenSliceInSec)
+    # audioSliceList_2 = audioSliceGenerator(audio_2, fs_HRIR, lenSliceInSec)
 
-    sliceIndex_1 = 0
-    sliceIndex_2 = 1
+    # sliceIndex_1 = 0
+    # sliceIndex_2 = 1
 
-    audioSlice_1 = audio_1[audioSliceList_1[sliceIndex_1]]
-    audioSlice_2 = audio_2[audioSliceList_2[sliceIndex_2]]
-    locIndex_1 = 5
-    locIndex_2 = 39
+    # audioSlice_1 = audio_1[audioSliceList_1[sliceIndex_1]]
+    # audioSlice_2 = audio_2[audioSliceList_2[sliceIndex_2]]
+    # locIndex_1 = 5
+    # locIndex_2 = 39
 
-    sigLeft_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 0])
-    sigRight_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 1])
-    sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 0])
-    sigRight_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 1])
+    # sigLeft_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 0])
+    # sigRight_1 = np.convolve(audioSlice_1, hrirSet_re[locIndex_1, 1])
+    # sigLeft_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 0])
+    # sigRight_2 = np.convolve(audioSlice_2, hrirSet_re[locIndex_2, 1])
 
-    binaural_cues = BinauralCues(prep_method="normalise", fs_audio=fs_audio)
+    # binaural_cues = BinauralCues(prep_method="normalise", fs_audio=fs_audio)
 
-    ipd, magL, phaseL, magR, phaseR = binaural_cues(sigLeft_1+sigLeft_2, sigRight_1+sigRight_2)
+    # ipd, magL, phaseL, magR, phaseR = binaural_cues(sigLeft_1+sigLeft_2, sigRight_1+sigRight_2)
 
-    vis_cues = VisualiseCues(fs_audio=fs_audio, Nfreq=binaural_cues.Nfreq, Ntime=binaural_cues.Ntime)
+    # vis_cues = VisualiseCues(fs_audio=fs_audio, Nfreq=binaural_cues.Nfreq, Ntime=binaural_cues.Ntime)
     
-    vis_cues(ipd, figTitle="IPD")
-    vis_cues(phaseL, figTitle="phaseL")
-    vis_cues(phaseR, figTitle="phaseR")
+    # vis_cues(ipd, figTitle="IPD")
+    # vis_cues(phaseL, figTitle="phaseL")
+    # vis_cues(phaseR, figTitle="phaseR")
 
-    save_cues = SaveCues(savePath="./saved_0208_temp/", locLabel=locLabel)
-    for _ in range(10):
-        save_cues([ipd, magL, phaseL, magR, phaseR], [locIndex_1, locIndex_2])
+    # save_cues = SaveCues(savePath="./saved_0208_temp/", locLabel=locLabel)
+    # for _ in range(10):
+    #     save_cues([ipd, magL, phaseL, magR, phaseR], [locIndex_1, locIndex_2])
+
+
+    # trainAudioPath = glob(os.path.join("./audio_train/speech_male/*"))
+    # print(trainAudioPath)
+    # audio_1, fs_audio_1 = sf.read(trainAudioPath[4])
+
+    # slices, powers = audioSliceGenerator(audio_1, fs_HRIR, 0.5, threshold=0, isDebug=True)
+    # print(len(slices))
+    # print(powers)
+    vis = VisualiseCues(fs_audio=16000, Nfreq=512, Ntime=44)
+    # binaural_cues = BinauralCues(prep_method="normalise", fs_audio=fs_audio_1)
+    # spec = binaural_cues.calSpectrogram(audio_1, fs_audio_1)
+    # print(np.mean(np.absolute(spec)))
+    # vis.showSpectrogram(spec, fs_audio_1, figTitle="spectrogram", isLog=True)
+
+    temp = torch.load("./saved_0308_temp/train/2.pt")
+    print(temp.shape)
+    vis.showSpectrogram(temp[:,:,0].numpy(), 16000, figTitle="ipd", isLog=False)
