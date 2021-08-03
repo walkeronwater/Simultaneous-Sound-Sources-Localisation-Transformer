@@ -120,6 +120,8 @@ class Preprocess:
             print("Preprocessing method: standardise")
         elif self.prep_method.lower() == "normalise":
             print("Preprocessing method: normalise")
+        elif self.prep_method.lower() == "minmax":
+            print("Preprocessing method: minmax")
         else:
             print("Preprocessing method: none")
             
@@ -128,7 +130,8 @@ class Preprocess:
             return (seq - np.mean(seq))/(np.std(seq))
         elif self.prep_method.lower() == "normalise":
             return seq/np.linalg.norm(seq)
-        
+        elif self.prep_method.lower() == "minmax":
+            return (seq - np.min(seq))/(np.max(seq) - np.min(seq))
         else:
             return seq
 

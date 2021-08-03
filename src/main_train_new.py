@@ -141,6 +141,7 @@ if __name__ == "__main__":
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     cuesShape = CuesShape(Ncues=args.Ncues)
+    task = args.task
     Nfreq = cuesShape.Nfreq
     Ntime = cuesShape.Ntime
     Ncues = cuesShape.Ncues
@@ -155,60 +156,28 @@ if __name__ == "__main__":
     val_acc_optim = 0.0
 
     if args.whichModel.lower() == "transformer":
-        model = DIYModel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout,
-                         args.isDebug)
+        model = TransformerModel(
+            task,
+            Ntime,
+            Nfreq,
+            Ncues,
+            Nsound,
+            numEnc=args.numEnc,
+            numFC=args.numFC,
+            heads=8,
+            device=device,
+            forward_expansion=4,
+            dropout=0.1,
+            isDebug=False
+        )
         optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    elif args.whichModel.lower() == "paralleltransformer":
-        if args.Nsound == 1:
-            model = DIY_parallel(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4, args.valDropout,
-                                 args.isDebug)
-        else:
-            model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4,
-                                   args.valDropout, args.isDebug)
-        # model.apply(weight_init)
-        optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    elif args.whichModel.lower() == "cnn":
-        if args.Nsound == 1:
-            model = CNNModel(task=args.task, Ncues=Ncues, dropout=args.valDropout, device=device, isDebug=args.isDebug)
-        else:
-            model = CNN_multiSound(
-                task=args.task,
-                Ntime=Ntime,
-                Nfreq=Nfreq,
-                Ncues=Ncues,
-                Nsound=Nsound,
-                dropout=args.valDropout,
-                device=device,
-                isDebug=args.isDebug
-            )
-        model.apply(weight_init)
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
-    elif args.whichModel.lower() == "pytorchtransformer":
-        if args.Nsound == 1:
-            model = PytorchTransformer(args.task, Ntime, Nfreq, Ncues, args.numEnc, args.numFC, 8, device, 4,
-                                       args.valDropout, args.isDebug)
-        else:
-            model = Pytorch_transformer_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8,
-                                                   device, 4, args.valDropout, args.isDebug)
-        optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    # elif args.whichModel.lower() == "multisound":
-    #     model = DIY_multiSound(args.task, Ntime, Nfreq, Ncues, Nsound, args.numEnc, args.numFC, 8, device, 4, args.valDropout, args.isDebug)
-    #     # model.apply(weight_init)
-    #     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
-    # elif args.whichModel.lower() == "multisoundcnn":
-
-    #     model.apply(weight_init)
-    #     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-3)
-    else:
-        raise SystemExit("No model selected")
-    # raise SystemExit("debug")
 
     if args.isHPC:
         if torch.cuda.device_count() > 1:
             print("Let's use", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
     model = model.to(device)
-
+    # raise SystemExit("debug")
 
     # Define training hyperparmeters:
     # learning rate scheduler
@@ -249,25 +218,24 @@ if __name__ == "__main__":
             # print(labels)
 
             outputs = model(inputs)
-            print(
-                "Input shape: ", inputs.shape, "\n",
-                "label shape: ", labels.shape, "\n",
-                "labels: ", labels[:5], "\n",
-                "Output shape: ", outputs.shape, "\n",
-                "Outputs: ", outputs[:5]
-            )
-            # print("Ouput: ", outputs)
-            # print("Label: ", labels)
-            # raise SystemExit("debug")
+            if args.isDebug:
+                print(
+                    "Input shape: ", inputs.shape, "\n",
+                    "label shape: ", labels.shape, "\n",
+                    "labels: ", labels[:5], "\n",
+                    "Output shape: ", outputs.shape, "\n",
+                    "Outputs: ", outputs[:5]
+                )
+
             if Nsound == 1:
-                if args.task in ["elevRegression", "azimRegression", "allRegression", "multisound"]:
+                if args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
                 else:
                     loss = nn.CrossEntropyLoss(outputs, labels)
                 if args.isDebug:
                     print("Loss", loss.shape)
             else:
-                if args.task in ["elevRegression", "azimRegression", "allRegression", "multisound"]:
+                if args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]:
                     loss = torch.sqrt(torch.mean(torch.square(cost_multiSound(outputs, labels))))
                     # loss = torch.sqrt(torch.mean(torch.square(cost_manhattan(outputs, labels))))
                 else:
@@ -281,12 +249,12 @@ if __name__ == "__main__":
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
             optimizer.step()
 
-            if not (args.task in ["elevRegression", "azimRegression", "allRegression", "multisound"]):
+            if not (args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]):
                 _, predicted = torch.max(outputs.data, 1)
                 train_total += labels.size(0)
                 train_correct += predicted.eq(labels.data).sum().item()
         train_loss = train_sum_loss / (i + 1)
-        if args.task in ["elevRegression", "azimRegression", "allRegression", "multisound"]:
+        if args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]:
             train_acc = radian2Degree(train_loss)
             print('Training Loss: %.04f | RMS angle (degree): %.04f '
                   % (train_loss, train_acc))
@@ -315,7 +283,7 @@ if __name__ == "__main__":
                 # print("Label: ", labels)
                 # raise SystemExit("debug")
                 if Nsound == 1:
-                    if args.task in ["elevRegression", "azimRegression", "allRegression", "multisound"]:
+                    if args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]:
                         val_loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
                     else:
                         val_loss = nn.CrossEntropyLoss(outputs, labels)
@@ -324,12 +292,12 @@ if __name__ == "__main__":
                     # val_loss = torch.sqrt(torch.mean(torch.square(cost_manhattan(outputs, labels))))
                 val_sum_loss += val_loss.item()
 
-                if not (args.task in ["elevRegression", "azimRegression", "allRegression", "multisound"]):
+                if not (args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]):
                     _, predicted = torch.max(outputs.data, 1)
                     val_total += labels.size(0)
                     val_correct += predicted.eq(labels.data).sum().item()
             val_loss = val_sum_loss / (i + 1)
-            if args.task in ["elevRegression", "azimRegression", "allRegression", "multisound"]:
+            if args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]:
                 val_acc = radian2Degree(val_loss)
                 print('Validation Loss: %.04f | RMS angle (degree): %.04f '
                       % (val_loss, val_acc))
@@ -400,7 +368,7 @@ if __name__ == "__main__":
             args.modelDir + "param_bestValLoss.pth.tar",
             args.task
         )
-        
+
     if (early_epoch_count >= early_epoch):
         break
     '''

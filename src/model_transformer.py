@@ -547,7 +547,98 @@ class DIY_parallel(nn.Module):
 
         # out = self.softmaxLayer(out)
         return out
+'''
+class DIY_parallel_multiSound(nn.Module):
+    def __init__(
+            self,
+            task,
+            Ntime,  # time windows
+            Nfreq,  # frequency bins
+            Ncues,
+            Nsound,
+            num_layers,
+            numFC,
+            heads,
+            device,
+            forward_expansion,
+            dropout,
+            isDebug
+    ):
+        super(DIY_parallel, self).__init__()
+        self.encoder = Encoder(
+            Ntime,
+            Nfreq,  # frequency bins
+            num_layers,
+            heads,
+            device,
+            forward_expansion,
+            dropout,
+        )
+        self.task = task
+        Nloc = predNeuron(task)
+        print("Number of neurons in the final layer: ", Nloc)
 
+        self.FClayers_elev = nn.Sequential(
+            nn.Linear(Ntime * Nfreq * Ncues, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            nn.Dropout(0.1),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, 1)
+        )
+        self.FClayers_azim = nn.Sequential(
+            nn.Linear(Ntime * Nfreq * Ncues, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            nn.Dropout(0.1),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, 1)
+        )
+
+        # self.setRange_elev = nn.Hardtanh()
+        # self.setRange_azim = nn.Hardtanh()
+        self.setRange_elev = nn.Hardtanh(-pi / 4, pi / 2)
+        self.setRange_azim = nn.Hardtanh(0, pi * 2)
+
+        # self.softmaxLayer = nn.Softmax(dim = -1)
+        self.isDebug = isDebug
+
+    def forward(self, cues):
+        encList = []
+        for i in range(cues.shape[-1]):
+            enc = self.encoder(cues[:, :, :, 0].permute(0, 2, 1))
+            encList.append(enc)
+
+        if self.isDebug:
+            print("Encoder for one cue shape: ", enc.shape)
+
+        out = torch.stack(encList)
+
+        out = out.permute(1, 2, 3, 0)
+
+        out_elev = torch.flatten(out, 1, -1)
+        if self.isDebug:
+            print("Encoder output shape: ", out_elev.shape)
+
+        for layers in self.FClayers_elev:
+            out_elev = layers(out_elev)
+        # out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
+        out_elev = self.setRange_elev(out_elev)
+
+        out_azim = torch.flatten(out, 1, -1)
+        for layers in self.FClayers_azim:
+            out_azim = layers(out_azim)
+        # out_azim = pi*self.setRange_azim(out_azim)+pi
+        out_azim = self.setRange_azim(out_azim)
+
+        out = torch.hstack((out_elev, out_azim))
+
+        # out = self.softmaxLayer(out)
+        return out
+
+'''
 '''
 # trained for submit_0108
 class DIY_multiSound(nn.Module):
@@ -729,6 +820,7 @@ class DIY_multiSound(nn.Module):
         self.setRange_elev = nn.Hardtanh(-pi/4, pi/2)
         self.setRange_azim = nn.Hardtanh(0, pi*2)
 
+        self.decoder_FC = DecoderFC(task, Ntime * Nfreq * Ncues, Nsound, dropout, isDebug)
         # self.softmaxLayer = nn.Softmax(dim = -1)
         self.isDebug = isDebug
     def forward(self, cues):
@@ -738,7 +830,7 @@ class DIY_multiSound(nn.Module):
 
         encList = []
         for i in range(cues.shape[-1]):
-            enc = self.encoder(cues[:,:,:,0].permute(0,2,1))
+            enc = self.encoder(cues[:,:,:,i].permute(0,2,1))
             encList.append(enc)
         
         if self.isDebug:
@@ -748,26 +840,28 @@ class DIY_multiSound(nn.Module):
         
         out = out.permute(1,2,3,0)
 
-        out_elev = torch.flatten(out, 1, -1)
-        if self.isDebug:
-            print("Encoder output shape: ", out_elev.shape)
+        return self.decoder_FC(out)
 
-        for layers in self.FClayers_elev:
-            out_elev = layers(out_elev)
-        # out_elev = self.test_layer_elev(out_elev)
-        out_elev = self.setRange_elev(out_elev)
-
-        out_azim = torch.flatten(out, 1, -1)
-        for layers in self.FClayers_azim:
-            out_azim = layers(out_azim)
-        # out_azim = self.test_layer_azim(out_azim)
-        out_azim = self.setRange_azim(out_azim)
-
-        # out = torch.hstack((out_elev, out_azim))
-        out = torch.stack((out_elev[:,0], out_azim[:,0],out_elev[:,1], out_azim[:,1]), dim=1)
-
-        # out = self.softmaxLayer(out)
-        return out
+        # out_elev = torch.flatten(out, 1, -1)
+        # if self.isDebug:
+        #     print("Encoder output shape: ", out_elev.shape)
+        #
+        # for layers in self.FClayers_elev:
+        #     out_elev = layers(out_elev)
+        # # out_elev = self.test_layer_elev(out_elev)
+        # out_elev = self.setRange_elev(out_elev)
+        #
+        # out_azim = torch.flatten(out, 1, -1)
+        # for layers in self.FClayers_azim:
+        #     out_azim = layers(out_azim)
+        # # out_azim = self.test_layer_azim(out_azim)
+        # out_azim = self.setRange_azim(out_azim)
+        #
+        # # out = torch.hstack((out_elev, out_azim))
+        # out = torch.stack((out_elev[:,0], out_azim[:,0],out_elev[:,1], out_azim[:,1]), dim=1)
+        #
+        # # out = self.softmaxLayer(out)
+        # return out
 
 class Pytorch_transformer_multiSound(nn.Module):
     def __init__(
@@ -816,6 +910,7 @@ class Pytorch_transformer_multiSound(nn.Module):
             print("Encoder output shape: ", out.shape)
 
         return self.decoder_FC(out)
+
 class DecoderFC(nn.Module):
     def __init__(
         self,
@@ -828,6 +923,11 @@ class DecoderFC(nn.Module):
     ):
         super(DecoderFC, self).__init__()
 
+        if task.lower() in ["allregression", "elevregression", "azimregression"]:
+            predLayer = nn.Linear(256, Nsound, bias=False)
+        elif task.lower() in ["allclass"]:
+            # [TODO] hardcoded Nloc = 187
+            predLayer = nn.Linear(256, 187, bias=False)
         self.FClayers_elev = nn.Sequential(
             # nn.Linear(7872, 256),
             nn.Linear(flattenShape, 256),
@@ -840,7 +940,8 @@ class DecoderFC(nn.Module):
             # nn.ReLU(),
             nn.Linear(256, 256),
             nn.Tanh(),
-            nn.Linear(256, Nsound, bias=False)
+            predLayer
+            # nn.Linear(256, Nsound, bias=False)
         )
         self.FClayers_azim = nn.Sequential(
             # nn.Linear(7872, 256),
@@ -854,8 +955,10 @@ class DecoderFC(nn.Module):
             # nn.ReLU(),
             nn.Linear(256, 256),
             nn.Tanh(),
-            nn.Linear(256, Nsound, bias=False)
+            predLayer
+            # nn.Linear(256, Nsound, bias=False)
         )
+        self.task = task
         self.setRange_elev = nn.Hardtanh(-pi/4, pi/2)
         self.setRange_azim = nn.Hardtanh(0, pi*2)
 
@@ -866,18 +969,145 @@ class DecoderFC(nn.Module):
         for layers in self.FClayers_elev:
             out_elev = layers(out_elev)
         # out_elev = self.test_layer_elev(out_elev)
-        out_elev = self.setRange_elev(out_elev)
-
         for layers in self.FClayers_azim:
             out_azim = layers(out_azim)
         # out_azim = self.test_layer_azim(out_azim)
-        out_azim = self.setRange_azim(out_azim)
+        if self.task.lower() in ["allregression","elevregression","azimregression"]:
+            out_elev = self.setRange_elev(out_elev)
+            out_azim = self.setRange_azim(out_azim)
+            out = torch.stack((out_elev[:, 0], out_azim[:, 0], out_elev[:, 1], out_azim[:, 1]), dim=1)
+        else:
+            out = torch.stack((out_elev, out_azim), dim=1)
 
-        out = torch.stack((out_elev[:,0], out_azim[:,0],out_elev[:,1], out_azim[:,1]), dim=1)
+        print("out shape: ", out.shape)
+
         return out
 
+#[TODO]
+class Enc_DIY(nn.Module):
+    def __init__(
+        self,
+        task,
+        Ntime,
+        Nfreq,
+        Ncues,
+        Nsound,
+        num_layers,
+        numFC,
+        heads,
+        device,
+        forward_expansion,
+        dropout,
+        isDebug
+    ):
+        super(Enc_DIY, self).__init__()
+        self.encoder = Encoder(
+            Ntime,
+            Nfreq,
+            num_layers,
+            heads,
+            device,
+            forward_expansion,
+            dropout
+        )
+    def forward(self, inputs):
+        encList = []
+        for i in range(inputs.shape[-1]):
+            enc = self.encoder(inputs[:, :, :, i].permute(0, 2, 1))
+            encList.append(enc)
+        out = torch.stack(encList)
+        out = out.permute(1, 2, 3, 0)
+        return out
 
+class Dec_2branch_2src_reg(nn.Module):
+    def __init__(
+        self,
+        enc_out_size,
+        dropout
+    ):
+        super(Dec_2branch_2src_reg, self).__init__()
 
+        self.FClayers_src1 = nn.Sequential(
+            nn.Linear(enc_out_size, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, 2)
+        )
+
+        self.FClayers_src2 = nn.Sequential(
+            nn.Linear(enc_out_size, 256),
+            nn.BatchNorm1d(256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            # nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.Tanh(),
+            nn.Linear(256, 2)
+        )
+    def forward(self, enc_out):
+        out_src1 = torch.flatten(enc_out, 1, -1)
+        out_src2 = torch.flatten(enc_out, 1, -1)
+
+        for layers in self.FClayers_src1:
+            out_src1 = layers(out_src1)
+        for layers in self.FClayers_src2:
+            out_src2 = layers(out_src2)
+
+        out = torch.cat([out_src1, out_src2], dim=-1)
+        return out
+
+class TransformerModel(nn.Module):
+    def __init__(
+        self,
+        task,
+        Ntime,
+        Nfreq,
+        Ncues,
+        Nsound,
+        numEnc,
+        numFC,
+        heads,
+        device,
+        forward_expansion,
+        dropout,
+        isDebug
+    ):
+        super(TransformerModel, self).__init__()
+
+        self.enc = Enc_DIY(
+            task,
+            Ntime,
+            Nfreq,
+            Ncues,
+            Nsound,
+            numEnc,
+            numFC,
+            heads,
+            device,
+            forward_expansion,
+            dropout,
+            isDebug
+        )
+
+        self.dec = Dec_2branch_2src_reg(
+            enc_out_size=Nfreq*Ntime*Ncues,
+            dropout=dropout
+        )
+
+    def forward(self, inputs):
+        enc_out = self.enc(inputs)
+        out = self.dec(enc_out)
+        return out
 
 def weight_init(m):
     if isinstance(m, nn.Linear):
@@ -893,15 +1123,27 @@ if __name__ == "__main__":
     numFC = 2
     Ntime = 44
     Nfreq = 512
-    Ncues = 6
+    Ncues = 5
     batchSize = 32
     Nsound = 2
     # model = FC3(task, Ntime, Nfreq, Ncues, numLayers, 8, device, 4, 0, True).to(device)
     # model = DIYModel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
     # model = PytorchTransformer(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
     # model = DIY_parallel(task, Ntime, Nfreq, Ncues, numEnc, numFC, 8, device, 4, 0, True).to(device)
-    model = DIY_multiSound(task, Ntime, Nfreq, Ncues, Nsound, numEnc, numFC, 8, device, 4, 0, True, batchSize=32).to(device)
-
+    # model = DIY_multiSound(task, Ntime, Nfreq, Ncues, Nsound, numEnc, numFC, 8, device, 4, 0, True, batchSize=32).to(device)
+    model = TransformerModel(
+        task,
+        Ntime,
+        Nfreq,
+        Ncues,
+        Nsound,
+        numEnc,
+        numFC,
+        heads=8,
+        device=device,
+        forward_expansion=4,
+        dropout=0.1,
+        isDebug=False).to(device)
     testInput = torch.rand(batchSize, Nfreq, Ntime, Ncues, dtype=torch.float32).to(device)
     print("testInput shape: ", testInput.shape)
     # print(testLabel)

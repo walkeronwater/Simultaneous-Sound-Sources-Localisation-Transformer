@@ -14,8 +14,6 @@ import torch.utils.data
 from numba import jit, njit
 from numba.experimental import jitclass
 
-from utils import radian2Degree, degree2Radian
-
 # from nvidia.dali import pipeline_def, Pipeline
 # import nvidia.dali.fn as fn
 # import nvidia.dali.types as types

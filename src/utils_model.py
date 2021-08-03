@@ -98,13 +98,15 @@ class MyDataset(torch.utils.data.Dataset):
             #             torch.tensor(self.annotation.iloc[pathIndex, 4], dtype=torch.float32)
             #         ]
                 # )
-            
-            label = []
-            for i in self.annotation.iloc[pathIndex].values[1:]:
-                label.extend(self.locLabel[i])
-            # print(label)
-            labels = degree2Radian(torch.tensor(label, dtype=torch.float32))
-            # labels = torch.tensor(self.annotation.iloc[pathIndex].values[1:], dtype=torch.float32)
+            if self.task.lower() == "allregression":
+                label = []
+                for i in self.annotation.iloc[pathIndex].values[1:]:
+                    label.extend(self.locLabel[i])
+                # print(label)
+                labels = degree2Radian(torch.tensor(label, dtype=torch.float32))
+                # labels = torch.tensor(self.annotation.iloc[pathIndex].values[1:], dtype=torch.float32)
+            elif self.task.lower() == "allclass":
+                labels = torch.tensor(self.annotation.iloc[pathIndex].values[1:], dtype=torch.int)
 
         if self.isDebug:
             print("pathIndex: ", pathIndex)
