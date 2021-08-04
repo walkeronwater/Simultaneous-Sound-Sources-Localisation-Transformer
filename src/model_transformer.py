@@ -516,7 +516,7 @@ class DIY_parallel(nn.Module):
     def forward(self, cues):
         encList = []
         for i in range(cues.shape[-1]):
-            enc = self.encoder(cues[:,:,:,0].permute(0,2,1))
+            enc = self.encoder(cues[:,:,:,i].permute(0,2,1))
             encList.append(enc)
         
         if self.isDebug:
