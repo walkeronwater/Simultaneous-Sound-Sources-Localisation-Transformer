@@ -332,19 +332,19 @@ if __name__ == "__main__":
     # raise SystemExit('debug')
 
     # print(trainAudioPath)
-    start_time = time.time()
+    # start_time = time.time()
     # createCues_multiSound(trainAudioPath, Nsample_train, cuesShape, args.prepMethod, dirName=args.cuesDir+"/train/")
-    createCues_(
-        # path=trainAudioPath,
-        src_1=train_src_1,
-        src_2=train_src_2,
-        Nsample=Nsample_train,
-        cuesShape=cuesShape,
-        prep_method=args.prepMethod,
-        dirName=args.cuesDir+"/train/",
-        locLabel=locLabel
-    )
-    print("Time elapsed: ", time.time()-start_time)
+    # createCues_(
+    #     # path=trainAudioPath,
+    #     src_1=train_src_1,
+    #     src_2=train_src_2,
+    #     Nsample=Nsample_train,
+    #     cuesShape=cuesShape,
+    #     prep_method=args.prepMethod,
+    #     dirName=args.cuesDir+"/train/",
+    #     locLabel=locLabel
+    # )
+    # print("Time elapsed: ", time.time()-start_time)
     # print(validAudioPath)
     # createCues_multiSound(validAudioPath, Nsample_valid, cuesShape, args.prepMethod, dirName=args.cuesDir+"/valid/")
     createCues_(
