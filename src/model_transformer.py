@@ -323,8 +323,8 @@ class DIYModel(nn.Module):
                 nn.Linear(Nloc, Nloc)
             )
         if task in ["elevRegression","azimRegression","allRegression"]:
-            self.setRange1 = nn.Hardtanh()
-            self.setRange2 = nn.Hardtanh()
+            self.setRange1 = nn.Hardtanh(-pi/4, pi/2)
+            self.setRange2 = nn.Hardtanh(0, pi*2)
         # self.sequentialFC = nn.Sequential(
         #     nn.Linear(Ntime*Nfreq*Ncues, 256),
         #     nn.BatchNorm1d(256),
@@ -360,8 +360,8 @@ class DIYModel(nn.Module):
         if self.task in ["elevRegression","azimRegression","allRegression"]:
             out = torch.stack(
                 [
-                    3/8*pi*self.setRange1(out[:,0])+pi/8,
-                    pi*self.setRange2(out[:,1])+pi
+                    self.setRange1(out[:,0]),
+                    self.setRange2(out[:,1])
                 ], dim=1
             )
         
@@ -427,8 +427,8 @@ class PytorchTransformer(nn.Module):
         #         nn.Tanh(),
         #         nn.Linear(Nloc, Nloc)
         #     )
-        # self.setRange1 = nn.Hardtanh()
-        # self.setRange2 = nn.Hardtanh()
+        self.setRange1 = nn.Hardtanh(-pi / 4, pi / 2)
+        self.setRange2 = nn.Hardtanh(0, pi * 2)
         self.isDebug = isDebug
         # self.softmaxLayer = nn.Softmax(dim = -1)
     def forward(self, cues):
@@ -452,8 +452,8 @@ class PytorchTransformer(nn.Module):
 
         out = torch.stack(
             [
-                3/8*pi*self.setRange1(out[:,0])+pi/8,
-                pi*self.setRange2(out[:,1])+pi
+                self.setRange1(out[:,0]),
+                self.setRange2(out[:,1])
             ], dim=1
         )
         
@@ -508,8 +508,6 @@ class DIY_parallel(nn.Module):
             nn.Linear(256, 1)
         )
 
-        # self.setRange_elev = nn.Hardtanh()
-        # self.setRange_azim = nn.Hardtanh()
         self.setRange_elev = nn.Hardtanh(-pi/4, pi/2)
         self.setRange_azim = nn.Hardtanh(0, pi*2)
 
@@ -534,13 +532,11 @@ class DIY_parallel(nn.Module):
 
         for layers in self.FClayers_elev:
             out_elev = layers(out_elev)
-        # out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
         out_elev = self.setRange_elev(out_elev)
 
         out_azim = torch.flatten(out, 1, -1)
         for layers in self.FClayers_azim:
             out_azim = layers(out_azim)
-        # out_azim = pi*self.setRange_azim(out_azim)+pi
         out_azim = self.setRange_azim(out_azim)
 
         out = torch.hstack((out_elev, out_azim))
@@ -597,8 +593,6 @@ class DIY_parallel_multiSound(nn.Module):
             nn.Linear(256, 1)
         )
 
-        # self.setRange_elev = nn.Hardtanh()
-        # self.setRange_azim = nn.Hardtanh()
         self.setRange_elev = nn.Hardtanh(-pi / 4, pi / 2)
         self.setRange_azim = nn.Hardtanh(0, pi * 2)
 
@@ -624,13 +618,11 @@ class DIY_parallel_multiSound(nn.Module):
 
         for layers in self.FClayers_elev:
             out_elev = layers(out_elev)
-        # out_elev = 3/8*pi*self.setRange_elev(out_elev)+pi/8
         out_elev = self.setRange_elev(out_elev)
 
         out_azim = torch.flatten(out, 1, -1)
         for layers in self.FClayers_azim:
             out_azim = layers(out_azim)
-        # out_azim = pi*self.setRange_azim(out_azim)+pi
         out_azim = self.setRange_azim(out_azim)
 
         out = torch.hstack((out_elev, out_azim))
