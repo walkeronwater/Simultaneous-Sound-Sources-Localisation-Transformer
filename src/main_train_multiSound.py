@@ -74,26 +74,24 @@ if __name__ == "__main__":
     parser.add_argument('--isSave', default="True", type=str, help='Save checkpoints?')
 
     args = parser.parse_args()
-    if args.dataDir[-1] != "/":
-        args.dataDir += "/"
-    if args.modelDir[-1] != "/":
-        args.modelDir += "/"
-    if args.isDebug == "True":
-        args.isDebug = True
-    else:
-        args.isDebug = False
-    if args.isHPC == "True":
-        args.isHPC = True
-    else:
-        args.isHPC = False
-    if args.isContinue == "True":
-        args.isContinue = True
-    else:
-        args.isContinue = False
-    if args.isSave == "True":
-        args.isSave = True
-    else:
-        args.isSave = False
+
+    # check input directories end up with /
+    dir_var = {
+        "data": args.dataDir,
+        "model": args.modelDir
+    }
+    for idx in dir_var.keys():
+        dir_var[idx] += "/"
+    # convert flag variables to boolean
+    flag_var = {
+        "isDebug": args.isDebug,
+        "isHPC": args.isHPC,
+        "isContinue": args.isContinue,
+        "isSave": args.isSave
+    }
+    for idx in flag_var.keys():
+        flag_var[idx] = True if flag_var[idx][0].lower() == "t" else False
+    # raise SystemExit("dbg")
 
     print("Data directory: ", args.dataDir)
     print("Model directory: ", args.modelDir)
@@ -121,8 +119,8 @@ if __name__ == "__main__":
         os.path.isdir(dirName)
     ), "Data directory doesn't exist."
 
-    train_dataset = MyDataset(dirName + "/train/", args.task, args.Nsound, locLabel, args.isDebug)
-    valid_dataset = MyDataset(dirName + "/valid/", args.task, args.Nsound, locLabel, args.isDebug)
+    train_dataset = MyDataset(dirName + "/train/", args.task, args.Nsound, locLabel, flag_var["isDebug"])
+    valid_dataset = MyDataset(dirName + "/valid/", args.task, args.Nsound, locLabel, flag_var["isDebug"])
     print("Dataset length: ", train_dataset.__len__())
     print("Dataset length: ", valid_dataset.__len__())
 
@@ -206,7 +204,11 @@ if __name__ == "__main__":
     # use tensorboard
     writer = SummaryWriter(f'runs/temp/tryingout_tensorboard')
     step = 1
-    criterion = nn.BCEWithLogitsLoss()
+    cost_func = CostFunc(
+        task=task,
+        Nsound=Nsound,
+        device=device
+    )
     for epoch in range(pretrainEpoch, pretrainEpoch + num_epochs):
         print("\nEpoch %d, lr = %f" % ((epoch + 1), getLR(optimizer)))
 
@@ -222,7 +224,7 @@ if __name__ == "__main__":
             # print(labels)
 
             outputs = model(inputs)
-            if args.isDebug:
+            if flag_var["isDebug"]:
                 print(
                     "Input shape: ", inputs.shape, "\n",
                     "label shape: ", labels.shape, "\n",
@@ -230,7 +232,8 @@ if __name__ == "__main__":
                     "Output shape: ", outputs.shape, "\n",
                     "Outputs: ", outputs[:5]
                 )
-
+            loss = cost_func(outputs, labels)
+            '''
             if Nsound == 1:
                 if args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
@@ -246,6 +249,7 @@ if __name__ == "__main__":
                     labels_hot = torch.zeros(labels.size(0), 187).to(device)
                     labels_hot = labels_hot.scatter_(1, labels.to(torch.int64), 1.).float()
                     loss = criterion(outputs.float(), labels_hot)
+            '''
             train_sum_loss += loss.item()
             optimizer.zero_grad()
             loss.backward()
@@ -296,7 +300,8 @@ if __name__ == "__main__":
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
 
                 outputs = model(inputs)
-
+                val_loss = cost_func(outputs, labels)
+                '''
                 if Nsound == 1:
                     if args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"]:
                         val_loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels))))
@@ -310,6 +315,7 @@ if __name__ == "__main__":
                         labels_hot = torch.zeros(labels.size(0), 187).to(device)
                         labels_hot = labels_hot.scatter_(1, labels.to(torch.int64), 1.).float()
                         val_loss = criterion(outputs.float(), labels_hot)
+                '''
                 val_sum_loss += val_loss.item()
 
                 if Nsound == 1 and (not (args.task.lower() in ["elevregression", "azimregression", "allregression", "multisound"])):

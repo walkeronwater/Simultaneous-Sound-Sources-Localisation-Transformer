@@ -6,6 +6,48 @@ import torch.nn.functional as F
 
 from utils import radian2Degree, degree2Radian
 
+class CostFunc:
+    def __init__(
+        self,
+        task,
+        Nsound,
+        device
+    ):
+        self.task = task
+        self.Nsound = Nsound
+        self.device = device
+        if Nsound == 1 and ("class" in self.task.lower()):
+            self.criterion = nn.CrossEntropyLoss()
+        elif Nsound == 2 and ("class" in self.task.lower()):
+            self.criterion = nn.BCEWithLogitsLoss()
+
+    def __call__(
+        self,
+        outputs,
+        labels
+    ):
+        if self.Nsound == 1:
+            if "regression" in self.task.lower():
+                return torch.sqrt(torch.mean(torch.square(self.loss_DoA(outputs, labels))))
+            elif "class" in self.task.lower():
+                return self.criterion(outputs, labels)
+        else:
+            if "regression" in self.task.lower():
+                return torch.sqrt(torch.mean(torch.square(self.loss_DoA(outputs[:, 0:2], labels[:, 0:2]) + self.loss_DoA(outputs[:, 2:4], labels[:, 2:4]))))
+            elif "class" in self.task.lower():
+                labels_hot = torch.zeros(labels.size(0), 187).to(self.device)
+                labels_hot = labels_hot.scatter_(1, labels.to(torch.int64), 1.).float()
+                return self.criterion(outputs.float(), labels_hot)
+
+    def loss_DoA(self, output, target):
+        # target should be (elev, azim)
+        # sine: azimuth
+        sine_term = torch.sin(output[:, 0]) * torch.sin(target[:, 0])
+        cosine_term = torch.cos(output[:, 0]) * torch.cos(target[:, 0]) * torch.cos(target[:, 1] - output[:, 1])
+        loss = torch.acos(F.hardtanh(sine_term + cosine_term, min_val=-1, max_val=1))
+        return torch.absolute(loss)
+
+
 def DoALoss(output, target):
     # target should be (elev, azim)
     # sine: azimuth
@@ -29,22 +71,31 @@ def cost_multiSound(output, target):
     return DoALoss(output[:, 0:2], target[:, 0:2]) + DoALoss(output[:, 2:4], target[:, 2:4])
 
 if __name__ == "__main__":
-    outputs = torch.tensor(
+    cost_func = CostFunc(
+        task="allClass",
+        Nsound=2,
+        device="cpu"
+    )
+
+    outputs_reg = torch.tensor(
         [
             [0, 0, 0, 3.14],
             [0, 0, 0, 3.14]
         ]
     )
-
-    labels = torch.tensor(
+    labels_reg = torch.tensor(
         [
-            [0, 3.14, 1, 0],
+            [3, 3.14, 0, 0],
             [0, 3.14, 0, 3.14]
         ]
     )
-    print(outputs.shape)
-    # loss = nn.MSELoss(outputs, labels)
-    loss = cost_multiSound(outputs, labels)
-    # loss = cost_manhattan(outputs, labels)
+    outputs_cls = torch.rand((2,187))
+    labels_cls = torch.tensor(
+        [
+            [1,2],
+            [0,2]
+        ]
+    )
 
-    print(loss)
+
+    print(cost_func(outputs_cls, labels_cls))

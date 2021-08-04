@@ -186,6 +186,7 @@ class Encoder(nn.Module):
 
         return out
 
+
 class FC3(nn.Module):
     def __init__(
         self,
@@ -903,6 +904,7 @@ class Pytorch_transformer_multiSound(nn.Module):
 
         return self.decoder_FC(out)
 
+
 class DecoderFC(nn.Module):
     def __init__(
         self,
@@ -976,6 +978,18 @@ class DecoderFC(nn.Module):
         return out
 
 #[TODO]
+'''
+# Collection of encoders:
+DIY transformer
+Pytorch transformer
+
+# Collection of decoders:
+Classfication with 1 branch
+Regression source-specific FC layers with Nsound branches
+Regression separate elevation and azimuth specific FC layers with Nsound branches
+
+'''
+
 class Enc_DIY(nn.Module):
     def __init__(
         self,
@@ -1037,7 +1051,6 @@ class Dec_1branch_cls(nn.Module):
         out_src = torch.flatten(enc_out, 1, -1)
         out_src = self.FClayers(out_src)
         return out_src
-
 
 class Dec_2branch_src_reg(nn.Module):
     def __init__(
