@@ -249,13 +249,13 @@ if __name__ == "__main__":
             # print(labels)
 
             outputs = model(inputs)
-            print(
-                "Input shape: ", inputs.shape, "\n",
-                "label shape: ", labels.shape, "\n",
-                "labels: ", labels[:5], "\n",
-                "Output shape: ", outputs.shape, "\n",
-                "Outputs: ", outputs[:5]
-            )
+            # print(
+            #     "Input shape: ", inputs.shape, "\n",
+            #     "label shape: ", labels.shape, "\n",
+            #     "labels: ", labels[:5], "\n",
+            #     "Output shape: ", outputs.shape, "\n",
+            #     "Outputs: ", outputs[:5]
+            # )
             # print("Ouput: ", outputs)
             # print("Label: ", labels)
             # raise SystemExit("debug")
