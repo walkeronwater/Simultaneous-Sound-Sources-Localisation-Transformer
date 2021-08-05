@@ -364,8 +364,8 @@ if __name__ == "__main__":
     
     if not os.path.isdir(args.cuesDir):
         os.mkdir(args.cuesDir)
-        # os.mkdir(args.cuesDir+"/train/")
-        # os.mkdir(args.cuesDir+"/valid/")
+    #     os.mkdir(args.cuesDir+"/train/")
+    #     os.mkdir(args.cuesDir+"/valid/")
     # if not os.path.isdir(args.cuesDir+"/train/"):
     #     os.mkdir(args.cuesDir+"/train/")
     # if not os.path.isdir(args.cuesDir+"/valid/"):

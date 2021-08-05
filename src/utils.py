@@ -24,6 +24,7 @@ import torch.nn.functional as F
 from numba import jit, njit
 from numba.experimental import jitclass
 from skimage.restoration import unwrap_phase
+from pydub import AudioSegment
 
 from load_data import *
 
@@ -110,11 +111,14 @@ def calILD(seqL, seqR):
     ild = 20*np.log10(np.divide(np.absolute(seqL), np.absolute(seqR), out=np.zeros_like(np.absolute(seqL)), where=np.absolute(seqR)!=0))
     return ild
 
-
 # [TODO] method to normalise a sequence which can be broadcasted to a sequence of sequence
 # min-max/standardise/L2 norm for each tensor like an image
 class Preprocess:
     def __init__(self, prep_method: str):
+        """
+        Args:
+            prep_method (str): the preprocessing method
+        """
         self.prep_method = prep_method
         if self.prep_method.lower() == "standardise":
             print("Preprocessing method: standardise")
@@ -126,41 +130,162 @@ class Preprocess:
             print("Preprocessing method: none")
             
     def __call__(self, seq):
+        """
+        Args:
+            seq (ndarray): left-ear or right-ear signal
+        
+        Returns:
+            seq (ndarray): preprocessed signal
+        """
         if self.prep_method.lower() == "standardise":
             return (seq - np.mean(seq))/(np.std(seq))
         elif self.prep_method.lower() == "normalise":
-            return seq/np.linalg.norm(seq)
+            return seq/np.linalg.norm(seq, ord=1)
         elif self.prep_method.lower() == "minmax":
             return (seq - np.min(seq))/(np.max(seq) - np.min(seq))
         else:
             return seq
 
+class AudioSignal:
+    def __init__(self, path, slice_duration):
+        """
+        read an audio file, calculate the mean power in dBFS
+
+        Args:
+            path (str): directory of audio files.
+            slice_duration (float): duration of audio slices in second 
+        """
+        self.sig, self.fs_audio = sf.read(path)
+        self.slice_duration = slice_duration
+        # mean power in dbfs
+        self.mean_power = 10*np.log10(np.mean(np.power(self.sig, 2)))
+        self.slice_list = self.audioSliceGenerator(threshold=self.mean_power)
+    
+    def __call__(self, idx):
+        """
+        Args:
+            idx (int): the index of sliced signal
+
+        Return:
+            sig (list): sliced signal
+        """
+        assert(
+            0 <= idx < len(self.slice_list)
+        ), "Invalid slice index"
+        
+        return self.sig[self.slice_list[idx]]
+
+    def audioSliceGenerator(self, threshold=0.01):
+        """
+        prepare slices of audio based on the mean power threshold
+
+        Return:
+            slice_list (list): a list of slice index ranges
+        """
+        slice_len = round(self.fs_audio * self.slice_duration)
+
+        slice_list = []
+        # threshold for spectrum power
+        for i in range(self.sig.size//slice_len):
+            sliced = self.sig[slice_len*i : slice_len*(i+1)]
+            if 10*np.log10(np.mean(np.power(sliced, 2))) > threshold:
+                slice_list.append(range(slice_len*i, slice_len*(i+1)))
+        return slice_list
+
+
+class BinauralSignal:
+    def __init__(self, hrir, fs_hrir, fs_audio):
+        """
+        resample HRIR to the sampling frequency of audio files
+
+        Args:
+            hrir (ndarray): hrir sets with shape (187, 2, 512).
+            fs_hrir (int): sampling frequency of HRIRs.
+            fs_audio (int): sampling frequency of audio files.
+        """
+        temp = librosa.resample(hrir[0,0], fs_hrir, fs_audio)
+        hrir_re = np.empty(hrir.shape[0:2]+temp.shape)
+        for i in range(hrir.shape[0]):
+            hrir_re[i, 0] = librosa.resample(hrir[i, 0], fs_hrir, fs_audio)
+            hrir_re[i, 1] = librosa.resample(hrir[i, 1], fs_hrir, fs_audio)
+        print(f"HRIR shape after resampling: {hrir_re.shape}")
+        self.hrir = hrir_re
+    
+    def __call__(self, seq, locIndex):
+        """
+        Convolve the audio signal with resampled HRIR for a location index
+
+        Args:
+            seq (ndarray): audio signal
+            locIndex (int): location index of the signal
+
+        Return:
+            tuple (ndarray, ndarray): left-ear and right-ear signal sequences after convolution
+        """
+        assert (
+            0 <= locIndex < self.hrir.shape[0]
+        ), "Invalid location index"
+        return (np.convolve(seq, self.hrir[locIndex, 0]), np.convolve(seq, self.hrir[locIndex, 1]))
+
 class BinauralCues:
     def __init__(self, fs_audio, prep_method):
+        """
+        Args:
+            fs_audio (int): sampling frequency of audio files
+            prep_method (str): the preprocessing method
+        """
         self.preprocess = Preprocess(prep_method=prep_method)
         self.fs_audio = fs_audio
         # self.sigL = sigL
         # self.sigR = sigR
         self.flag = False
+        self.freq_axis = None
+        self.time_axis = None
         self.Nfreq = None
         self.Ntime = None
     
-    def calSpectrogram(self, seq, fs):
+    def calSpectrogram(self, seq):
+        """
+        Args:
+            seq (ndarray): left-ear or right-ear signal
+        Return:
+            Sxx (ndarray): magnitude spectrogram
+            Phxx (ndarray): phase spectrogram
+        """
         Nfft = 1023
-        Zxx = librosa.stft(seq, n_fft=Nfft, hop_length=512)
+
+        # using Librosa packages
+        # Zxx = librosa.stft(seq, n_fft=Nfft, hop_length=512)
+        # if not self.flag:
+        #     freq_axis = librosa.fft_frequencies(sr=self.fs_audio, n_fft=Nfft)
+        #     length = seq.shape[0] / self.fs_audio
+        #     time_axis = np.linspace(0., length, seq.shape[0])
+        #     time_axis = librosa.frames_to_time(range(0, Zxx.shape[1]), sr=self.fs_audio, hop_length=512, n_fft=Nfft)
+        #     self.freq_axis = freq_axis
+        #     self.time_axis = time_axis
+        #     self.Nfreq = freq_axis.size
+        #     self.Ntime = time_axis.size
+        #     self.flag = True
+        # preprocess the STFT spectrum
+        # self.preprocess(Zxx)
+        # return Zxx
+
+        # using scipy packages
+        freq_axis, time_axis, Sxx = signal.spectrogram(seq, self.fs_audio, nfft=1023, mode="magnitude")
+        _, _, Phxx = signal.spectrogram(seq, self.fs_audio, nfft=1023, mode="phase")
+
         if not self.flag:
-            Nfreq = librosa.fft_frequencies(sr=fs, n_fft=Nfft)
-            length = seq.shape[0] / fs
-            Ntime = np.linspace(0., length, seq.shape[0])
-            Ntime = librosa.frames_to_time(range(0, Zxx.shape[1]), sr=fs, hop_length=512, n_fft=Nfft)
-            self.Nfreq = Nfreq
-            self.Ntime = Ntime
+            self.freq_axis = freq_axis
+            self.time_axis = time_axis
+            self.Nfreq = freq_axis.size
+            self.Ntime = time_axis.size
             self.flag = True
-        return Zxx
+
+        return Sxx, Phxx
 
     def calIPD(self, specL, specR):
         ipd = np.angle(np.divide(specL, specR, out=np.zeros_like(specL), where=np.absolute(specR)!=0))
-        ipd = unwrap_phase(ipd)
+        # ipd = unwrap_phase(ipd)
         # ipd = np.unwrap(ipd)
         
         # get ITD:
@@ -182,39 +307,70 @@ class BinauralCues:
         # theta = np.angle(np.divide(y, x, where=x!=0))
         mag = np.abs(spec)
         phase = np.angle(spec)
-        phase = unwrap_phase(phase)
+        # phase = unwrap_phase(phase)
         # phase = np.unwrap(phase)
         return mag, phase
 
     def __call__(self, sigL, sigR):
-        specL = self.calSpectrogram(sigL, self.fs_audio)
-        specR = self.calSpectrogram(sigR, self.fs_audio)
-        ipd = self.calIPD(specL, specR)
-        magL, phaseL = self.cartesian2euler(specL)
-        magR, phaseR = self.cartesian2euler(specR)
+        """
+        Calculate all the cues
 
-        ipd, magL, phaseL, magR, phaseR = (self.preprocess(i) for i in [ipd, magL, phaseL, magR, phaseR])
+        Args:
+            sigL, sigR: left-ear and right-ear signal
+        Returns:
+            IPD, ILD, MagL, PhaseL, MagR, PhaseR
+        """
+        # specL = self.calSpectrogram(sigL)
+        # specR = self.calSpectrogram(sigR)
+        # ipd = self.calIPD(specL, specR)
+        # ild = self.calILD(specL, specR)
+        magL, phaseL = self.calSpectrogram(sigL)
+        magR, phaseR = self.calSpectrogram(sigR)
+        # print(f"min values of mag data {np.min(magL)}, {np.min(magR)}\n \
+        #         {np.max(magL)}{np.max(magR)}")
+
+        magL, magR = (self.preprocess(i) for i in [20*np.log10(magL), 20*np.log10(magR)])
+        phaseL, phaseR = (self.preprocess(i) for i in [phaseL, phaseR])
         
-        return (ipd, magL, phaseL, magR, phaseR)
+        return (magL, phaseL, magR, phaseR)
 
 class VisualiseCues:
-    def __init__(self, fs_audio, Nfreq, Ntime):
+    def __init__(self, fs_audio, freq_axis, time_axis):
+        """
+        Args:
+            fs_audio (int): sampling frequency of audio files
+            freq_axis (ndarray): 1-d frequency axis from 0 to fs/2
+            time_axis (ndarray): 1-d time axis
+        """
         self.fs_audio = fs_audio
-        self.Nfreq = Nfreq
-        self.Ntime = Ntime
-    
-    def showSpectrogram(self, Zxx, fs, figTitle, isLog=True):
+        self.freq_axis = freq_axis
+        self.time_axis = time_axis
+        self.Nfreq = freq_axis.size
+        self.Ntime = time_axis.size
+
+    def showBinauralSig(self, audio_sig, sigL, sigR):
+        plt.plot(audio_sig)
+        plt.plot(sigL)
+        plt.plot(sigR)
+        plt.xlabel("Sample")
+        plt.ylabel("Magnitude")
+        plt.legend(["audio","left-ear","right-ear"])
+        plt.title("Visualisation in time-domain")
+        plt.grid()
+        plt.show()
+        
+    def showSpectrogram(self, Zxx, figTitle, isLog=True):
         fig, ax = plt.subplots()
         print("Spectrogram shape: ", Zxx.shape)
 
-        if isLog:
-            img = librosa.display.specshow(librosa.amplitude_to_db(np.abs(Zxx),ref=np.max),
-                                        sr=fs, hop_length=512, fmax=fs/2,
-                                        y_axis='linear', x_axis='time', ax=ax)
-        else:
-            img = librosa.display.specshow(np.abs(Zxx),
-                                        sr=fs, hop_length=512, fmax=fs/2,
-                                        y_axis='linear', x_axis='time', ax=ax)
+        Zxx_ = librosa.amplitude_to_db(np.abs(Zxx)) if isLog else Zxx
+        
+        img = librosa.display.specshow(
+            Zxx_,
+            sr=self.fs_audio, hop_length=512, fmax=self.fs_audio/2,
+            y_axis='linear', x_axis='time', ax=ax
+        )
+
         ax.set_title(figTitle)
         if isLog:
             fig.colorbar(img, ax=ax, format="%+2.0f dB")
@@ -224,19 +380,20 @@ class VisualiseCues:
         # fig.set_figwidth(5)
         plt.show()
     
-    def showCues(self, data, Nfreq, Ntime, figTitle):
+    def showCues(self, data, figTitle):
         # data shape: (Nfreq, Ntime)
-        for i in range(0, self.Ntime.size, 10):
-            plt.plot(Nfreq, data[:,i])
+        for i in range(0, self.Ntime, 10):
+            plt.plot(self.freq_axis, data[:,i])
         plt.xlabel("Frequency")
         plt.ylabel(figTitle)
         plt.title(figTitle)
+        plt.legend(range(0, self.Ntime, 10))
         plt.grid()
         plt.show()
 
-    def __call__(self, data, figTitle):
-        self.showSpectrogram(data, fs=self.fs_audio, figTitle=figTitle, isLog=False)
-        self.showCues(data, Nfreq=self.Nfreq, Ntime=self.Ntime, figTitle=figTitle)
+    # def __call__(self, data, figTitle):
+    #     self.showSpectrogram(data, figTitle=figTitle, isLog=False)
+    #     self.showCues(data, figTitle=figTitle)
 
     
 # [TODO] method to log IPD cues and spectral cues
@@ -245,6 +402,11 @@ class VisualiseCues:
 
 class SaveCues:
     def __init__(self, savePath, locLabel):
+        """
+        Args:
+            fs_audio (int): sampling frequency of audio files
+            locLabel
+        """
         if not os.path.isdir(savePath):
             os.mkdir(savePath)
         self.savePath = savePath
@@ -253,10 +415,10 @@ class SaveCues:
 
     def concatCues(self, cuesList: list):
         cuesShape = cuesList[0].shape
-        lastDim = len(cuesList)
-        cues = torch.zeros(cuesShape+(lastDim,), dtype=torch.float)
+        Ncues = len(cuesList)
+        cues = torch.zeros(cuesShape+(Ncues,), dtype=torch.float)
 
-        for i in range(lastDim):
+        for i in range(Ncues):
             cues[:,:,i] = torch.from_numpy(cuesList[i])
 
         return cues
@@ -283,8 +445,8 @@ class SaveCues:
                     csvFile.write(str(locIndex2Label(self.locLabel, i, "allClass")))
                 csvFile.write('\n')
 
-    def __call__(self, data, locIndex):
-        cues = self.concatCues(data)
+    def __call__(self, cuesList: list, locIndex: list):
+        cues = self.concatCues(cuesList)
         self.annotate(locIndex=locIndex)
         torch.save(cues, self.savePath+str(self.fileCount)+'.pt')
         self.fileCount += 1
@@ -300,17 +462,19 @@ def concatCues(cuesList: list, cuesShape: tuple):
     return cues
 
 def locIndex2Label(locLabel, locIndex, task):
-    if task == "elevClass":
+    if task.lower() == "elevclass":
+        # range of elevation: -45 to 90 degrees
         labels = int(((locLabel[locIndex, 0]+45) % 150)/15)
-    elif task == "azimClass":
+    elif task.lower()  == "azimclass":
+        # range of elevation: 0 to 345 degrees
         labels = int((locLabel[locIndex, 1] % 360)/15)
-    elif task == "allClass":
+    elif task.lower()  == "allclass":
         labels = int(locIndex)
-    elif task == "elevRegression":
+    elif task.lower()  == "elevregression":
         labels = locLabel[locIndex, 0]/180.0*pi
-    elif task == "azimRegression":
+    elif task.lower()  == "azimregression":
         labels = locLabel[locIndex, 1]/180.0*pi
-    elif task == "allRegression":
+    elif task.lower()  == "allregression":
         labels = torch.tensor(
             [
                 locLabel[locIndex, 0]/180.0*pi,
@@ -385,6 +549,37 @@ if __name__ == "__main__":
     path = "./HRTF/IRC*"
     hrirSet, locLabel, fs_HRIR = loadHRIR(path)
     print(hrirSet.shape)
+
+    
+    speech_male_path = glob(os.path.join("./audio_train/speech_male/*"))
+    speech_female_path = glob(os.path.join("./audio_train/speech_female/*"))
+
+    speech_male = AudioSignal(path=speech_male_path[0], slice_duration=1)
+    sig_sliced = speech_male(idx=1)
+    print(f"length of slice list: {len(sig_sliced)}")
+
+    locIndex = 155
+    binaural_sig = BinauralSignal(hrirSet, fs_HRIR, speech_male.fs_audio)
+    sigL, sigR = binaural_sig(sig_sliced, locIndex)
+
+    binaural_cues = BinauralCues(speech_male.fs_audio, "normalise")
+    binaural_cues_noprep = BinauralCues(speech_male.fs_audio, "standardise")
+    
+    magL, phaseL, magR, phaseR = binaural_cues(sigL, sigR)
+    magL_, phaseL_, magR_, phaseR_ = binaural_cues_noprep(sigL, sigR)
+
+    vis_cues = VisualiseCues(speech_male.fs_audio, binaural_cues.freq_axis, binaural_cues.time_axis)
+    # vis_cues.showBinauralSig(sig_sliced, sigL, sigR)
+    # vis_cues.showSpectrogram(magL, figTitle="left-ear mag", isLog=True)
+    # vis_cues.showSpectrogram(magL_, figTitle="left-ear mag", isLog=True)
+    # vis_cues.showSpectrogram(phaseL, figTitle="left-ear phase", isLog=False)
+    # vis_cues.showSpectrogram(phaseL_, figTitle="right-ear phase", isLog=False)
+    vis_cues.showCues(magL, figTitle="left-ear mag")
+    vis_cues.showCues(magL_, figTitle="left-ear mag")
+    vis_cues.showCues(phaseL, figTitle="left-ear phase")
+    vis_cues.showCues(phaseL_, figTitle="left-ear phase")
+
+    raise SystemExit("debugging")
 
     # trainAudioPath = glob(os.path.join("./audio_train/*"))
 
