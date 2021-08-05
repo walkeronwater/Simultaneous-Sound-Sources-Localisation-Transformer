@@ -78,10 +78,11 @@ class LocRegion:
                 self.high_left.append(i)
             elif self.locLabel[i, 0] < 0 and 0 < self.locLabel[i, 1] < 180:
                 self.low_left.append(i)
-            elif self.locLabel[i, 0] > 0 and 0 < self.locLabel[i, 1] > 180:
+            elif self.locLabel[i, 0] > 0 and self.locLabel[i, 1] > 180:
                 self.high_right.append(i)
-            elif self.locLabel[i, 0] < 0 and 0 < self.locLabel[i, 1] > 180:
+            elif self.locLabel[i, 0] < 0 and self.locLabel[i, 1] > 180:
                 self.low_right.append(i)
+        print(f"Number of locations in each region: {len(self.high_left)}, {len(self.low_left)}, {len(self.high_right)}, {len(self.low_right)}")
     
     def getLocRegion(self):
         return (self.high_left, self.low_left, self.high_right, self.low_right)
