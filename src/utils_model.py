@@ -24,6 +24,7 @@ from torchsummary import summary
 
 from load_data import *
 from utils import *
+
 class MultiEpochsDataLoader(torch.utils.data.DataLoader):
 
     def __init__(self, *args, **kwargs):
@@ -114,6 +115,45 @@ class MyDataset(torch.utils.data.Dataset):
 
         return data, labels
 
+
+class CuesDataset(torch.utils.data.Dataset):
+    def __init__(self, filePath, task, Nsound, locLabel, isDebug=False):
+        super(CuesDataset, self).__init__()
+        self.filePath = filePath
+        self.task = task
+        # self.Nsound = Nsound
+        self.annotation = pd.read_csv(filePath+"dataLabels.csv", header=None)
+        self.isDebug = isDebug
+        self.locLabel = locLabel
+        
+        self.Nsound = self.annotation.iloc[0].values.shape[0] - 1
+        print(f"self.Nsound: {self.Nsound}")
+        assert(
+            self.Nsound == Nsound
+        ), "Number of sound sources doesn't match."
+        self.Nfreq, self.Ntime, self.Ncues = list(torch.load(filePath+"/0.pt").shape)
+
+    def __len__(self):
+        return int(self.annotation.iloc[-1, 0] + 1)
+    
+    def __getitem__(self, pathIndex):
+        data = torch.load(self.filePath+str(pathIndex)+".pt")
+
+        from_csv = self.annotation.iloc[pathIndex].values
+        
+        labels = torch.empty((2*(from_csv.shape[0]-1)))
+        
+        # read starting from the second element in the pathIndex row
+        for i in range(1, from_csv.shape[0]):
+            labels[2*(i-1):2*(i-1)+2] = degree2Radian(torch.from_numpy(self.locLabel[from_csv[i]]))
+
+        if self.isDebug:
+            print("pathIndex: ", pathIndex)
+            print("label:", labels)
+
+        return data, labels
+
+
 def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
     Ntrain = round(trainValidSplit[0]*dataset.__len__())
     if Ntrain % batchSize == 1:
@@ -134,6 +174,23 @@ def splitDataset(batchSize, trainValidSplit: list, numWorker, dataset):
     valid_loader = MultiEpochsDataLoader(dataset=valid, batch_size=batchSize, shuffle=True, num_workers=numWorker, persistent_workers=False)
 
     return train_loader, valid_loader
+
+"""
+class ModelSelection:
+    def __init__(
+        self,
+        task,
+        Nsound
+    ):
+        self.task = task
+        self.Nsound = Nsound
+
+    def __call__(self):
+        if self.Nsound = 2:
+            if self.task.lower() == "allregression":
+                model =
+        return
+"""
 
 def predNeuron(task):
     if task == "elevClass":
@@ -261,8 +318,8 @@ if __name__ == "__main__":
     print(loc_region.whichRegion(123))
 
 
-    train_dataset = MyDataset(
-        filePath="./saved_0308_temp/train/",
+    train_dataset = CuesDataset(
+        filePath="./saved_0508_temp/train/",
         task="allclass",
         Nsound=2,
         locLabel=locLabel
@@ -282,11 +339,18 @@ if __name__ == "__main__":
             [1, 5],
         ]
     )
+
+    count=0
+    for i, (inputs, labels) in enumerate(train_loader):
+        count+=1
+
+    raise SystemExit
+
+
     print(labels.size(0))
     # labels = labels.unsqueeze(0)
     target = torch.zeros(labels.size(0), 187).scatter_(1, labels, 1.)
     print(target.shape)
-
 
     outputs = torch.rand((32, 187))
     # outputs = torch.nn.functional.one_hot(outputs.to(torch.int64), num_classes=187)

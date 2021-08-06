@@ -17,31 +17,29 @@ class CostFunc:
         self.Nsound = Nsound
         self.device = device
         if Nsound == 1 and ("class" in self.task.lower()):
-            self.criterion = nn.CrossEntropyLoss()
+            self.cls_criterion = nn.CrossEntropyLoss()
         elif Nsound == 2 and ("class" in self.task.lower()):
-            self.criterion = nn.BCEWithLogitsLoss()
+            self.cls_criterion = nn.BCEWithLogitsLoss()
 
-    def __call__(
-        self,
-        outputs,
-        labels
-    ):
+    def __call__(self, outputs, labels):
         if self.Nsound == 1:
             if "regression" in self.task.lower():
-                return torch.sqrt(torch.mean(torch.square(self.loss_DoA(outputs, labels))))
+                return torch.sqrt(torch.mean(torch.square(self.calDoALoss(outputs, labels))))
             elif "class" in self.task.lower():
-                return self.criterion(outputs, labels)
+                return self.cls_criterion(outputs, labels)
         else:
             if "regression" in self.task.lower():
-                return torch.sqrt(torch.mean(torch.square(self.loss_DoA(outputs[:, 0:2], labels[:, 0:2]) + self.loss_DoA(outputs[:, 2:4], labels[:, 2:4]))))
+                return torch.sqrt(torch.mean(torch.square(self.calDoALoss(outputs[:, 0:2], labels[:, 0:2]) + self.calDoALoss(outputs[:, 2:4], labels[:, 2:4]))))
             elif "class" in self.task.lower():
                 labels_hot = torch.zeros(labels.size(0), 187).to(self.device)
                 labels_hot = labels_hot.scatter_(1, labels.to(torch.int64), 1.).float()
-                return self.criterion(outputs.float(), labels_hot)
+                return self.cls_criterion(outputs.float(), labels_hot)
 
-    def loss_DoA(self, output, target):
-        # target should be (elev, azim)
-        # sine: azimuth
+    def calDoALoss(self, output, target):
+        """
+        target should be (elev, azim)
+        sine term: azimuth
+        """
         sine_term = torch.sin(output[:, 0]) * torch.sin(target[:, 0])
         cosine_term = torch.cos(output[:, 0]) * torch.cos(target[:, 0]) * torch.cos(target[:, 1] - output[:, 1])
         loss = torch.acos(F.hardtanh(sine_term + cosine_term, min_val=-1, max_val=1))
