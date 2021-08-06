@@ -143,8 +143,10 @@ def createTrainingSet():
 
     # audio indexes
     
-    audio_index = 0
-    src = AudioSignal(path=src_path[audio_index], slice_duration=1)
+    audio_index_1 = 0
+    audio_index_2 = 0
+    src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
+    src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
     binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src.fs_audio)
     loc_region = LocRegion(locLabel=locLabel)
     binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method="standardise")
