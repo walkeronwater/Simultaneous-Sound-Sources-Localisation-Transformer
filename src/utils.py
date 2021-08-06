@@ -160,7 +160,6 @@ class AudioSignal:
         # mean power in dbfs
         self.mean_power = 10*np.log10(np.mean(np.power(self.sig, 2)))
         self.slice_list = self.audioSliceGenerator(threshold=self.mean_power)
-    
     def __call__(self, idx):
         """
         Args:
@@ -192,9 +191,8 @@ class AudioSignal:
                 slice_list.append(range(slice_len*i, slice_len*(i+1)))
         return slice_list
 
-
 class BinauralSignal:
-    def __init__(self, hrir, fs_hrir, fs_audio):
+    def __init__(self, hrir, fs_hrir, fs_audio, val_SNR=100, noise_type="Gaussian"):
         """
         resample HRIR to the sampling frequency of audio files
 
@@ -203,6 +201,10 @@ class BinauralSignal:
             fs_hrir (int): sampling frequency of HRIRs.
             fs_audio (int): sampling frequency of audio files.
         """
+        self.val_SNR = val_SNR
+        self.noise_type = noise_type
+
+        # resampling HRIRs
         temp = librosa.resample(hrir[0,0], fs_hrir, fs_audio)
         hrir_re = np.empty(hrir.shape[0:2]+temp.shape)
         for i in range(hrir.shape[0]):
@@ -225,7 +227,23 @@ class BinauralSignal:
         assert (
             0 <= locIndex < self.hrir.shape[0]
         ), "Invalid location index"
-        return (np.convolve(seq, self.hrir[locIndex, 0]), np.convolve(seq, self.hrir[locIndex, 1]))
+
+        sigL = np.convolve(seq, self.hrir[locIndex, 0])
+        sigR = np.convolve(seq, self.hrir[locIndex, 1])
+
+        if self.val_SNR >= 100:
+            return (sigL, sigR)
+        else:
+            return (sigL + self.noiseGenerator(sigL), sigR + self.noiseGenerator(sigR))
+    
+
+    def noiseGenerator(self, seq):
+        if self.noise_type.lower() == "gaussian":
+            sig_power = 10*np.log10(np.mean(np.power(seq, 2)))
+            noise_power = np.power(10, (sig_power - self.val_SNR)/10)
+            noise_sig = np.random.normal(0, np.sqrt(noise_power), seq.shape)
+            return noise_sig
+
 
 class BinauralCues:
     def __init__(self, fs_audio, prep_method):

@@ -1,3 +1,4 @@
+import time
 import argparse
 import soundfile as sf
 from scipy import signal
@@ -24,7 +25,7 @@ import torch.nn.functional as F
 from load_data import *
 from utils import *
 
-#[TODO] hardcoded tensor size
+"""
 class CuesShape:
     def __init__(
         self,
@@ -41,10 +42,6 @@ class CuesShape:
         self.Nloc = Nloc
         self.lenSliceInSec = lenSliceInSec
         self.valSNRList = valSNRList
-
-#[TODO]
-def mixLoc():
-    pass
 
 def createCues(path, Nsample, cuesShape, prep_method, dirName):
     Nfreq = cuesShape.Nfreq
@@ -114,14 +111,67 @@ def createCues(path, Nsample, cuesShape, prep_method, dirName):
                     if fileCount % (Nloc*len(valSNRList)) == 0:
                         print("# location set ("+str(Nloc*len(valSNRList))+" samples per set): ",
                             fileCount // (Nloc*len(valSNRList)))
+"""
+
+def createTrainingSet():
+    timeFlag = True
+    hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
+    src_path = glob(os.path.join(args.trainAudioDir+"/speech_male/*"))
+    
+    src_count = 0
+    for i in range(len(src_path)):
+        src = AudioSignal(path=src_path[i], slice_duration=1)
+        src_count += len(src.slice_list)
+    
+    path = "./HRTF/IRC*"
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+    print(hrirSet.shape)
+
+    # audio indexes
+    
+    audio_index = 0
+    src = AudioSignal(path=src_path[audio_index], slice_duration=1)
+    binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src.fs_audio, val_SNR=20, noise_type="Gaussian")
+    loc_region = LocRegion(locLabel=locLabel)
+    binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method="standardise")
+    save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
+    
+    start_time = time.time()
+    slice_idx = 0
+    count = 0
+    while True:
+        print(f"Current audio: {audio_index}")
+        # print(f"Number of slices: {len(src.slice_list)}")
+        if slice_idx >= len(src.slice_list):
+            slice_idx = 0
+            audio_index += 1
+            src = AudioSignal(path=src_path[audio_index], slice_duration=1)
+
+        sig_sliced = src(idx=slice_idx)
+
+        for loc_idx in range(loc_region.Nloc):
+            sigL, sigR = binaural_sig(sig_sliced, loc_idx)
+            magL, phaseL, magR, phaseR = binaural_cues(sigL, sigR)
+
+            save_cues(cuesList=[magL, phaseL, magR, phaseR], locIndex=[loc_idx])
+            if save_cues.fileCount == args.Nsample:
+                return
+
+            if timeFlag:
+                print(f"One location loop costs {(time.time()-start_time)} seconds.")
+                timeFlag = False
+        slice_idx += 1
+        count += 1
+        # print(count)
+        if count >= src_count:
+            return
 
 
-
-'''
-# This will create two folders containing data for training, validation. Each dataset will be
-# balanced and the volume will be decided by the train-validation ratio and total amount given
-# by the user input.
-'''
+"""
+This will create two folders containing data for training, validation. Each dataset will be
+balanced and the volume will be decided by the train-validation ratio and total amount given
+by the user input.
+"""
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Create cues')
     parser.add_argument('trainAudioDir', type=str, help='Directory of audio files for training')
@@ -158,36 +208,29 @@ if __name__ == "__main__":
     print("Number of training audio files: ", len(trainAudioPath))
     print("Number of validation audio files: ", len(validAudioPath))
 
-    cuesShape = CuesShape(valSNRList=args.valSNRList, Ncues=args.Ncues)
+    # cuesShape = CuesShape(valSNRList=args.valSNRList, Ncues=args.Ncues)
     # print(cuesShape.valSNRList)
     # raise SystemExit('debug')
 
-    # resampling the HRIR
-    _, fs_audio = sf.read(trainAudioPath[0])
-    temp = librosa.resample(hrirSet[0, 0], fs_HRIR, fs_audio)
-    hrirSet_re = np.empty(hrirSet.shape[0:2]+temp.shape)
-    for i in range(hrirSet.shape[0]):
-        hrirSet_re[i, 0] = librosa.resample(hrirSet[i, 0], fs_HRIR, fs_audio)
-        hrirSet_re[i, 1] = librosa.resample(hrirSet[i, 1], fs_HRIR, fs_audio)
-    print(hrirSet_re.shape)
-    del temp, hrirSet
-    
-    dirName = args.cuesDir
-
-    if not os.path.isdir(dirName):
-        os.mkdir(dirName)
-        os.mkdir(dirName+"/train/")
-        os.mkdir(dirName+"/valid/")
-    if not os.path.isdir(dirName+"/train/"):
-        os.mkdir(dirName+"/train/")
-    if not os.path.isdir(dirName+"/valid/"):
-        os.mkdir(dirName+"/valid/")
+    if not os.path.isdir(args.cuesDir):
+        os.mkdir(args.cuesDir)
+    #     os.mkdir(dirName+"/train/")
+    #     os.mkdir(dirName+"/valid/")
+    # if not os.path.isdir(dirName+"/train/"):
+    #     os.mkdir(dirName+"/train/")
+    # if not os.path.isdir(dirName+"/valid/"):
+    #     os.mkdir(dirName+"/valid/")
     # raise SystemExit('debug')
 
+    """
     print(trainAudioPath)
     createCues(trainAudioPath, Nsample_train, cuesShape, args.prepMethod, dirName=args.cuesDir+"/train/")
     print(validAudioPath)
     createCues(validAudioPath, Nsample_valid, cuesShape, args.prepMethod, dirName=args.cuesDir+"/valid/")
+    """
+    createTrainingSet()
+
+
 
 
     '''

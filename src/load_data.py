@@ -68,7 +68,7 @@ def loadHRIR(path):
 class LocRegion:
     def __init__(self, locLabel):
         self.locLabel = locLabel
-        
+        self.Nloc = locLabel.shape[0]
         self.high_left = []
         self.high_right = []
         self.low_left = []

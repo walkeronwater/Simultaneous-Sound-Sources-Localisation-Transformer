@@ -27,23 +27,6 @@ import time
 from load_data import *
 from utils import *
 
-#[TODO] hardcoded tensor size
-class CuesShape:
-    def __init__(
-        self,
-        Nfreq = 512,
-        Ntime = 44,
-        Ncues = 5,
-        Nloc = 187,
-        lenSliceInSec = 0.5,
-        valSNRList = [-5,0,5,10,15,20,25,30,35]
-    ):
-        self.Nfreq = Nfreq
-        self.Ntime = Ntime
-        self.Ncues = Ncues
-        self.Nloc = Nloc
-        self.lenSliceInSec = lenSliceInSec
-        self.valSNRList = valSNRList
 
 '''
 def createCues_multiSound(path, Nsample, cuesShape, prep_method, dirName):
@@ -180,17 +163,10 @@ def saveCues_multiSound(cues, locIndex_1, locIndex_2, dirName, fileCount, locLab
             csvFile.write(str(locIndex2Label(locLabel, locIndex_2, "azimRegression")))
             csvFile.write('\n')
     torch.save(cues, dirName+str(fileCount)+'.pt')
-'''
-
-# @jit(nopython=True)
-# def conv(seq1, seq2):
-#     return np.convolve(seq1, seq2)
-
 
 def createCues_(
     # path,
-    src_1, src_2, Nsample, cuesShape, prep_method, dirName, locLabel
-):
+    src_1, src_2, Nsample, cuesShape, prep_method, dirName, locLabel):
     cuesShape = CuesShape()
     Nfreq = cuesShape.Nfreq
     Ntime = cuesShape.Ntime
@@ -254,6 +230,12 @@ def createCues_(
                             if save_cues.fileCount == Nsample:
                                 return
 
+'''
+
+# @jit(nopython=True)
+# def conv(seq1, seq2):
+#     return np.convolve(seq1, seq2)
+
 def createTrainingSet():
     timeFlag = True
     hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
@@ -265,7 +247,6 @@ def createTrainingSet():
     for i in range(len(src_1_path)):
         src_1 = AudioSignal(path=src_1_path[i], slice_duration=1)
         src_1_count += len(src_1.slice_list)
-    src_2_count = 0
     for i in range(len(src_2_path)):
         src_2 = AudioSignal(path=src_2_path[i], slice_duration=1)
         src_2_count += len(src_2.slice_list)
@@ -325,11 +306,11 @@ def createTrainingSet():
         if count >= src_1_count or count >= src_2_count:
             return
 
-'''
-# This will create two folders containing data for training, validation. Each dataset will be
-# balanced and the volume will be decided by the train-validation ratio and total amount given
-# by the user input.
-'''
+"""
+This will create two folders containing data for training, validation. Each dataset will be
+balanced and the volume will be decided by the train-validation ratio and total amount given
+by the user input.
+"""
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Create cues')
     parser.add_argument('trainAudioDir', type=str, help='Directory of audio files for training')
