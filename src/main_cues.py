@@ -116,8 +116,22 @@ def createCues(path, Nsample, cuesShape, prep_method, dirName):
 def createTrainingSet():
     timeFlag = True
     hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
-    src_path = glob(os.path.join(args.trainAudioDir+"/speech_male/*"))
+    path_1 = glob(os.path.join(args.trainAudioDir+"/speech_male/*"))
+    path_2 = glob(os.path.join(args.trainAudioDir+"/speech_female/*"))
     
+    src_path = []
+    flag = True
+    i, j = 0, 0
+    while i < len(path_1) and j < len(path_2):
+        if flag:
+            src_path.append(path_1[i])
+            i += 1
+            flag = False
+        else:
+            src_path.append(path_2[j])
+            j += 1
+            flag = True
+
     src_count = 0
     for i in range(len(src_path)):
         src = AudioSignal(path=src_path[i], slice_duration=1)
@@ -131,7 +145,7 @@ def createTrainingSet():
     
     audio_index = 0
     src = AudioSignal(path=src_path[audio_index], slice_duration=1)
-    binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src.fs_audio, val_SNR=20, noise_type="Gaussian")
+    binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src.fs_audio)
     loc_region = LocRegion(locLabel=locLabel)
     binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method="standardise")
     save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
@@ -140,26 +154,30 @@ def createTrainingSet():
     slice_idx = 0
     count = 0
     while True:
-        print(f"Current audio: {audio_index}")
-        # print(f"Number of slices: {len(src.slice_list)}")
         if slice_idx >= len(src.slice_list):
             slice_idx = 0
             audio_index += 1
             src = AudioSignal(path=src_path[audio_index], slice_duration=1)
 
+        print(f"Current audio: {src_path[audio_index]}")
+        # print(f"Number of slices: {len(src.slice_list)}")
+        
         sig_sliced = src(idx=slice_idx)
 
         for loc_idx in range(loc_region.Nloc):
-            sigL, sigR = binaural_sig(sig_sliced, loc_idx)
-            magL, phaseL, magR, phaseR = binaural_cues(sigL, sigR)
+            for val_SNR in args.valSNRList:
+                binaural_sig.val_SNR = val_SNR
 
-            save_cues(cuesList=[magL, phaseL, magR, phaseR], locIndex=[loc_idx])
-            if save_cues.fileCount == args.Nsample:
-                return
+                sigL, sigR = binaural_sig(sig_sliced, loc_idx)
+                magL, phaseL, magR, phaseR = binaural_cues(sigL, sigR)
 
-            if timeFlag:
-                print(f"One location loop costs {(time.time()-start_time)} seconds.")
-                timeFlag = False
+                save_cues(cuesList=[magL, phaseL, magR, phaseR], locIndex=[loc_idx])
+                if save_cues.fileCount == args.Nsample:
+                    return
+
+                if timeFlag:
+                    print(f"One location loop costs {(time.time()-start_time)} seconds.")
+                    timeFlag = False
         slice_idx += 1
         count += 1
         # print(count)
