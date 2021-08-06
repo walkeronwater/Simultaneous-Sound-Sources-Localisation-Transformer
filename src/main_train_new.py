@@ -174,7 +174,6 @@ if __name__ == "__main__":
     writer = SummaryWriter(f'runs/temp/tryingout_tensorboard')
 
     """training-validation iteration"""
-
     pre_epoch = 0
     for epoch in range(pre_epoch, pre_epoch + args.numEpoch):
         print("\nEpoch %d, lr = %f" % ((epoch + 1), getLR(optimizer)))
