@@ -118,6 +118,8 @@ class BinauralSignal:
             hrir (ndarray): hrir sets with shape (187, 2, 512).
             fs_hrir (int): sampling frequency of HRIRs.
             fs_audio (int): sampling frequency of audio files.
+            val_SNR (int): noise SNR if <100
+            noise_type (str): type of corrupted noise
         """
         self.val_SNR = val_SNR
         self.noise_type = noise_type

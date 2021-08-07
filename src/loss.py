@@ -70,23 +70,22 @@ def cost_multiSound(output, target):
 
 if __name__ == "__main__":
     cost_func = CostFunc(
-        task="allClass",
+        task="allRegression",
         Nsound=2,
         device="cpu"
     )
 
     outputs_reg = torch.tensor(
         [
-            [0, 0, 0, 3.14],
-            [0, 0, 0, 3.14]
+            [0, 0, 0, 0]
         ]
     )
     labels_reg = torch.tensor(
         [
-            [3, 3.14, 0, 0],
-            [0, 3.14, 0, 3.14]
+            [1.5, 3.14, 0, 0]
         ]
     )
+
     outputs_cls = torch.rand((2,187))
     labels_cls = torch.tensor(
         [
@@ -96,4 +95,4 @@ if __name__ == "__main__":
     )
 
 
-    print(cost_func(outputs_cls, labels_cls))
+    print(cost_func(outputs_reg, labels_reg))

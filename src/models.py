@@ -9,22 +9,22 @@ class SelfAttention(nn.Module):
     """
     Self attention module for (time, freq) dependency learning
     """
-    def __init__(self, Nfreq, heads):
+    def __init__(self, embed_size, heads):
         super(SelfAttention, self).__init__()
-        self.Nfreq = Nfreq
+        self.embed_size = embed_size
         self.heads = heads
-        self.head_dim = Nfreq // heads
+        self.head_dim = embed_size // heads
 
         # assert debug
         assert (
-            self.head_dim * heads == Nfreq
+            self.head_dim * heads == embed_size
         ), "Embedding size needs to be divisible by heads"
 
         # obtain Q K V matrices by linear transformation
         self.values = nn.Linear(self.head_dim, self.head_dim, bias=False)
         self.keys = nn.Linear(self.head_dim, self.head_dim, bias=False)
         self.queries = nn.Linear(self.head_dim, self.head_dim, bias=False)
-        self.fc_out = nn.Linear(heads * self.head_dim, Nfreq)
+        self.fc_out = nn.Linear(heads * self.head_dim, embed_size)
 
     def forward(self, value, key, query):
         # Get number of training examples
@@ -45,7 +45,7 @@ class SelfAttention(nn.Module):
 
         energy = torch.einsum("nqhd,nkhd->nhqk", [queries, keys])
 
-        attention = torch.softmax(energy / (self.Nfreq ** (1 / 2)), dim=3)
+        attention = torch.softmax(energy / (self.embed_size ** (1 / 2)), dim=3)
 
         out = torch.einsum("nhql,nlhd->nqhd", [attention, values]).reshape(
             N, query_time, self.heads * self.head_dim
@@ -58,15 +58,15 @@ class Attention(nn.Module):
     """
     Self attention module for (freq, cues) dependency learning 
     """
-    def __init__(self, embedSize):
+    def __init__(self, embed_size):
         super(Attention, self).__init__()
-        self.embedSize = embedSize
+        self.embed_size = embed_size
 
         # obtain Q K V matrices by linear transformation
-        self.values = nn.Linear(embedSize, embedSize, bias=False)
-        self.keys = nn.Linear(embedSize, embedSize, bias=False)
-        self.queries = nn.Linear(embedSize, embedSize, bias=False)
-        self.fc_out = nn.Linear(embedSize, embedSize)
+        self.values = nn.Linear(embed_size, embed_size, bias=False)
+        self.keys = nn.Linear(embed_size, embed_size, bias=False)
+        self.queries = nn.Linear(embed_size, embed_size, bias=False)
+        self.fc_out = nn.Linear(embed_size, embed_size)
 
     def forward(self, value, key, query):
         # Get number of training examples
@@ -82,10 +82,10 @@ class Attention(nn.Module):
 
         energy = torch.einsum("ntqe,ntke->neqk", [queries, keys])
 
-        attention = torch.softmax(energy / (self.embedSize ** (1 / 2)), dim=3)
+        attention = torch.softmax(energy / (self.embed_size ** (1 / 2)), dim=3)
 
         out = torch.einsum("neqk,ntve->ntqe", [attention, values]).reshape(
-            N, query_time, query_freq, self.embedSize
+            N, query_time, query_freq, self.embed_size
         )
 
         out = self.fc_out(out)
@@ -190,7 +190,7 @@ class EncoderDIYTransformer(nn.Module):
         super(EncoderDIYTransformer, self).__init__()
         self.encoder = Encoder(
             Ntime,
-            Nfreq,
+            Nfreq*Ncues,
             num_layers,
             heads,
             device,
@@ -198,12 +198,15 @@ class EncoderDIYTransformer(nn.Module):
             dropout
         )
     def forward(self, inputs):
-        encList = []
-        for i in range(inputs.shape[-1]):
-            enc = self.encoder(inputs[:, :, :, i].permute(0, 2, 1))
-            encList.append(enc)
-        out = torch.stack(encList)
-        out = out.permute(1, 2, 3, 0)
+        out = torch.flatten(inputs.permute(0, 2, 1, 3), -2, -1)
+        out = self.encoder(out)
+        
+        # encList = []
+        # for i in range(inputs.shape[-1]):
+        #     enc = self.encoder(inputs[:, :, :, i].permute(0, 2, 1))
+        #     encList.append(enc)
+        # out = torch.stack(encList)
+        # out = out.permute(1, 2, 3, 0)
         return out
 
 class FCModules(nn.Module):
@@ -283,7 +286,6 @@ class DecoderSrcReg(nn.Module):
                 for _ in range(Nsound)
             ]
         )
-        print(f"Number of FC layers: {len(self.FC_layers)}")
 
     def forward(self, enc_out):
         out_src = torch.flatten(enc_out, 1, -1)
@@ -449,6 +451,7 @@ if __name__ == "__main__":
         Nsound=Nsound,
         whichEnc="diy",
         whichDec="cls",
+        numEnc=3,
         device=device
     )
     model = model.to(device)
@@ -457,7 +460,7 @@ if __name__ == "__main__":
     outputs = model(inputs.to(device))
 
     print(f"inputs: {inputs.shape},\
-        outputs: {outputs.shape}, \
+        outputs: {torch.max(outputs)}, \
         labels: {labels.shape}")
 
-    # summary(model, (Nfreq, Ntime, Ncues))
+    summary(model, (Nfreq, Ntime, Ncues))

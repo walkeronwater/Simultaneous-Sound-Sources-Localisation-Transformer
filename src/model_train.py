@@ -145,7 +145,7 @@ if __name__ == "__main__":
         whichEnc="diy",
         whichDec=args.whichDec,
         device=device,
-        # numEnc=args.numEnc,
+        numEnc=args.numEnc,
         # numFC=args.numFC,
     )
     if args.isHPC:
