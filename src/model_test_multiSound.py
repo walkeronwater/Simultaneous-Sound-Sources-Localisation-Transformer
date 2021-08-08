@@ -169,6 +169,7 @@ if __name__ == "__main__":
     Nsample = 2
     batch_size = 32
     # model_dir = "D:/SSSL-D/HPC/0808_2Sound_ea/"
+    data_dir = args.dataDir
     model_dir = args.modelDir
     # path = args.hrirDir + "/IRC*"
     path = "./HRTF/IRC*"
@@ -224,7 +225,7 @@ if __name__ == "__main__":
             dataset = TensorDataset(test_cues, test_label)
 
             # test_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-            valid_dataset = CuesDataset(dataDir + "/valid/",
+            valid_dataset = CuesDataset(data_dir + "/valid/",
                                 task, Nsound, locLabel, isDebug=False)
 
             isPersistent = True if num_workers > 0 else False
