@@ -153,6 +153,7 @@ if __name__ == "__main__":
     parser.add_argument('dataDir', type=str, help='Directory of saved cues')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
     parser.add_argument('whichModel', type=str, help='whichModel?')
+    parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     args = parser.parse_args()
@@ -191,7 +192,7 @@ if __name__ == "__main__":
         whichEnc="diy",
         whichDec=whichDec,
         device=device,
-        # numEnc=args.numEnc,
+        numEnc=args.numEnc
         # numFC=args.numFC,
     )
     # model, val_optim = loadCheckpoint(
