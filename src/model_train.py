@@ -189,12 +189,12 @@ if __name__ == "__main__":
             outputs = model(inputs)
 
             if flag_var["isDebug"]:
-                print( \
+                print("Training Outputs: ", outputs[:5]
                     # "Input shape: ", inputs.shape, "\n",
                     # "label shape: ", labels.shape, "\n",
                     # "labels: ", labels[:5], "\n",
                     # "Output shape: ", outputs.shape, "\n",
-                    "Training Outputs: ", outputs[:5]
+                    # "Training Outputs: ", outputs[:5]
                 )
 
             loss = cost_func(outputs, labels)
@@ -219,12 +219,12 @@ if __name__ == "__main__":
                 outputs = model(inputs)
                 
                 if flag_var["isDebug"]:
-                print( \
+                print("Validation Outputs: ", outputs[:5]
                     # "Input shape: ", inputs.shape, "\n",
                     # "label shape: ", labels.shape, "\n",
                     # "labels: ", labels[:5], "\n",
                     # "Output shape: ", outputs.shape, "\n",
-                    "Validation Outputs: ", outputs[:5]
+                    # "Validation Outputs: ", outputs[:5]
                 )
 
                 val_loss = cost_func(outputs, labels)
