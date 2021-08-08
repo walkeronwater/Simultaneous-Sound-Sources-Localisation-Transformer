@@ -203,7 +203,7 @@ if __name__ == "__main__":
     if isHPC:
         if torch.cuda.device_count() > 1:
             print("Let's use", torch.cuda.device_count(), "GPUs!")
-        model = nn.DataParallel(model)
+    model = nn.DataParallel(model)
     model = model.to(device)
 
     checkpoint = torch.load(model_dir+"param_bestValLoss.pth.tar")
