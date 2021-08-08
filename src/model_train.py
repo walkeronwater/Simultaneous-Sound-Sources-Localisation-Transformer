@@ -189,7 +189,7 @@ if __name__ == "__main__":
             outputs = model(inputs)
 
             if flag_var["isDebug"]:
-                print(
+                print( \
                     # "Input shape: ", inputs.shape, "\n",
                     # "label shape: ", labels.shape, "\n",
                     # "labels: ", labels[:5], "\n",
@@ -219,7 +219,7 @@ if __name__ == "__main__":
                 outputs = model(inputs)
                 
                 if flag_var["isDebug"]:
-                print(
+                print( \
                     # "Input shape: ", inputs.shape, "\n",
                     # "label shape: ", labels.shape, "\n",
                     # "labels: ", labels[:5], "\n",
