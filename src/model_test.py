@@ -140,6 +140,8 @@ def createTestSet(loc_idx, val_SNR):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing phase')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
+    parser.add_argument('whichModel', type=str, help='whichModel?')
+    parser.add_argument('isHPC', type=str, help='isHPC?')
     args = parser.parse_args()
     """define Nfreq, Ntime, Ncues"""
     Nfreq = 512
@@ -147,8 +149,8 @@ if __name__ == "__main__":
     Ncues = 4
     Nsound = 1
     task = "allRegression"
-    whichDec = "ea"
-    isHPC = True
+    whichDec = args.whichModel
+    isHPC = True if args.isHPC.lower()[0] == "t" else False
     num_workers = 0
     Nsample = 2
     batch_size = 32
