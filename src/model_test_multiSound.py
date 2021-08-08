@@ -149,6 +149,9 @@ def createTestSet(loc_idx_1, loc_idx_2):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Testing phase')
+    parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
+    args = parser.parse_args()
     """define Nfreq, Ntime, Ncues"""
     Nfreq = 512
     Ntime = 72
@@ -160,8 +163,8 @@ if __name__ == "__main__":
     num_workers = 0
     Nsample = 2
     batch_size = 32
-    model_dir = "D:/SSSL-D/HPC/0608_2Sound_src/"
-
+    # model_dir = "D:/SSSL-D/HPC/0808_2Sound_ea/"
+    model_dir = args.modelDir
     # path = args.hrirDir + "/IRC*"
     path = "./HRTF/IRC*"
     hrirSet, locLabel, fs_HRIR = loadHRIR(path)
@@ -228,15 +231,15 @@ if __name__ == "__main__":
                     inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                     outputs = model(inputs)
 
-                    # if True:
-                    #     print(
-                    #         "Input shape: ", inputs.shape, "\n",
-                    #         "label shape: ", labels.shape, "\n",
-                    #         "labels: ", labels[:5], "\n",
-                    #         "Output shape: ", outputs.shape, "\n",
-                    #         "Outputs: ", outputs[:5]
-                    #     )
-                    print(f"RMS angle error of two sources (over one batch): {torch.mean(radian2Degree(cost_func.calDoALoss(outputs, labels))).item():.2f}")
+                    if True:
+                        print(
+                            "Input shape: ", inputs.shape, "\n",
+                            "label shape: ", labels.shape, "\n",
+                            "labels: ", labels[:5], "\n",
+                            "Output shape: ", outputs.shape, "\n",
+                            "Outputs: ", outputs[:5]
+                        )
+                    print(f"RMS angle error of two sources (over one batch): {torch.mean(radian2Degree(cost_func(outputs, labels))).item():.2f}")
                     vis_pred(outputs, labels)
                     test_loss = cost_func(outputs, labels)
                     test_sum_loss += test_loss.item()
