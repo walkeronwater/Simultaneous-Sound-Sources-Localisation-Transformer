@@ -194,16 +194,20 @@ if __name__ == "__main__":
         # numEnc=args.numEnc,
         # numFC=args.numFC,
     )
-    model, val_optim = loadCheckpoint(
-        model=model, optimizer=None, scheduler=None,
-        loadPath=model_dir,
-        task=task, phase="test", whichBest="bestValLoss"
-    )
+    # model, val_optim = loadCheckpoint(
+    #     model=model, optimizer=None, scheduler=None,
+    #     loadPath=model_dir,
+    #     task=task, phase="test", whichBest="bestValLoss"
+    # )
+
     if isHPC:
         if torch.cuda.device_count() > 1:
             print("Let's use", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
     model = model.to(device)
+    
+    checkpoint = torch.load(loadPath+"param_bestValLoss.pth.tar")
+    model.load_state_dict(checkpoint['model'], strict=False)
 
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device)
 

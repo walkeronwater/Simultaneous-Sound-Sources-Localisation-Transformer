@@ -273,6 +273,13 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase, whichBest
     else:
         raise SystemExit("Task doesn't match")
 
+class WrappedModel(nn.Module):
+	def __init__(self, module):
+		super(WrappedModel, self).__init__()
+		self.module = module # that I actually define.
+	def forward(self, x):
+		return self.module(x)
+
 class EarlyStopping:
     def __init__(self, patience):
         self.patience = patience
