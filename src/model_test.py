@@ -138,6 +138,9 @@ def createTestSet(loc_idx, val_SNR):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Testing phase')
+    parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
+
     """define Nfreq, Ntime, Ncues"""
     Nfreq = 512
     Ntime = 72
@@ -149,7 +152,8 @@ if __name__ == "__main__":
     num_workers = 0
     Nsample = 2
     batch_size = 32
-    model_dir = "D:/SSSL-D/HPC/0608_1Sound_ea/"
+    # model_dir = "D:/SSSL-D/HPC/0608_1Sound_ea/"
+    model_dir = args.model_dir
     valSNRList = [-5,0,5,10,15,20,25,30,35]
 
     # path = args.hrirDir + "/IRC*"
