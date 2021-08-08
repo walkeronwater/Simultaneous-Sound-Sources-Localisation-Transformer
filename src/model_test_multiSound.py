@@ -152,7 +152,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing phase')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
     parser.add_argument('whichModel', type=str, help='whichModel?')
-    parser.add_argument('isHPC', type=str, help='isHPC?')
+    parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
+    parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     args = parser.parse_args()
     """define Nfreq, Ntime, Ncues"""
     Nfreq = 512
