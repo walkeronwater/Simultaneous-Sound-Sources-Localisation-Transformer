@@ -207,7 +207,7 @@ if __name__ == "__main__":
     model = model.to(device)
 
     checkpoint = torch.load(model_dir+"param_bestValLoss.pth.tar")
-    model.load_state_dict(checkpoint['model'], strict=False)
+    model.load_state_dict(checkpoint['model'], strict=True)
 
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device)
 
