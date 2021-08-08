@@ -229,15 +229,15 @@ if __name__ == "__main__":
 
             dataset = TensorDataset(test_cues, test_label)
 
-            # test_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-            valid_dataset = CuesDataset(data_dir + "/valid/",
-                                task, Nsound, locLabel, isDebug=False)
+            test_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+            # valid_dataset = CuesDataset(data_dir + "/valid/",
+            #                     task, Nsound, locLabel, isDebug=False)
 
-            isPersistent = True if num_workers > 0 else False
-            test_loader = MultiEpochsDataLoader(
-                dataset=valid_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
-                persistent_workers=isPersistent
-            )
+            # isPersistent = True if num_workers > 0 else False
+            # test_loader = MultiEpochsDataLoader(
+            #     dataset=valid_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
+            #     persistent_workers=isPersistent
+            # )
             test_correct = 0.0
             test_total = 0.0
             test_sum_loss = 0.0
