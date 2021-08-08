@@ -150,6 +150,7 @@ def createTestSet(loc_idx_1, loc_idx_2):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing phase')
+    parser.add_argument('dataDir', type=str, help='Directory of saved cues')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
     parser.add_argument('whichModel', type=str, help='whichModel?')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
@@ -222,8 +223,15 @@ if __name__ == "__main__":
 
             dataset = TensorDataset(test_cues, test_label)
 
-            test_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+            # test_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+            valid_dataset = CuesDataset(dataDir + "/valid/",
+                                task, Nsound, locLabel, isDebug=False)
 
+            isPersistent = True if num_workers > 0 else False
+            test_loader = MultiEpochsDataLoader(
+                dataset=valid_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers,
+                persistent_workers=isPersistent
+            )
             test_correct = 0.0
             test_total = 0.0
             test_sum_loss = 0.0
