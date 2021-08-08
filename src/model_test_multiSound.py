@@ -162,6 +162,7 @@ if __name__ == "__main__":
     task = "allRegression"
     whichDec = args.whichModel
     isHPC = True if args.isHPC.lower()[0] == "t" else False
+    isFalse = True if args.isDebug.lower()[0] == "t" else False
     num_workers = 0
     Nsample = 2
     batch_size = 32
@@ -233,7 +234,7 @@ if __name__ == "__main__":
                     inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                     outputs = model(inputs)
 
-                    if True:
+                    if isDebug:
                         print(
                             "Input shape: ", inputs.shape, "\n",
                             "label shape: ", labels.shape, "\n",
