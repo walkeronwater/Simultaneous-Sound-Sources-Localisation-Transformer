@@ -205,8 +205,8 @@ if __name__ == "__main__":
             print("Let's use", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
     model = model.to(device)
-    
-    checkpoint = torch.load(loadPath+"param_bestValLoss.pth.tar")
+
+    checkpoint = torch.load(model_dir+"param_bestValLoss.pth.tar")
     model.load_state_dict(checkpoint['model'], strict=False)
 
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device)
