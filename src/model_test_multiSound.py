@@ -81,46 +81,50 @@ class VisualisePrediction:
             src_loss (list): loss of each sound source
         """
         for i in range(self.Nsound):
-            print(f"src_loss: {src_loss[i]}, {type(src_loss[i])}")
+            # print(f"src_loss: {src_loss[i]}, {type(src_loss[i])}")
             self.sound_list[i](outputs[:,2*i:2*(i+1)], labels[:,2*i:2*(i+1)], src_loc, src_loss[i])
 
     def report(self):
         # print(f"{len(self.elev_pred)}, {len(self.elev_target)}, {len(self.azim_pred)}, {len(self.azim_pred)}")
         for i in range(self.Nsound):
-            print(np.max(self.sound_list[i].loc_loss))
-            
             plt.figure()
-            plt.plot(range(187), np.max(self.sound_list[i].loc_loss, axis=self.Nsound -1-i))
+            plt.scatter(
+                range(187),
+                np.true_divide(self.sound_list[i].loc_loss.sum(axis=self.Nsound -1-i),(self.sound_list[i].loc_loss!=0).sum(axis=self.Nsound -1-i))
+            )
+            plt.xticks(range(0, 186, 3))
+            # plt.plot(range(187), np.max(self.sound_list[i].loc_loss, axis=self.Nsound -1-i))
             plt.xlabel("Location")
             plt.ylabel("Max angle error in degree")
             plt.title(f"Elevation of sound source {i}")
-            plt.show()
-
-            x = np.linspace(-45, 90, 100)
-            y = x
-            plt.figure()
-            plt.scatter(self.sound_list[i].elev_target, self.sound_list[i].elev_pred, color='blue')
-            plt.plot(x, y,'-r')
-            plt.xticks(range(-45, 91, 15))
-            plt.yticks(range(-45, 91, 15))
-            plt.xlabel("Ground truth")
-            plt.ylabel("Prediction")
-            plt.title(f"Elevation of sound source {i}")
             plt.grid()
             plt.show()
 
-            x = np.linspace(0, 345, 100)
-            y = x
-            plt.figure()
-            plt.scatter(self.sound_list[i].azim_target, self.sound_list[i].azim_pred, color='blue')
-            plt.plot(x, y,'-r')
-            plt.xticks(range(0, 360, 15))
-            plt.yticks(range(0, 360, 15))
-            plt.xlabel("Ground truth")
-            plt.ylabel("Prediction")
-            plt.title(f"Azimuth of sound source {i}")
-            plt.grid()
-            plt.show()
+            # x = np.linspace(-45, 90, 100)
+            # y = x
+            # plt.figure()
+            # plt.scatter(self.sound_list[i].elev_target, self.sound_list[i].elev_pred, color='blue')
+            # plt.plot(x, y,'-r')
+            # plt.xticks(range(-45, 91, 15))
+            # plt.yticks(range(-45, 91, 15))
+            # plt.xlabel("Ground truth")
+            # plt.ylabel("Prediction")
+            # plt.title(f"Elevation of sound source {i}")
+            # plt.grid()
+            # plt.show()
+
+            # x = np.linspace(0, 345, 100)
+            # y = x
+            # plt.figure()
+            # plt.scatter(self.sound_list[i].azim_target, self.sound_list[i].azim_pred, color='blue')
+            # plt.plot(x, y,'-r')
+            # plt.xticks(range(0, 360, 15))
+            # plt.yticks(range(0, 360, 15))
+            # plt.xlabel("Ground truth")
+            # plt.ylabel("Prediction")
+            # plt.title(f"Azimuth of sound source {i}")
+            # plt.grid()
+            # plt.show()
 
             plt.figure()
             plt.scatter(self.sound_list[i].azim_target, self.sound_list[i].elev_target, color='red')
