@@ -92,7 +92,7 @@ class VisualisePrediction:
                 range(187),
                 np.true_divide(self.sound_list[i].loc_loss.sum(axis=self.Nsound -1-i),(self.sound_list[i].loc_loss!=0).sum(axis=self.Nsound -1-i))
             )
-            plt.xticks(range(0, 186, 3))
+            plt.xticks(range(0, 186, 6))
             # plt.plot(range(187), np.max(self.sound_list[i].loc_loss, axis=self.Nsound -1-i))
             plt.xlabel("Location")
             plt.ylabel("Max angle error in degree")
@@ -284,7 +284,7 @@ if __name__ == "__main__":
     loc_right = loc_region.high_right + loc_region.low_right
     for loc_idx_1 in range(0, len(loc_left), 1):
         for loc_idx_2 in range(0, len(loc_right), 1):
-            print(f"Test set created for location pair: {loc_left[loc_idx_1]}, {loc_right[loc_idx_2]}")
+            # print(f"Test set created for location pair: {loc_left[loc_idx_1]}, {loc_right[loc_idx_2]}")
             createTestSet(loc_left[loc_idx_1], loc_right[loc_idx_2])
 
             dataset = TensorDataset(test_cues, test_label)
@@ -335,7 +335,7 @@ if __name__ == "__main__":
                     test_sum_loss += test_loss.item()
                 test_loss = test_sum_loss / (i + 1)
                 test_acc = radian2Degree(test_loss)
-                print('Location : Test Loss: %.04f | RMS angle error (degree): %.04f '
-                    % (test_loss, test_acc))
+                # print('Location : Test Loss: %.04f | RMS angle error (degree): %.04f '
+                #     % (test_loss, test_acc))
             
         vis_pred.report()
