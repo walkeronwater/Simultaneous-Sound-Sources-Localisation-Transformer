@@ -21,7 +21,7 @@ class SourcePrediction:
         self.elev_target = []
         self.azim_pred = []
         self.azim_target = []
-        self.loc_loss = np.empty((187, 187))
+        self.loc_loss = np.zeros((187, 187), dtype=float)
             
     def __call__(self, outputs, labels, src_loc, src_loss):
         """
@@ -36,7 +36,6 @@ class SourcePrediction:
         self.elev_target.extend([radian2Degree(i) for i in labels[:, 0].tolist()])
         self.azim_pred.extend([radian2Degree(self.unwrapPrediction(i, "azim")) for i in outputs[:, 1].tolist()])
         self.azim_target.extend([radian2Degree(i) for i in labels[:, 1].tolist()])
-        print(f"src_loss: {src_loss}")
         self.loc_loss[src_loc[0], src_loc[1]] = src_loss
 
         # for i in range(outputs.shape[0]):
@@ -82,15 +81,16 @@ class VisualisePrediction:
             src_loss (list): loss of each sound source
         """
         for i in range(self.Nsound):
+            print(f"src_loss: {src_loss[i]}, {type(src_loss[i])}")
             self.sound_list[i](outputs[:,2*i:2*(i+1)], labels[:,2*i:2*(i+1)], src_loc, src_loss[i])
 
     def report(self):
         # print(f"{len(self.elev_pred)}, {len(self.elev_target)}, {len(self.azim_pred)}, {len(self.azim_pred)}")
         for i in range(self.Nsound):
-            print(self.sound_list[i].loc_loss)
+            print(np.max(self.sound_list[i].loc_loss))
             
             plt.figure()
-            plt.plot(range(187), np.mean(self.sound_list[i].loc_loss, axis=self.Nsound -1 - i))
+            plt.plot(range(187), np.max(self.sound_list[i].loc_loss, axis=self.Nsound -1-i))
             plt.show()
 
             x = np.linspace(-45, 90, 100)
