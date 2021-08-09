@@ -96,7 +96,7 @@ class VisualisePrediction:
             # plt.plot(range(187), np.max(self.sound_list[i].loc_loss, axis=self.Nsound -1-i))
             plt.xlabel("Location")
             plt.ylabel("Max angle error in degree")
-            plt.title(f"Elevation of sound source {i}")
+            plt.title(f"Loss of sound source {i}")
             plt.grid()
             plt.show()
 
@@ -131,8 +131,8 @@ class VisualisePrediction:
             plt.scatter(self.sound_list[i].azim_pred, self.sound_list[i].elev_pred, color='blue')
             plt.xticks(range(0, 360, 15))
             plt.yticks(range(-45, 91, 15))
-            plt.xlabel("Elevation")
-            plt.ylabel("Azmiuth")
+            plt.xlabel("Azimuth")
+            plt.ylabel("Elevation")
             plt.title(f"Prediction and target of sound source {i}")
             plt.grid()
             plt.show()
@@ -278,11 +278,11 @@ if __name__ == "__main__":
     binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src_1.fs_audio)
     binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method="standardise")
     loc_region = LocRegion(locLabel=locLabel)
-    vis_pred = VisualisePrediction(Nsound=Nsound)
-
     loc_left = loc_region.high_left + loc_region.low_left
     loc_right = loc_region.high_right + loc_region.low_right
     for loc_idx_1 in range(0, len(loc_left), 1):
+        vis_pred = VisualisePrediction(Nsound=Nsound)
+
         for loc_idx_2 in range(0, len(loc_right), 1):
             # print(f"Test set created for location pair: {loc_left[loc_idx_1]}, {loc_right[loc_idx_2]}")
             createTestSet(loc_left[loc_idx_1], loc_right[loc_idx_2])
