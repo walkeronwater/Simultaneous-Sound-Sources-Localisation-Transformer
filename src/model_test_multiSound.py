@@ -29,9 +29,9 @@ class SourcePrediction:
             labels: shape of (batch size, 2)
         """
         
-        self.elev_pred.extend([radian2Degree(i) for i in outputs[:, 0].tolist()])
+        self.elev_pred.extend([radian2Degree(self.unwrapPrediction(i, "elev")) for i in outputs[:, 0].tolist()])
         self.elev_target.extend([radian2Degree(i) for i in labels[:, 0].tolist()])
-        self.azim_pred.extend([radian2Degree(i) for i in outputs[:, 1].tolist()])
+        self.azim_pred.extend([radian2Degree(self.unwrapPrediction(i, "azim")) for i in outputs[:, 1].tolist()])
         self.azim_target.extend([radian2Degree(i) for i in labels[:, 1].tolist()])
 
         # for i in range(outputs.shape[0]):
@@ -39,7 +39,23 @@ class SourcePrediction:
         #     self.elev_target.append(labels[i, 0].item())
         #     self.azim_pred.append(outputs[i, 1].item())
         #     self.azim_target.append(labels[i, 1].item())
-
+    
+    def unwrapPrediction(self, val, type_input: str):
+        if type_input.lower() == "azim":
+            while val > 2*pi:
+                val -= 2*pi
+            while val < 0:
+                val += 2*pi
+        elif type_input.lower() == "elev":
+            while val > 2*pi:
+                val -= 2*pi
+            while val < 0:
+                val += 2*pi
+            if pi/2 < val < pi*3/2:
+                val = pi - val
+            elif pi*3/2 < val < pi*2:
+                val -= 2*pi
+        return val
 
 class VisualisePrediction:
     """
@@ -73,6 +89,7 @@ class VisualisePrediction:
             plt.xlabel("Ground truth")
             plt.ylabel("Prediction")
             plt.title(f"Elevation of sound source {i}")
+            plt.grid()
             plt.show()
 
             x = np.linspace(0, 345, 100)
@@ -85,6 +102,7 @@ class VisualisePrediction:
             plt.xlabel("Ground truth")
             plt.ylabel("Prediction")
             plt.title(f"Azimuth of sound source {i}")
+            plt.grid()
             plt.show()
 
             plt.figure()
@@ -95,6 +113,7 @@ class VisualisePrediction:
             plt.xlabel("Elevation")
             plt.ylabel("Azmiuth")
             plt.title(f"Prediction and target of sound source {i}")
+            plt.grid()
             plt.show()
 
     def plotRegression(self, pred_list, target_list):
@@ -173,8 +192,12 @@ if __name__ == "__main__":
     data_dir = args.dataDir
     model_dir = args.modelDir
     # path = args.hrirDir + "/IRC*"
-    path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+
+    load_hrir = LoadHRIR(path="C:/Users/mynam/Desktop/SSSL-desktop/HRTF/IRC*")
+    hrirSet, locLabel, fs_HRIR = load_hrir(2)
+    
+    # path = "./HRTF/IRC*"
+    # hrirSet, locLabel, fs_HRIR = loadHRIR(path)
     
     # save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
     """create a tensor that stores all testing examples"""
@@ -195,11 +218,6 @@ if __name__ == "__main__":
         numEnc=args.numEnc
         # numFC=args.numFC,
     )
-    # model, val_optim = loadCheckpoint(
-    #     model=model, optimizer=None, scheduler=None,
-    #     loadPath=model_dir,
-    #     task=task, phase="test", whichBest="bestValLoss"
-    # )
 
     if isHPC:
         if torch.cuda.device_count() > 1:
@@ -207,16 +225,22 @@ if __name__ == "__main__":
     model = nn.DataParallel(model)
     model = model.to(device)
 
-    checkpoint = torch.load(model_dir+"param_bestValLoss.pth.tar")
-    model.load_state_dict(checkpoint['model'], strict=True)
+    model, val_optim = loadCheckpoint(
+        model=model, optimizer=None, scheduler=None,
+        loadPath=model_dir,
+        task=task, phase="test", whichBest="bestValLoss"
+    )
+
+    # checkpoint = torch.load(model_dir+"param_bestValLoss.pth.tar")
+    # model.load_state_dict(checkpoint['model'], strict=True)
 
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device)
 
     """mix sound sources"""
     # loc_idx_1 = 0
     # loc_idx_2 = 0
-    src_1_path = glob(os.path.join("./audio_train/speech_male/*"))
-    src_2_path = glob(os.path.join("./audio_train/speech_female/*"))
+    src_1_path = glob(os.path.join("./audio_test/speech_female/*"))
+    src_2_path = glob(os.path.join("./audio_test/speech_male/*"))
     src_1 = AudioSignal(path=src_1_path[0], slice_duration=1)
     binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src_1.fs_audio)
     binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method="standardise")
@@ -257,7 +281,7 @@ if __name__ == "__main__":
                             "Output shape: ", outputs.shape, "\n",
                             "Outputs: ", outputs[:5]
                         )
-                    print(f"RMS angle error of two sources (over one batch): {torch.mean(radian2Degree(cost_func(outputs, labels))).item():.2f}")
+                    print(f"RMS angle error of two sources (over one batch): {cost_func(outputs, labels).shape}, {torch.mean(radian2Degree(cost_func(outputs, labels))).item():.2f}")
                     vis_pred(outputs, labels)
                     test_loss = cost_func(outputs, labels)
                     test_sum_loss += test_loss.item()
@@ -265,4 +289,4 @@ if __name__ == "__main__":
                 print('Test Loss: %.04f | Test Acc: %.04f '
                     % (test_loss, test_acc))
             
-        vis_pred.report()
+    vis_pred.report()

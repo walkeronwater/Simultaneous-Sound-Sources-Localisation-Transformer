@@ -21,30 +21,27 @@ from numba.experimental import jitclass
 def loadHRIR(path):
     names = []
     names += glob(path)
-    print(names[0])
 
     splitnames = [os.path.split(name) for name in names]
-    print(len(splitnames))
 
     p = re.compile('IRC_\d{4,4}')
-    print(p)
 
     subjects = [int(name[4:8]) for base, name in splitnames 
                             if not (p.match(name[-8:]) is None)]
-    print(subjects)
 
     k = 0
     subject = subjects[k]
+    print(subjects)
 
     for k in range(len(names)):
         subject = subjects[k]
         # filename = os.path.join(names[k], 'IRC_' + str(subject))
         filename = os.path.join(names[k], 'COMPENSATED/MAT/HRIR/IRC_' + str(subject) + '_C_HRIR.mat')
-    #     print(filename)
+    print(filename)
 
     m = loadmat(filename, struct_as_record=True)
-    print(m.keys())
-    print(m['l_eq_hrir_S'].dtype)
+    # print(m.keys())
+    # print(m['l_eq_hrir_S'].dtype)
 
     l, r = m['l_eq_hrir_S'], m['r_eq_hrir_S']
     hrirSet_l = l['content_m'][0][0]
@@ -61,9 +58,56 @@ def loadHRIR(path):
     hrirSet = np.vstack((np.reshape(hrirSet_l, (1,) + hrirSet_l.shape),
                             np.reshape(hrirSet_r, (1,) + hrirSet_r.shape)))
     hrirSet = np.transpose(hrirSet, (1,0,2))
-    print("hrirSet shape: ", hrirSet.shape)
     
     return hrirSet, locLabel, fs_HRIR
+
+class LoadHRIR:
+    def __init__(self, path):
+        """
+        Args:
+            path (str): the HRIR directory that ends with IRC*
+        """
+
+        self.names = []
+        self.names += glob(path)
+        self.num_subject = len(self.names)
+        splitnames = [os.path.split(name) for name in self.names]
+
+        p = re.compile('IRC_\d{4,4}')
+
+        self.subjects = [int(name[4:8]) for base, name in splitnames 
+                                if not (p.match(name[-8:]) is None)]
+
+    def __call__(self, idx):
+        """
+        Args:
+            idx (int): the index of the subject
+        """
+        assert(
+            0 <= idx < self.num_subject
+        ), f"Invalid subject index. Available indexes: {0, self.num_subject}"
+
+        subject = self.subjects[idx]
+        filename = os.path.join(self.names[idx], 'COMPENSATED/MAT/HRIR/IRC_' + str(subject) + '_C_HRIR.mat')
+        m = loadmat(filename, struct_as_record=True)
+
+        l, r = m['l_eq_hrir_S'], m['r_eq_hrir_S']
+        hrirSet_l = l['content_m'][0][0]
+        hrirSet_r = r['content_m'][0][0]
+        elev = l['elev_v'][0][0]
+        azim = l['azim_v'][0][0]
+        fs_HRIR = m['l_eq_hrir_S']['sampling_hz'][0][0][0][0]
+
+        locLabel = np.hstack((elev, azim)) 
+        # print("locLabel shape: ", locLabel.shape, " (order: elev, azim)") # locLabel shape: (187, 2)
+        # print(locLabel[0:5])
+
+        # 0: left-ear 1: right-ear
+        hrirSet = np.vstack((np.reshape(hrirSet_l, (1,) + hrirSet_l.shape),
+                                np.reshape(hrirSet_r, (1,) + hrirSet_r.shape)))
+        hrirSet = np.transpose(hrirSet, (1,0,2))
+
+        return hrirSet, locLabel, fs_HRIR
 
 class LocRegion:
     def __init__(self, locLabel):
@@ -102,5 +146,11 @@ class LocRegion:
 
 
 if __name__ == "__main__":
-    path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+    # path = "C:/Users/mynam/Desktop/SSSL-desktop/HRTF/IRC*"
+    # # path = "./HRTF/IRC*"
+    # hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+    # print(f"{hrirSet.shape}")
+
+    load_hrir = LoadHRIR(path="C:/Users/mynam/Desktop/SSSL-desktop/HRTF/IRC*")
+    hrirSet, locLabel, fs_HRIR = load_hrir(51)
+    print(f"{hrirSet.shape}")
