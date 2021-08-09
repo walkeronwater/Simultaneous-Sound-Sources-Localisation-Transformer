@@ -191,7 +191,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing phase')
     parser.add_argument('dataDir', type=str, help='Directory of saved cues')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
-    parser.add_argument('whichModel', type=str, help='whichModel?')
+    parser.add_argument('whichModel', type=str, help='Which model')
+    parser.add_argument('whichDec', type=str, help='Which decoder')
+    parser.add_argument('src1_dir', type=str, help='src1_dir?')
+    parser.add_argument('src2_dir', type=str, help='src2_dir?')
+
     parser.add_argument('--hrirDir', default="./HRTF/", type=str, help='Directory of HRIR files')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
@@ -203,7 +207,7 @@ if __name__ == "__main__":
     Ncues = 4
     Nsound = 2
     task = "allRegression"
-    whichDec = args.whichModel
+    whichDec = args.whichDec
     isHPC = True if args.isHPC.lower()[0] == "t" else False
     isDebug = True if args.isDebug.lower()[0] == "t" else False
     num_workers = 0
@@ -260,8 +264,12 @@ if __name__ == "__main__":
     """mix sound sources"""
     loc_idx_1 = 0
     loc_idx_2 = 0
-    src_1_path = glob(os.path.join("./audio_test/speech_male/*"))
-    src_2_path = glob(os.path.join("./audio_test/speech_female/*"))
+    # src_1_path = glob(os.path.join("./audio_test/speech_male/*"))
+    # src_2_path = glob(os.path.join("./audio_test/speech_female/*"))
+    src_1_path = glob(os.path.join(args.src1_dir + "/*"))
+    src_2_path = glob(os.path.join(args.src2_dir + "/*"))
+
+    
     src_1 = AudioSignal(path=src_1_path[0], slice_duration=1)
     binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src_1.fs_audio)
     binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method="standardise")
@@ -270,8 +278,8 @@ if __name__ == "__main__":
 
     loc_left = loc_region.high_left + loc_region.low_left
     loc_right = loc_region.high_right + loc_region.low_right
-    for loc_idx_1 in range(0, len(loc_left), 31):
-        for loc_idx_2 in range(0, len(loc_right), 31):
+    for loc_idx_1 in range(0, len(loc_left), 1):
+        for loc_idx_2 in range(0, len(loc_right), 1):
             print(f"Test set created for location pair: {loc_left[loc_idx_1]}, {loc_right[loc_idx_2]}")
             createTestSet(loc_left[loc_idx_1], loc_right[loc_idx_2])
 
