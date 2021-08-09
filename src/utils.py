@@ -88,7 +88,7 @@ class AudioSignal:
         """
         assert(
             0 <= idx < len(self.slice_list)
-        ), "Invalid slice index"
+        ), print(f"Invalid slice index, valid range: {0, len(self.slice_list)}")
         
         return self.sig[self.slice_list[idx]]
 
@@ -108,6 +108,11 @@ class AudioSignal:
             if 10*np.log10(np.mean(np.power(sliced, 2))) > threshold:
                 slice_list.append(range(slice_len*i, slice_len*(i+1)))
         return slice_list
+
+    def apply_gain(self, sliced_sig, target_power):
+        mean_power = 10*np.log10(np.mean(np.power(sliced_sig, 2)))
+        sliced_sig *= np.power(10, (target_power - self.mean_power)/20)
+        return sliced_sig
 
 class BinauralSignal:
     def __init__(self, hrir, fs_hrir, fs_audio, val_SNR=100, noise_type="Gaussian"):

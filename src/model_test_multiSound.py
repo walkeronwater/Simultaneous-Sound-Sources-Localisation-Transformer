@@ -193,7 +193,7 @@ def createTestSet(loc_idx_1, loc_idx_2):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing phase')
-    parser.add_argument('dataDir', type=str, help='Directory of saved cues')
+    parser.add_argument('dataDir', type=str, help='Directory of audio files')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
     parser.add_argument('whichModel', type=str, help='Which model')
     parser.add_argument('whichDec', type=str, help='Which decoder')
@@ -205,6 +205,7 @@ if __name__ == "__main__":
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     args = parser.parse_args()
+    
     """define Nfreq, Ntime, Ncues"""
     Nfreq = 512
     Ntime = 72
@@ -280,10 +281,13 @@ if __name__ == "__main__":
     loc_region = LocRegion(locLabel=locLabel)
     loc_left = loc_region.high_left + loc_region.low_left
     loc_right = loc_region.high_right + loc_region.low_right
-    for loc_idx_1 in range(0, len(loc_left), 1):
+
+    # for loc_idx_1 in range(0, len(loc_left), 1):
+    for loc_idx_2 in range(0, len(loc_right), 1):
         vis_pred = VisualisePrediction(Nsound=Nsound)
 
-        for loc_idx_2 in range(0, len(loc_right), 1):
+        # for loc_idx_2 in range(0, len(loc_right), 1):
+        for loc_idx_1 in range(0, len(loc_left), 1):
             # print(f"Test set created for location pair: {loc_left[loc_idx_1]}, {loc_right[loc_idx_2]}")
             createTestSet(loc_left[loc_idx_1], loc_right[loc_idx_2])
 

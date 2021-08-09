@@ -139,18 +139,26 @@ def createTestSet(loc_idx, val_SNR):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Testing phase')
+    parser.add_argument('dataDir', type=str, help='Directory of audio files')
+    parser.add_argument('audioDir', type=str, help='Directory of audio files')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
     parser.add_argument('whichModel', type=str, help='whichModel?')
+    parser.add_argument('whichDec', type=str, help='Which decoder')
+    
+    parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     args = parser.parse_args()
+
     """define Nfreq, Ntime, Ncues"""
     Nfreq = 512
     Ntime = 72
     Ncues = 4
     Nsound = 1
     task = "allRegression"
-    whichDec = args.whichModel
+    whichDec = args.whichDec
+    audio_dir = args.audioDir
+    model_dir = args.modelDir
     isHPC = True if args.isHPC.lower()[0] == "t" else False
     isDebug = True if args.isDebug.lower()[0] == "t" else False
     num_workers = 0
@@ -180,24 +188,27 @@ if __name__ == "__main__":
         whichEnc="diy",
         whichDec=whichDec,
         device=device,
-        # numEnc=args.numEnc,
+        numEnc=args.numEnc
         # numFC=args.numFC,
-    )
-    model, val_optim = loadCheckpoint(
-        model=model, optimizer=None, scheduler=None,
-        loadPath=model_dir,
-        task=task, phase="test", whichBest="bestValLoss"
     )
     if isHPC:
         if torch.cuda.device_count() > 1:
             print("Let's use", torch.cuda.device_count(), "GPUs!")
-        model = nn.DataParallel(model)
+    model = nn.DataParallel(model)
     model = model.to(device)
+    # model, val_optim = loadCheckpoint(
+    #     model=model, optimizer=None, scheduler=None,
+    #     loadPath=model_dir,
+    #     task=task, phase="test", whichBest="bestValLoss"
+    # )
+
+    checkpoint = torch.load(model_dir+"param_bestValLoss.pth.tar")
+    model.load_state_dict(checkpoint['model'], strict=True)
 
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device)
 
-    """mix sound sources"""
-    src_path = glob(os.path.join("./audio_train/speech_male/*"))
+    """mix sound sources with noise"""
+    src_path = glob(os.path.join(audio_dir+"/*"))
     src = AudioSignal(path=src_path[0], slice_duration=1)
     binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src.fs_audio)
     binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method="standardise")

@@ -241,6 +241,7 @@ def createTrainingSet():
     hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
     src_1_path = glob(os.path.join(args.trainAudioDir+"/speech_male/*"))
     src_2_path = glob(os.path.join(args.trainAudioDir+"/speech_female/*"))
+    print(f"Total available number of audio files: {len(src_1_path)}, {len(src_2_path)}")
     
     src_1_count = 0
     src_2_count = 0
@@ -250,11 +251,8 @@ def createTrainingSet():
     for i in range(len(src_2_path)):
         src_2 = AudioSignal(path=src_2_path[i], slice_duration=1)
         src_2_count += len(src_2.slice_list)
+    print(f"Total available number of audio slices: {src_1_count}, {src_2_count}")
     
-    path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
-    print(hrirSet.shape)
-
     # audio indexes
     
     audio_index_1 = 0
@@ -270,25 +268,48 @@ def createTrainingSet():
     slice_idx_1 = 0
     slice_idx_2 = 0
     count = 0
+    # start with male
+    flag = [1, 0]
     while True:
         print(f"Current audio (src 1): {audio_index_1}, and (src 2): {audio_index_2}")
         # print(f"Number of slices (audio 1): {len(src_1.slice_list)}, and (audio 2): {len(src_2.slice_list)}")
+        # print(f"Source indexes: {slice_idx_1, slice_idx_2}")
+            
+        if flag == [1,0]:
+            src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
+            src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
+            flag = [0,1]
+        elif flag == [0,1]:
+            src_1 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
+            src_2 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
+            flag = [1,1]
+        elif flag == [1,1]:
+            src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
+            audio_index_1 += 1
+            src_2 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
+            flag = [0,0]
+        elif flag == [0,0]:
+            src_1 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
+            audio_index_2 += 1
+            src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
+            flag = [1,0]
+            
         if slice_idx_1 >= len(src_1.slice_list):
             slice_idx_1 = 0
             audio_index_1 += 1
-            src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
             
         if slice_idx_2 >= len(src_2.slice_list):
             slice_idx_2 = 0
             audio_index_2 += 1
-            src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
-        
+            # src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
 
         sig_sliced_1 = src_1(idx=slice_idx_1)
+        sig_sliced_1 = src_1.apply_gain(sig_sliced_1, target_power=-20)
         sig_sliced_2 = src_2(idx=slice_idx_2)
+        sig_sliced_2 = src_2.apply_gain(sig_sliced_2, target_power=-20)
 
-        for loc_idx_1 in loc_region.high_left + loc_region.low_left:
-            for loc_idx_2 in loc_region.high_right + loc_region.low_right:
+        for loc_idx_1 in loc_region.high_left + loc_region.low_left + loc_region.azim_0 + loc_region.azim_180:
+            for loc_idx_2 in loc_region.high_right + loc_region.low_right + loc_region.azim_0 + loc_region.azim_180:
                 sigL_1, sigR_1 = binaural_sig(sig_sliced_1, loc_idx_1)
                 sigL_2, sigR_2 = binaural_sig(sig_sliced_2, loc_idx_2)
                 magL, phaseL, magR, phaseR = binaural_cues(sigL_1+sigL_2, sigR_1+sigR_2)
@@ -303,7 +324,7 @@ def createTrainingSet():
         slice_idx_2 += 1
         count += 1
         # print(count)
-        if count >= src_1_count or count >= src_2_count:
+        if count >= src_1_count or count >= src_2_count or audio_index_1 >= len(src_1_path)-1 or audio_index_2 >= len(src_2_path)-1:
             return
 
 """
