@@ -91,6 +91,9 @@ class VisualisePrediction:
             
             plt.figure()
             plt.plot(range(187), np.max(self.sound_list[i].loc_loss, axis=self.Nsound -1-i))
+            plt.xlabel("Location")
+            plt.ylabel("Max angle error in degree")
+            plt.title(f"Elevation of sound source {i}")
             plt.show()
 
             x = np.linspace(-45, 90, 100)
@@ -243,14 +246,14 @@ if __name__ == "__main__":
     model = nn.DataParallel(model)
     model = model.to(device)
 
-    model, val_optim = loadCheckpoint(
-        model=model, optimizer=None, scheduler=None,
-        loadPath=model_dir,
-        task=task, phase="test", whichBest="bestValLoss"
-    )
+    # model, val_optim = loadCheckpoint(
+    #     model=model, optimizer=None, scheduler=None,
+    #     loadPath=model_dir,
+    #     task=task, phase="test", whichBest="bestValLoss"
+    # )
 
-    # checkpoint = torch.load(model_dir+"param_bestValLoss.pth.tar")
-    # model.load_state_dict(checkpoint['model'], strict=True)
+    checkpoint = torch.load(model_dir+"param_bestValLoss.pth.tar")
+    model.load_state_dict(checkpoint['model'], strict=True)
 
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device)
 
