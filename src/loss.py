@@ -35,13 +35,13 @@ class CostFunc:
                 labels_hot = labels_hot.scatter_(1, labels.to(torch.int64), 1.).float()
                 return self.cls_criterion(outputs.float(), labels_hot)
 
-    def calDoALoss(self, output, target):
+    def calDoALoss(self, outputs, labels):
         """
-        target should be (elev, azim)
+        labels should be (elev, azim)
         sine term: azimuth
         """
-        sine_term = torch.sin(output[:, 0]) * torch.sin(target[:, 0])
-        cosine_term = torch.cos(output[:, 0]) * torch.cos(target[:, 0]) * torch.cos(target[:, 1] - output[:, 1])
+        sine_term = torch.sin(outputs[:, 0]) * torch.sin(labels[:, 0])
+        cosine_term = torch.cos(outputs[:, 0]) * torch.cos(labels[:, 0]) * torch.cos(labels[:, 1] - outputs[:, 1])
         loss = torch.acos(F.hardtanh(sine_term + cosine_term, min_val=-1, max_val=1))
         return torch.absolute(loss)
 
@@ -75,16 +75,18 @@ if __name__ == "__main__":
         device="cpu"
     )
 
-    outputs_reg = torch.tensor(
-        [
-            [0, 0, 0, 0]
-        ]
-    )
-    labels_reg = torch.tensor(
-        [
-            [1.5, 3.14, 0, 0]
-        ]
-    )
+    outputs_reg = torch.tensor([
+        [ 0.1835,  0.6184,  0.2620, -2.8884],
+        [-0.7827,  2.4502,  0.2621, -2.8868],
+        [-0.0040,  0.2067, -0.2562, -2.8940],
+        [ 0.2672,  0.2594,  0.6544, -1.9791],
+        [ 0.2611,  0.2640,  0.2634, -2.8271]])
+    labels_reg = torch.tensor([
+        [0.2618, 0.2618, 0.2618, 3.4034],
+        [0.2618, 0.2618, 0.2618, 3.4034],
+        [0.2618, 0.2618, 0.2618, 3.4034],
+        [0.2618, 0.2618, 0.2618, 3.4034],
+        [0.2618, 0.2618, 0.2618, 3.4034]])
 
     outputs_cls = torch.rand((2,187))
     labels_cls = torch.tensor(
@@ -95,4 +97,7 @@ if __name__ == "__main__":
     )
 
 
-    print(cost_func(outputs_reg, labels_reg))
+    print(DoALoss(outputs_reg[:,0:2], labels_reg[:,0:2]))
+    print(radian2Degree(torch.mean(DoALoss(outputs_reg[:,0:2], labels_reg[:,0:2]))))
+    print(DoALoss(outputs_reg[:,2:4], labels_reg[:,2:4]))
+    print(radian2Degree(torch.mean(DoALoss(outputs_reg[:,2:4], labels_reg[:,2:4]))))

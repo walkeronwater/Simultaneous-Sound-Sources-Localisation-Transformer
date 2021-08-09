@@ -21,18 +21,23 @@ class SourcePrediction:
         self.elev_target = []
         self.azim_pred = []
         self.azim_target = []
+        self.loc_loss = np.empty((187, 187))
             
-    def __call__(self, outputs, labels):
+    def __call__(self, outputs, labels, src_loc, src_loss):
         """
         Args:
             outputs: shape of (batch size, 2)
             labels: shape of (batch size, 2)
+            src_loc: the location label of a sound source
+            src_loss: the loss corresponding to that location
         """
         
         self.elev_pred.extend([radian2Degree(self.unwrapPrediction(i, "elev")) for i in outputs[:, 0].tolist()])
         self.elev_target.extend([radian2Degree(i) for i in labels[:, 0].tolist()])
         self.azim_pred.extend([radian2Degree(self.unwrapPrediction(i, "azim")) for i in outputs[:, 1].tolist()])
         self.azim_target.extend([radian2Degree(i) for i in labels[:, 1].tolist()])
+        print(f"src_loss: {src_loss}")
+        self.loc_loss[src_loc[0], src_loc[1]] = src_loss
 
         # for i in range(outputs.shape[0]):
         #     self.elev_pred.append(outputs[i, 0].item())
@@ -66,19 +71,28 @@ class VisualisePrediction:
         for i in range(Nsound):
             self.sound_list.append(SourcePrediction())
         self.Nsound = Nsound
+        
 
-    def __call__(self, outputs, labels):
+    def __call__(self, outputs, labels, src_loc, src_loss):
         """
         Args:
             outputs: shape of (batch size, 2*Nsound)
             labels: shape of (batch size, 2*Nsound)
+            loc_pair (list): location index of each sound source
+            src_loss (list): loss of each sound source
         """
         for i in range(self.Nsound):
-            self.sound_list[i](outputs[:,2*i:2*(i+1)], labels[:,2*i:2*(i+1)])
+            self.sound_list[i](outputs[:,2*i:2*(i+1)], labels[:,2*i:2*(i+1)], src_loc, src_loss[i])
 
     def report(self):
         # print(f"{len(self.elev_pred)}, {len(self.elev_target)}, {len(self.azim_pred)}, {len(self.azim_pred)}")
         for i in range(self.Nsound):
+            print(self.sound_list[i].loc_loss)
+            
+            plt.figure()
+            plt.plot(range(187), np.mean(self.sound_list[i].loc_loss, axis=self.Nsound -1 - i))
+            plt.show()
+
             x = np.linspace(-45, 90, 100)
             y = x
             plt.figure()
@@ -97,8 +111,8 @@ class VisualisePrediction:
             plt.figure()
             plt.scatter(self.sound_list[i].azim_target, self.sound_list[i].azim_pred, color='blue')
             plt.plot(x, y,'-r')
-            plt.xticks(range(0, 360, 30))
-            plt.yticks(range(0, 360, 30))
+            plt.xticks(range(0, 360, 15))
+            plt.yticks(range(0, 360, 15))
             plt.xlabel("Ground truth")
             plt.ylabel("Prediction")
             plt.title(f"Azimuth of sound source {i}")
@@ -108,7 +122,7 @@ class VisualisePrediction:
             plt.figure()
             plt.scatter(self.sound_list[i].azim_target, self.sound_list[i].elev_target, color='red')
             plt.scatter(self.sound_list[i].azim_pred, self.sound_list[i].elev_pred, color='blue')
-            plt.xticks(range(0, 360, 30))
+            plt.xticks(range(0, 360, 15))
             plt.yticks(range(-45, 91, 15))
             plt.xlabel("Elevation")
             plt.ylabel("Azmiuth")
@@ -119,9 +133,12 @@ class VisualisePrediction:
     def plotRegression(self, pred_list, target_list):
         pass
 
+
+
+
 def createTestSet(loc_idx_1, loc_idx_2):
-    audio_index_1 = 0
-    audio_index_2 = 0
+    audio_index_1 = 15
+    audio_index_2 = 5
     src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
     src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
     # binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src_1.fs_audio)
@@ -172,6 +189,7 @@ if __name__ == "__main__":
     parser.add_argument('dataDir', type=str, help='Directory of saved cues')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
     parser.add_argument('whichModel', type=str, help='whichModel?')
+    parser.add_argument('--hrirDir', default="./HRTF/", type=str, help='Directory of HRIR files')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
@@ -193,11 +211,11 @@ if __name__ == "__main__":
     model_dir = args.modelDir
     # path = args.hrirDir + "/IRC*"
 
-    load_hrir = LoadHRIR(path="C:/Users/mynam/Desktop/SSSL-desktop/HRTF/IRC*")
-    hrirSet, locLabel, fs_HRIR = load_hrir(2)
+    # load_hrir = LoadHRIR(path="C:/Users/mynam/Desktop/SSSL-desktop/HRTF/IRC*")
+    # hrirSet, locLabel, fs_HRIR = load_hrir(2)
     
-    # path = "./HRTF/IRC*"
-    # hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+    path = args.hrirDir + "/IRC*"
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
     
     # save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
     """create a tensor that stores all testing examples"""
@@ -237,19 +255,22 @@ if __name__ == "__main__":
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device)
 
     """mix sound sources"""
-    # loc_idx_1 = 0
-    # loc_idx_2 = 0
-    src_1_path = glob(os.path.join("./audio_test/speech_female/*"))
-    src_2_path = glob(os.path.join("./audio_test/speech_male/*"))
+    loc_idx_1 = 0
+    loc_idx_2 = 0
+    src_1_path = glob(os.path.join("./audio_test/speech_male/*"))
+    src_2_path = glob(os.path.join("./audio_test/speech_female/*"))
     src_1 = AudioSignal(path=src_1_path[0], slice_duration=1)
     binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src_1.fs_audio)
     binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method="standardise")
     loc_region = LocRegion(locLabel=locLabel)
     vis_pred = VisualisePrediction(Nsound=Nsound)
-    for loc_idx_1 in loc_region.high_left + loc_region.low_left:
-        for loc_idx_2 in loc_region.high_right + loc_region.low_right:
-            print(f"Test set created for location pair: {loc_idx_1}, {loc_idx_2}")
-            createTestSet(loc_idx_1, loc_idx_2)
+
+    loc_left = loc_region.high_left + loc_region.low_left
+    loc_right = loc_region.high_right + loc_region.low_right
+    for loc_idx_1 in range(0, len(loc_left), 31):
+        for loc_idx_2 in range(0, len(loc_right), 31):
+            print(f"Test set created for location pair: {loc_left[loc_idx_1]}, {loc_right[loc_idx_2]}")
+            createTestSet(loc_left[loc_idx_1], loc_right[loc_idx_2])
 
             dataset = TensorDataset(test_cues, test_label)
 
@@ -277,16 +298,29 @@ if __name__ == "__main__":
                         print(
                             "Input shape: ", inputs.shape, "\n",
                             "label shape: ", labels.shape, "\n",
-                            "labels: ", labels[:5], "\n",
+                            "labels: ", labels[:], "\n",
                             "Output shape: ", outputs.shape, "\n",
-                            "Outputs: ", outputs[:5]
+                            "Outputs: ", outputs[:]
                         )
-                    print(f"RMS angle error of two sources (over one batch): {cost_func(outputs, labels).shape}, {torch.mean(radian2Degree(cost_func(outputs, labels))).item():.2f}")
-                    vis_pred(outputs, labels)
+                        print("RMS angle error of two sources (over one batch):", "\n",
+                            "Loss of source 1: ", radian2Degree(torch.mean(cost_func.calDoALoss(outputs[:, 0:2], labels[:, 0:2]))).item(), "\n",
+                            "Loss of source 2: ", radian2Degree(torch.mean(cost_func.calDoALoss(outputs[:, 2:4], labels[:, 2:4]))).item(), "\n",
+                            "RMS angle difference of both sources: ", radian2Degree(torch.mean(cost_func(outputs, labels))).item())
+                        raise SystemExit
+
                     test_loss = cost_func(outputs, labels)
+                    vis_pred(
+                        outputs, labels,
+                        [loc_left[loc_idx_1], loc_right[loc_idx_2]],
+                        [
+                            torch.mean(radian2Degree(cost_func.calDoALoss(outputs[:, 0:2], labels[:, 0:2]))).item(),
+                            torch.mean(radian2Degree(cost_func.calDoALoss(outputs[:, 2:4], labels[:, 2:4]))).item()
+                        ]
+                    )
                     test_sum_loss += test_loss.item()
                 test_loss = test_sum_loss / (i + 1)
-                print('Test Loss: %.04f | Test Acc: %.04f '
+                test_acc = radian2Degree(test_loss)
+                print('Location : Test Loss: %.04f | RMS angle error (degree): %.04f '
                     % (test_loss, test_acc))
             
-    vis_pred.report()
+        vis_pred.report()
