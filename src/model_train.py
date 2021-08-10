@@ -148,7 +148,7 @@ if __name__ == "__main__":
         numEnc=args.numEnc,
         # numFC=args.numFC,
     )
-    if args.isHPC:
+    if flag_var['isHPC']:
         if torch.cuda.device_count() > 1:
             print("Let's use", torch.cuda.device_count(), "GPUs!")
         model = nn.DataParallel(model)
