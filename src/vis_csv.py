@@ -9,7 +9,7 @@ if __name__ == "__main__":
     print("Path to the csv file: ", args.csvPath)
 
     if args.csvPath[-4:] != ".csv":
-        args.csvPath += "/.csv"
+        args.csvPath += ".csv"
         
     csvF = pd.read_csv(args.csvPath, header=None)
     print(csvF)
