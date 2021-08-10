@@ -428,9 +428,8 @@ if __name__ == "__main__":
         with torch.no_grad():
             for i, (inputs, labels) in enumerate(test_loader, 0):
                 inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
+
                 outputs = model(inputs)
-                print("outputs:", outputs)
-                print("labels:", labels)
 
                 if args.task in ["elevRegression","azimRegression","allRegression"]:
                     loss = torch.sqrt(torch.mean(torch.square(DoALoss(outputs, labels[:, 1:3]))))
@@ -461,6 +460,8 @@ if __name__ == "__main__":
             test_acc = round(100.0 * test_correct / test_total, 2)
             print('For SNR: %d Test Loss: %.04f | Test Acc: %.4f%% '
                 % (valSNR, test_loss, test_acc))
+        print("outputs:", outputs[0:10])
+        print("labels:", labels[0:10])
                 
         out = confusion.report()
         UD_confusion.append(out[0])

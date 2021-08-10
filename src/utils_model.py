@@ -117,12 +117,13 @@ class MyDataset(torch.utils.data.Dataset):
 
 
 class CuesDataset(torch.utils.data.Dataset):
-    def __init__(self, filePath, task, Nsound, locLabel, isDebug=False):
+    def __init__(self, filePath, task, Nsound, locLabel, coordinates="spherical", isDebug=False):
         super(CuesDataset, self).__init__()
         self.filePath = filePath
         self.task = task
         # self.Nsound = Nsound
         self.annotation = pd.read_csv(filePath+"dataLabels.csv", header=None)
+        self.coordinates = coordinates
         self.isDebug = isDebug
         self.locLabel = locLabel
         
@@ -141,11 +142,19 @@ class CuesDataset(torch.utils.data.Dataset):
 
         from_csv = self.annotation.iloc[pathIndex].values
         
-        labels = torch.empty((2*(from_csv.shape[0]-1)))
+        if self.coordinates.lower() == "spherical":
+            labels = torch.empty((2*(from_csv.shape[0]-1)))
         
-        # read starting from the second element in the pathIndex row
-        for i in range(1, from_csv.shape[0]):
-            labels[2*(i-1):2*(i-1)+2] = degree2Radian(torch.from_numpy(self.locLabel[from_csv[i]]))
+            # read starting from the second element in the pathIndex row
+            for i in range(1, from_csv.shape[0]):
+                labels[2*(i-1):2*(i-1)+2] = degree2Radian(torch.from_numpy(self.locLabel[from_csv[i]]))
+
+        elif self.coordinates.lower() == "cartesian":
+            labels = torch.empty((3*(from_csv.shape[0]-1)))
+        
+            # read starting from the second element in the pathIndex row
+            for i in range(1, from_csv.shape[0]):
+                labels[3*(i-1):3*(i-1)+3] = torch.from_numpy(spherical2Cartesian(self.locLabel[from_csv[i]]))
 
         if self.isDebug:
             print("pathIndex: ", pathIndex)
@@ -326,10 +335,11 @@ if __name__ == "__main__":
 
 
     train_dataset = CuesDataset(
-        filePath="./saved_0508_temp/train/",
+        filePath="./saved_0808_temp/train/",
         task="allclass",
         Nsound=2,
-        locLabel=locLabel
+        locLabel=locLabel,
+        coordinates="cartesian"
     )
 
     train_loader = MultiEpochsDataLoader(
@@ -350,8 +360,8 @@ if __name__ == "__main__":
     count=0
     for i, (inputs, labels) in enumerate(train_loader):
         count+=1
-
-    raise SystemExit
+        print(labels)
+        raise SystemExit
 
 
     print(labels.size(0))

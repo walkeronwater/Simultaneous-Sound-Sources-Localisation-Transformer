@@ -67,6 +67,7 @@ if __name__ == "__main__":
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--isContinue', default="True", type=str, help='Continue training?')
     parser.add_argument('--isSave', default="True", type=str, help='Save checkpoints?')
+    parser.add_argument('--coordinates', default="spherical", type=str, help='Spherical or Cartesian')
 
     args = parser.parse_args()
     print("Data directory: ", args.dataDir)
@@ -112,9 +113,9 @@ if __name__ == "__main__":
     _, locLabel, _ = loadHRIR(path)
 
     train_dataset = CuesDataset(dir_var["data"] + "/train/",
-                                args.task, args.Nsound, locLabel, isDebug=False)
+                                args.task, args.Nsound, locLabel, coordinates=args.coordinates, isDebug=False)
     valid_dataset = CuesDataset(dir_var["data"] + "/valid/",
-                                args.task, args.Nsound, locLabel, isDebug=False)
+                                args.task, args.Nsound, locLabel, coordinates=args.coordinates, isDebug=False)
     print(f"Dataset length: {train_dataset.__len__()}, {valid_dataset.__len__()}")
     
     isPersistent = True if args.numWorker > 0 else False

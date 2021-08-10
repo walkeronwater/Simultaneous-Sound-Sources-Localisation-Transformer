@@ -120,8 +120,7 @@ if __name__ == "__main__":
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--prepMethod', default="None", type=str, help='Preprocessing method')
-
-
+    
     args = parser.parse_args()
     if args.audioDir[-1] != "/":
         args.audioDir += "/"

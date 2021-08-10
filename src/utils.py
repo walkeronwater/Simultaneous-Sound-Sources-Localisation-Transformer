@@ -29,7 +29,7 @@ from skimage.restoration import unwrap_phase
 from load_data import *
 
 
-# [TODO] method to normalise a sequence which can be broadcasted to a sequence of sequence
+# method to normalise a sequence which can be broadcasted to a sequence of sequence
 # min-max/standardise/L2 norm for each tensor like an image
 class Preprocess:
     def __init__(self, prep_method: str):
@@ -169,7 +169,6 @@ class BinauralSignal:
             noise_power = np.power(10, (sig_power - self.val_SNR)/10)
             noise_sig = np.random.normal(0, np.sqrt(noise_power), seq.shape)
             return noise_sig
-
 
 class BinauralCues:
     def __init__(self, fs_audio, prep_method):
@@ -339,10 +338,8 @@ class VisualiseCues:
     #     self.showSpectrogram(data, figTitle=figTitle, isLog=False)
     #     self.showCues(data, figTitle=figTitle)
 
-    
 # [TODO] method to log IPD cues and spectral cues
 '''def cuesLog():'''
-
 
 class SaveCues:
     def __init__(self, savePath, locLabel):
@@ -395,38 +392,6 @@ class SaveCues:
         torch.save(cues, self.savePath+str(self.fileCount)+'.pt')
         self.fileCount += 1
 
-
-def concatCues(cuesList: list, cuesShape: tuple):
-    lastDim = len(cuesList)
-    cues = torch.zeros(cuesShape+(lastDim,), dtype=torch.float)
-
-    for i in range(lastDim):
-        cues[:,:,i] = torch.from_numpy(cuesList[i])
-
-    return cues
-
-def locIndex2Label(locLabel, locIndex, task):
-    if task.lower() == "elevclass":
-        # range of elevation: -45 to 90 degrees
-        labels = int(((locLabel[locIndex, 0]+45) % 150)/15)
-    elif task.lower()  == "azimclass":
-        # range of elevation: 0 to 345 degrees
-        labels = int((locLabel[locIndex, 1] % 360)/15)
-    elif task.lower()  == "allclass":
-        labels = int(locIndex)
-    elif task.lower()  == "elevregression":
-        labels = locLabel[locIndex, 0]/180.0*pi
-    elif task.lower()  == "azimregression":
-        labels = locLabel[locIndex, 1]/180.0*pi
-    elif task.lower()  == "allregression":
-        labels = torch.tensor(
-            [
-                locLabel[locIndex, 0]/180.0*pi,
-                locLabel[locIndex, 1]/180.0*pi
-            ], dtype=torch.float32
-        )
-    return labels
-
 def radian2Degree(val):
     return val/pi*180
 
@@ -438,6 +403,20 @@ def linear2dbfs(val, factor="amplitude"):
         return 20*np.log10(val)
     elif factor.lower == "power":
         return 10*np.log10(val**2)
+
+def spherical2Cartesian(val):
+    """
+    val (nd array): order (elev, azimuth)
+    """
+    elev = val[0]
+    azim = val[1]
+    elev = degree2Radian(elev)
+    azim = degree2Radian(azim)  
+    x = np.cos(azim) * np.cos(elev)
+    y = np.sin(azim) * np.cos(elev)
+    z = np.sin(elev)
+
+    return np.array([x,y,z])
 
 if __name__ == "__main__":
     # class CuesShape:
@@ -456,12 +435,15 @@ if __name__ == "__main__":
     #         self.Nloc = Nloc
     #         self.lenSliceInSec = lenSliceInSec
     #         self.valSNRList = valSNRList
+    
 
     path = "./HRTF/IRC*"
     hrirSet, locLabel, fs_HRIR = loadHRIR(path)
     print(hrirSet.shape)
-
-    
+    for i in range(187):
+        x,y,z = spherical2Cartesian(locLabel[i,0], locLabel[i,1])
+        print(locLabel[i],x,y,z)
+    raise SystemExit
     speech_male_path = glob(os.path.join("./audio_train/speech_male/*"))
     speech_female_path = glob(os.path.join("./audio_train/speech_female/*"))
 
