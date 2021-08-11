@@ -271,15 +271,19 @@ class DecoderSrcReg(nn.Module):
         self,
         enc_out_size,
         Nsound,
-        dropout
+        dropout,
+        coordinates = "spherical"
     ):
         super(DecoderSrcReg, self).__init__()
-
+        if coordinates.lower() == "spherical":
+            output_size = 2
+        elif coordinates.lower() == "cartesian":
+            output_size = 3
         self.FC_layers = nn.ModuleList(
             [
                 FCModules(
                     input_size=enc_out_size,
-                    output_size=2,
+                    output_size=output_size,
                     activation="relu",
                     dropout=dropout
                 )
@@ -316,7 +320,7 @@ class DecoderEAReg(nn.Module):
 
         self.FC_layers_azim = FCModules(
             input_size=enc_out_size,
-            output_size=2,
+            output_size=Nsound,
             activation="relu",
             dropout=dropout
         )
@@ -357,7 +361,8 @@ class TransformerModel(nn.Module):
         device="cpu",
         forward_expansion=4,
         dropout=0.1,
-        isDebug=False
+        isDebug=False,
+        coordinates="spherical"
     ):
         super(TransformerModel, self).__init__()
 
@@ -389,7 +394,8 @@ class TransformerModel(nn.Module):
             self.dec = DecoderSrcReg(
                 enc_out_size=Nfreq * Ntime * Ncues,
                 Nsound=Nsound,
-                dropout=dropout
+                dropout=dropout,
+                coordinates=coordinates
             )
         elif whichDec.lower() == "cls":
             self.dec = DecoderSrcCls(
@@ -416,7 +422,7 @@ if __name__ == "__main__":
     path = "./HRTF/IRC*"
     _, locLabel, _ = loadHRIR(path)
 
-    path = "./saved_0508_temp/"
+    path = "./saved_0808_temp/"
     csvF = pd.read_csv(path+"/train/dataLabels.csv", header=None)
 
 
@@ -450,7 +456,7 @@ if __name__ == "__main__":
         Ncues=Ncues,
         Nsound=Nsound,
         whichEnc="diy",
-        whichDec="cls",
+        whichDec="src",
         numEnc=3,
         device=device
     )
@@ -460,7 +466,7 @@ if __name__ == "__main__":
     outputs = model(inputs.to(device))
 
     print(f"inputs: {inputs.shape},\
-        outputs: {torch.max(outputs)}, \
+        max outputs: {torch.max(outputs)}, \
         labels: {labels.shape}")
 
-    summary(model, (Nfreq, Ntime, Ncues))
+    # summary(model, (Nfreq, Ntime, Ncues))
