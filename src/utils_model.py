@@ -455,7 +455,7 @@ class VisualisePrediction:
             if not path:
                 plt.show()
             else:
-                plt.savefig(f"{path}_loc_{loc_pair_name}_src_{src_idx}.png")
+                plt.savefig(f"{path}loc_{loc_pair_name}_src_{src_idx}.png")
 
     def connectPoints(self):
         pass
