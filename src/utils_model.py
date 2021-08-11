@@ -456,7 +456,8 @@ class VisualisePrediction:
                 plt.show()
             else:
                 plt.savefig(f"{path}fixed_src0_elev{elev}_azim{azim}_src_{src_idx}.png")
-
+            plt.close()
+            
     def connectPoints(self):
         pass
 
