@@ -449,7 +449,7 @@ class VisualisePrediction:
             plt.xlabel("Azimuth")
             plt.ylabel("Elevation")
 
-            elev, azim = fixed_src[0], fixed_src[0]
+            elev, azim = fixed_src[0], fixed_src[1]
             plt.title(f"Prediction and target of sound source {src_idx} when source 0 is fixed at elevation {elev} and azim {azim}")
             plt.grid()
             if not path:
