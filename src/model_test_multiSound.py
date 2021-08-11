@@ -156,6 +156,7 @@ if __name__ == "__main__":
 
     for loc_idx_1 in range(0, len(loc_1), 1):
         vis_pred = VisualisePrediction(Nsound=Nsound)
+        print(f"plotting: {loc_idx_1} and {loc_idx_2}")
 
         for loc_idx_2 in range(0, len(loc_2), 1):
             # print(f"Test set created for location pair: {loc_1[loc_idx_1]}, {loc_2[loc_idx_2]}")
