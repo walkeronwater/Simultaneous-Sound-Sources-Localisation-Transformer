@@ -11,11 +11,13 @@ class CostFunc:
         self,
         task,
         Nsound,
-        device
+        device,
+        coordinates="spherical"
     ):
         self.task = task
         self.Nsound = Nsound
         self.device = device
+        self.coordinates = coordinates
         if Nsound == 1 and ("class" in self.task.lower()):
             self.cls_criterion = nn.CrossEntropyLoss()
         elif Nsound == 2 and ("class" in self.task.lower()):
@@ -29,7 +31,10 @@ class CostFunc:
                 return self.cls_criterion(outputs, labels)
         else:
             if "regression" in self.task.lower():
-                return torch.sqrt(torch.mean(torch.square(self.calDoALoss(outputs[:, 0:2], labels[:, 0:2]) + self.calDoALoss(outputs[:, 2:4], labels[:, 2:4]))))
+                if self.coordinates.lower() == "spherical":
+                    return torch.sqrt(torch.mean(torch.square(self.calDoALoss(outputs[:, 0:2], labels[:, 0:2]) + self.calDoALoss(outputs[:, 2:4], labels[:, 2:4]))))
+                elif self.coordinates.lower() == "cartesian":
+                    return torch.sqrt(torch.mean(torch.square(self.calDoALossCartesian(outputs[:, 0:3], labels[:, 0:3]) + self.calDoALossCartesian(outputs[:, 3:6], labels[:, 3:6]))))
             elif "class" in self.task.lower():
                 labels_hot = torch.zeros(labels.size(0), 187).to(self.device)
                 labels_hot = labels_hot.scatter_(1, labels.to(torch.int64), 1.).float()
@@ -43,6 +48,15 @@ class CostFunc:
         sine_term = torch.sin(outputs[:, 0]) * torch.sin(labels[:, 0])
         cosine_term = torch.cos(outputs[:, 0]) * torch.cos(labels[:, 0]) * torch.cos(labels[:, 1] - outputs[:, 1])
         loss = torch.acos(F.hardtanh(sine_term + cosine_term, min_val=-1, max_val=1))
+        return torch.absolute(loss)
+
+    def calDoALossCartesian(self, outputs, labels):
+        """
+        labels should be (x, y, z)
+        """
+        dot_product = torch.sum(torch.mul(outputs, labels), dim=1)
+        cross_product = torch.cross(outputs, labels, dim=1)
+        loss = torch.atan(F.hardtanh(torch.norm(cross_product, dim=1)/dot_product, min_val=-1, max_val=1))
         return torch.absolute(loss)
 
 
@@ -72,21 +86,22 @@ if __name__ == "__main__":
     cost_func = CostFunc(
         task="allRegression",
         Nsound=2,
-        device="cpu"
+        device="cpu",
+        coordinates="cartesian"
     )
 
-    outputs_reg = torch.tensor([
-        [ 0.1835,  0.6184,  0.2620, -2.8884],
-        [-0.7827,  2.4502,  0.2621, -2.8868],
-        [-0.0040,  0.2067, -0.2562, -2.8940],
-        [ 0.2672,  0.2594,  0.6544, -1.9791],
-        [ 0.2611,  0.2640,  0.2634, -2.8271]])
-    labels_reg = torch.tensor([
-        [0.2618, 0.2618, 0.2618, 3.4034],
-        [0.2618, 0.2618, 0.2618, 3.4034],
-        [0.2618, 0.2618, 0.2618, 3.4034],
-        [0.2618, 0.2618, 0.2618, 3.4034],
-        [0.2618, 0.2618, 0.2618, 3.4034]])
+    outputs_reg = torch.tensor(
+        [
+            [ 0.1835,  0.6184,  0.2620, -2.8884, 2.4502,  0.2621,],
+            [-0.7827,  2.4502,  0.2621, -2.8868, 0.2594,  0.6544,]
+        ]
+    )
+    labels_reg = torch.tensor(
+        [
+            [0.2618, 0.2618, 0.2618, 0.2618, 0.2618, 3.4034],
+            [0.2618, 0.2618, 0.2618, 0.2618, 0.2618, 3.4034]
+        ]
+    )
 
     outputs_cls = torch.rand((2,187))
     labels_cls = torch.tensor(
@@ -96,8 +111,4 @@ if __name__ == "__main__":
         ]
     )
 
-
-    print(DoALoss(outputs_reg[:,0:2], labels_reg[:,0:2]))
-    print(radian2Degree(torch.mean(DoALoss(outputs_reg[:,0:2], labels_reg[:,0:2]))))
-    print(DoALoss(outputs_reg[:,2:4], labels_reg[:,2:4]))
-    print(radian2Degree(torch.mean(DoALoss(outputs_reg[:,2:4], labels_reg[:,2:4]))))
+    print(cost_func(outputs_reg, labels_reg))

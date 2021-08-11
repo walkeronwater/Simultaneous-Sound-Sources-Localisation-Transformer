@@ -147,6 +147,7 @@ if __name__ == "__main__":
         whichDec=args.whichDec,
         device=device,
         numEnc=args.numEnc,
+        coordinates=args.coordinates
         # numFC=args.numFC,
     )
     if flag_var['isHPC']:
@@ -169,7 +170,7 @@ if __name__ == "__main__":
     early_stop = EarlyStopping(args.patience)
 
     """set cost function"""
-    cost_func = CostFunc(task=task, Nsound=Nsound, device=device)
+    cost_func = CostFunc(task=task, Nsound=Nsound, device=device, coordinates=args.coordinates)
 
     """tensorboard"""
     writer = SummaryWriter(f'runs/temp/tryingout_tensorboard')
@@ -193,7 +194,7 @@ if __name__ == "__main__":
                 print(
                     # "Input shape: ", inputs.shape, "\n",
                     # "label shape: ", labels.shape, "\n",
-                    # "labels: ", labels[:5], "\n",
+                    "labels: ", labels[:5], "\n",
                     # "Output shape: ", outputs.shape, "\n",
                     "Training Outputs: ", outputs[:5]
                 )
