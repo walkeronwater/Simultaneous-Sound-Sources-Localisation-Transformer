@@ -154,10 +154,10 @@ if __name__ == "__main__":
     loc_1 = [i for i in loc_region.elev_dict[0] if i in loc_region.low_left+loc_region.high_left]
     loc_2 = loc_region.low_right+loc_region.high_right
 
-    for loc_idx_1 in range(0, len(loc_1), 101):
+    for loc_idx_1 in range(0, len(loc_1), 1):
         vis_pred = VisualisePrediction(Nsound=Nsound)
 
-        for loc_idx_2 in range(0, len(loc_2), 101):
+        for loc_idx_2 in range(0, len(loc_2), 1):
             # print(f"Test set created for location pair: {loc_1[loc_idx_1]}, {loc_2[loc_idx_2]}")
             createTestSet(loc_1[loc_idx_1], loc_2[loc_idx_2])
 
