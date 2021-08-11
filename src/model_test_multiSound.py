@@ -68,6 +68,7 @@ if __name__ == "__main__":
     parser.add_argument('src1_dir', type=str, help='src1_dir?')
     parser.add_argument('src2_dir', type=str, help='src2_dir?')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
+    parser.add_argument('plotDir', type=str, help='Directory of plots to be saved at')
     parser.add_argument('whichModel', type=str, help='Which model')
     parser.add_argument('whichDec', type=str, help='Which decoder')
 
@@ -213,5 +214,5 @@ if __name__ == "__main__":
             
         vis_pred.report(
             src_loc = [loc_1[loc_idx_1], loc_2[loc_idx_2]],
-            path = "./experiments/"
+            path = args.plotDir
         )
