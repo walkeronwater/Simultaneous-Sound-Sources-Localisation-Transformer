@@ -391,7 +391,7 @@ class VisualisePrediction:
             # print(f"src_loss: {src_loss[src_idx]}, {type(src_loss[src_idx])}")
             self.sound_list[src_idx](outputs[:,2*src_idx:2*(src_idx+1)], labels[:,2*src_idx:2*(src_idx+1)], src_loc, src_loss[src_idx])
 
-    def report(self, src_loc:list, path=None):
+    def report(self, fixed_src:list, path=None):
         # print(f"{len(self.elev_pred)}, {len(self.elev_target)}, {len(self.azim_pred)}, {len(self.azim_pred)}")
         for src_idx in range(self.Nsound):
             # plt.figure()
@@ -448,14 +448,14 @@ class VisualisePrediction:
             # plt.axis("square", emit=False)
             plt.xlabel("Azimuth")
             plt.ylabel("Elevation")
-            fig_title = [str(i) for i in src_loc]
-            loc_pair_name = ' and '.join(fig_title)
-            plt.title(f"Prediction and target of sound source {src_idx} for location {loc_pair_name}")
+
+            elev, azim = fixed_src[0], fixed_src[0]
+            plt.title(f"Prediction and target of sound source {src_idx} when source 0 is fixed at elevation {elev} and azim {azim}")
             plt.grid()
             if not path:
                 plt.show()
             else:
-                plt.savefig(f"{path}loc_{loc_pair_name}_src_{src_idx}.png")
+                plt.savefig(f"{path}fixed_src0_elev{elev}_azim{azim}_src_{src_idx}.png")
 
     def connectPoints(self):
         pass
