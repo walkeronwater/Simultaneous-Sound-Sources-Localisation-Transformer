@@ -37,7 +37,7 @@ def loadHRIR(path):
         subject = subjects[k]
         # filename = os.path.join(names[k], 'IRC_' + str(subject))
         filename = os.path.join(names[k], 'COMPENSATED/MAT/HRIR/IRC_' + str(subject) + '_C_HRIR.mat')
-    print(filename)
+    # print(filename)
 
     m = loadmat(filename, struct_as_record=True)
     # print(m.keys())
@@ -117,9 +117,20 @@ class LocRegion:
         self.high_right = []
         self.low_left = []
         self.low_right = []
-        self.azim_0 = []
-        self.azim_180 = []
+        self.elev_dict = {}
+        self.azim_dict = {}
         for i in range(self.locLabel.shape[0]):
+            elev = self.locLabel[i, 0]
+            azim = self.locLabel[i, 1]
+            if not(elev in self.elev_dict.keys()):
+                self.elev_dict[elev] = [i]
+            else:
+                self.elev_dict[elev].append(i)
+            if not(azim in self.azim_dict.keys()):
+                self.azim_dict[azim] = [i]
+            else:
+                self.azim_dict[azim].append(i)
+                
             if self.locLabel[i, 0] > 0 and 0 < self.locLabel[i, 1] < 180:
                 self.high_left.append(i)
             elif self.locLabel[i, 0] <= 0 and 0 < self.locLabel[i, 1] < 180:
@@ -128,10 +139,6 @@ class LocRegion:
                 self.high_right.append(i)
             elif self.locLabel[i, 0] <= 0 and self.locLabel[i, 1] > 180:
                 self.low_right.append(i)
-            elif self.locLabel[i, 1] == 0:
-                self.azim_0.append(i)
-            elif self.locLabel[i, 1] == 180:
-                self.azim_180.append(i)
         print(f"Number of locations in each region: {len(self.high_left)}, {len(self.low_left)}, {len(self.high_right)}, {len(self.low_right)}")
     
     def getLocRegion(self):
@@ -158,5 +165,9 @@ if __name__ == "__main__":
     # print(f"{hrirSet.shape}")
 
     load_hrir = LoadHRIR(path="C:/Users/mynam/Desktop/SSSL-desktop/HRTF/IRC*")
-    hrirSet, locLabel, fs_HRIR = load_hrir(51)
+    hrirSet, locLabel, fs_HRIR = load_hrir(4)
     print(f"{hrirSet.shape}")
+
+    loc_region = LocRegion(locLabel)
+    print(f"{loc_region.elev_dict}")
+    print(f"{loc_region.azim_dict}")

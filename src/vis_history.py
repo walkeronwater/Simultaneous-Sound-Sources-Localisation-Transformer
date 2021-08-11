@@ -26,9 +26,7 @@ from torchsummary import summary
 
 from load_data import *
 from utils import *
-from model_transformer import *
-from loss import DoALoss
-from main_train import loadCheckpoint
+from models import *
 
 def loadHistory(loadPath, figPath, isDebug):
     trainHistory = glob(os.path.join(loadPath, "curve*"))
