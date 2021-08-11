@@ -152,8 +152,8 @@ if __name__ == "__main__":
     binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method="standardise")
     loc_region = LocRegion(locLabel=locLabel)
     loc_1 = [i for i in loc_region.elev_dict[0] if i in loc_region.low_left+loc_region.high_left]
-    loc_1 = loc_region.azim_dict[0]
-    loc_2 = loc_region.low_right+loc_region.high_right+loc_region.azim_dict[180]
+    loc_1 = loc_region.low_left+loc_region.high_left
+    loc_2 = loc_region.low_right+loc_region.high_right+loc_region.azim_dict[180]+loc_region.azim_dict[0]
 
     for loc_idx_1 in range(0, len(loc_1), 1):
         vis_pred = VisualisePrediction(Nsound=Nsound)
