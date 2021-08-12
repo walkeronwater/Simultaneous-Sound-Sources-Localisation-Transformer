@@ -46,7 +46,8 @@ class Preprocess:
             print("Preprocessing method: minmax")
         else:
             print("Preprocessing method: none")
-            
+        # [TODO]: bandpass the input signal for testing
+
     def __call__(self, seq):
         """
         Args:
@@ -391,6 +392,29 @@ class SaveCues:
         self.annotate(locIndex=locIndex)
         torch.save(cues, self.savePath+str(self.fileCount)+'.pt')
         self.fileCount += 1
+
+def locIndex2Label(locLabel, locIndex, task):
+    if task.lower() == "elevclass":
+        # range of elevation: -45 to 90 degrees
+        labels = int(((locLabel[locIndex, 0]+45) % 150)/15)
+    elif task.lower()  == "azimclass":
+        # range of elevation: 0 to 345 degrees
+        labels = int((locLabel[locIndex, 1] % 360)/15)
+    elif task.lower()  == "allclass":
+        labels = int(locIndex)
+    elif task.lower()  == "elevregression":
+        labels = locLabel[locIndex, 0]/180.0*pi
+    elif task.lower()  == "azimregression":
+        labels = locLabel[locIndex, 1]/180.0*pi
+    elif task.lower()  == "allregression":
+        labels = torch.tensor(
+            [
+                locLabel[locIndex, 0]/180.0*pi,
+                locLabel[locIndex, 1]/180.0*pi
+            ], dtype=torch.float32
+        )
+    return labels
+
 
 def radian2Degree(val):
     return val/pi*180

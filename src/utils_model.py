@@ -446,6 +446,7 @@ class VisualisePrediction:
             plt.yticks(np.linspace(-90, 90, 13))
             # plt.axis([-180, 180, -90, 90])
             # plt.axis("square", emit=False)
+            plt.legend(["target", "prediction"])
             plt.xlabel("Azimuth")
             plt.ylabel("Elevation")
 
