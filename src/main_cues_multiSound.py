@@ -236,7 +236,7 @@ def createCues_(
 # def conv(seq1, seq2):
 #     return np.convolve(seq1, seq2)
 
-def createTrainingSet():
+def createTrainingSet(frame_duration):
     timeFlag = True
     hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
     src_1_path = glob(os.path.join(args.trainAudioDir+"/speech_male/*"))
@@ -246,10 +246,10 @@ def createTrainingSet():
     src_1_count = 0
     src_2_count = 0
     for i in range(len(src_1_path)):
-        src_1 = AudioSignal(path=src_1_path[i], slice_duration=1)
+        src_1 = AudioSignal(path=src_1_path[i], slice_duration=frame_duration)
         src_1_count += len(src_1.slice_list)
     for i in range(len(src_2_path)):
-        src_2 = AudioSignal(path=src_2_path[i], slice_duration=1)
+        src_2 = AudioSignal(path=src_2_path[i], slice_duration=frame_duration)
         src_2_count += len(src_2.slice_list)
     print(f"Total available number of audio slices: {src_1_count}, {src_2_count}")
     
@@ -257,8 +257,8 @@ def createTrainingSet():
     
     audio_index_1 = 0
     audio_index_2 = 0
-    src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
-    src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
+    src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=frame_duration)
+    src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=frame_duration)
     binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src_1.fs_audio)
     loc_region = LocRegion(locLabel=locLabel)
     binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method="standardise")
@@ -268,51 +268,56 @@ def createTrainingSet():
     slice_idx_1 = 0
     slice_idx_2 = 0
     count = 0
-    # start with male
+    # start with male-female
     flag = [1, 0]
     while True:
         print(f"Current audio (src 1): {audio_index_1}, and (src 2): {audio_index_2}")
-        # print(f"Number of slices (audio 1): {len(src_1.slice_list)}, and (audio 2): {len(src_2.slice_list)}")
-        # print(f"Source indexes: {slice_idx_1, slice_idx_2}")
-            
-        if flag == [1,0]:
-            src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
-            src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
-            flag = [0,1]
-        elif flag == [0,1]:
-            src_1 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
-            src_2 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
-            flag = [1,1]
-        elif flag == [1,1]:
-            src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
-            audio_index_1 += 1
-            src_2 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
-            flag = [0,0]
-        elif flag == [0,0]:
-            src_1 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
-            audio_index_2 += 1
-            src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
-            flag = [1,0]
-            
-        if slice_idx_1 >= len(src_1.slice_list):
+        print(f"Number of slices (audio 1): {len(src_1.slice_list)}, and (audio 2): {len(src_2.slice_list)}")
+        print(f"Source indexes: {slice_idx_1, slice_idx_2}")
+        print(f"Flag: {flag}")
+    
+        if slice_idx_1 >= len(src_1.slice_list)-1:
             slice_idx_1 = 0
             audio_index_1 += 1
-            
-        if slice_idx_2 >= len(src_2.slice_list):
+        if slice_idx_2 >= len(src_2.slice_list)-1:
             slice_idx_2 = 0
             audio_index_2 += 1
-            # src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
+        
+        src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=frame_duration)
+        src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=frame_duration)
 
-        sig_sliced_1 = src_1(idx=slice_idx_1)
+        if flag == [1,0]:
+            sig_sliced_1 = src_1(idx=slice_idx_1)
+            sig_sliced_2 = src_2(idx=slice_idx_2)
+            flag = [0,1]
+        elif flag == [0,1]:
+            sig_sliced_1 = src_2(idx=slice_idx_2)
+            sig_sliced_2 = src_1(idx=slice_idx_1)
+            flag = [1,1]
+        elif flag == [1,1]:
+            sig_sliced_1 = src_1(idx=slice_idx_1)
+            slice_idx_1 += 1
+            sig_sliced_2 = src_1(idx=slice_idx_1)
+            flag = [0,0]
+        elif flag == [0,0]:
+            sig_sliced_1 = src_2(idx=slice_idx_2)
+            slice_idx_2 += 1
+            sig_sliced_2 = src_2(idx=slice_idx_2)
+            flag = [1,0]
+
         sig_sliced_1 = src_1.apply_gain(sig_sliced_1, target_power=-20)
-        sig_sliced_2 = src_2(idx=slice_idx_2)
         sig_sliced_2 = src_2.apply_gain(sig_sliced_2, target_power=-20)
 
-        for loc_idx_1 in loc_region.high_left + loc_region.low_left + loc_region.azim_0 + loc_region.azim_180:
-            for loc_idx_2 in loc_region.high_right + loc_region.low_right + loc_region.azim_0 + loc_region.azim_180:
+        for loc_idx_1 in loc_region.high_left + loc_region.low_left + loc_region.azim_dict[0] + loc_region.azim_dict[180]:
+            for loc_idx_2 in loc_region.high_right + loc_region.low_right + loc_region.azim_dict[0] + loc_region.azim_dict[180]:
+                if (loc_idx_1 in loc_region.azim_dict[0] and loc_idx_2 in loc_region.azim_dict[0]) \
+                    or (loc_idx_1 in loc_region.azim_dict[180] and loc_idx_2 in loc_region.azim_dict[180]):
+                    continue
+
                 sigL_1, sigR_1 = binaural_sig(sig_sliced_1, loc_idx_1)
                 sigL_2, sigR_2 = binaural_sig(sig_sliced_2, loc_idx_2)
                 magL, phaseL, magR, phaseR = binaural_cues(sigL_1+sigL_2, sigR_1+sigR_2)
+                print(f"magL shape: {magL.shape}")
 
                 save_cues(cuesList=[magL, phaseL, magR, phaseR], locIndex=[loc_idx_1, loc_idx_2])
                 if save_cues.fileCount == args.Nsample:
@@ -323,7 +328,7 @@ def createTrainingSet():
         slice_idx_1 += 1
         slice_idx_2 += 1
         count += 1
-        # print(count)
+        print(count)
         if count >= src_1_count or count >= src_2_count or audio_index_1 >= len(src_1_path)-1 or audio_index_2 >= len(src_2_path)-1:
             return
 
@@ -340,9 +345,10 @@ if __name__ == "__main__":
     parser.add_argument('cuesDir', type=str, help='Directory of cues to be saved')
     parser.add_argument('Nsound', type=int, help='Number of sound')
     parser.add_argument('Nsample', type=int, help='Number of samples')
+    parser.add_argument('--frameDuration', default=1, type=float, help='Duration of frames')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--valSNRList', default="-5,0,5,10,15,20,25,30,35", type=str, help='Range of SNR')
-    parser.add_argument('--Ncues', default=5, type=int, help='Number of cues?')
+    parser.add_argument('--Ncues', default=4, type=int, help='Number of cues?')
     parser.add_argument('--prepMethod', default="normalise", type=str, help='Preprocessing method')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
@@ -373,5 +379,5 @@ if __name__ == "__main__":
     # if not os.path.isdir(args.cuesDir+"/valid/"):
     #     os.mkdir(args.cuesDir+"/valid/")
     
-    createTrainingSet()
+    createTrainingSet(frame_duration=args.frameDuration)
     
