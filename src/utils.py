@@ -442,6 +442,18 @@ def spherical2Cartesian(val):
 
     return np.array([x,y,z])
 
+# [TODO] tensorise
+def cartesian2Spherical(val):
+    """
+    val (nd array): order (x, y, z)
+    """
+    x, y, z = val[0], val[1], val[2]
+    r = np.sqrt(x**2 + y**2 + z**2)
+    elev = np.arcsin(z/r)
+    azim = np.arctan(y/x)
+
+    return np.array((elev, azim))
+
 if __name__ == "__main__":
     # class CuesShape:
     #     def __init__(
@@ -459,7 +471,13 @@ if __name__ == "__main__":
     #         self.Nloc = Nloc
     #         self.lenSliceInSec = lenSliceInSec
     #         self.valSNRList = valSNRList
+    val = np.array(
+        [0.433, 0.75, 0.5],
+        [0.433, 0.75, 0.5]
+    )
+    print(cartesian2Spherical(val))
     
+    raise SystemExit
 
     path = "./HRTF/IRC*"
     hrirSet, locLabel, fs_HRIR = loadHRIR(path)

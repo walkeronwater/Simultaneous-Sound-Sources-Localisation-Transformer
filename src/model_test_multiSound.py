@@ -12,7 +12,7 @@ from models import *
 from loss import *
 
 
-def createTestSet(loc_idx_1, loc_idx_2):
+def createTestSet(loc_idx_1, loc_idx_2, coordinates):
     audio_index_1 = 15
     audio_index_2 = 5
     src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
@@ -51,8 +51,17 @@ def createTestSet(loc_idx_1, loc_idx_2):
         #     return
         test_cues[count] = torch.tensor([magL, phaseL, magR, phaseR]).permute(1,2,0)
 
-        test_label[count] = torch.from_numpy(degree2Radian(np.concatenate((locLabel[loc_idx_1], locLabel[loc_idx_2]), axis=-1)))
-
+        if coordinates.lower() == "spherical":
+            test_label[count] = torch.from_numpy(degree2Radian(np.concatenate((locLabel[loc_idx_1], locLabel[loc_idx_2]), axis=-1)))
+        elif coordinates.lower() == "cartesian":
+            test_label[count] = torch.from_numpy(
+                np.concatenate(
+                    (spherical2Cartesian(locLabel[loc_idx_1]), spherical2Cartesian(locLabel[loc_idx_2])),
+                    axis=-1
+                )
+        )
+            
+        
         count += 1
         if count >= Nsample:
             return
@@ -72,10 +81,12 @@ if __name__ == "__main__":
     parser.add_argument('whichModel', type=str, help='Which model')
     parser.add_argument('whichDec', type=str, help='Which decoder')
 
+
     parser.add_argument('--hrirDir', default="./HRTF/", type=str, help='Directory of HRIR files')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
+    parser.add_argument('--coordinates', default="spherical", type=str, help='Spherical or Cartesian')
     args = parser.parse_args()
     
     """define Nfreq, Ntime, Ncues"""
@@ -104,7 +115,10 @@ if __name__ == "__main__":
     # save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
     """create a tensor that stores all testing examples"""
     test_cues = torch.empty((Nsample, Nfreq, Ntime, Ncues))
-    test_label = torch.empty((Nsample, 2*Nsound))
+    if args.coordinates.lower() == "spherical":
+        test_label = torch.empty((Nsample, 2*Nsound))
+    elif args.coordinates.lower() == "cartesian":
+        test_label = torch.empty((Nsample, 3*Nsound))
 
     """load model"""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -117,7 +131,8 @@ if __name__ == "__main__":
         whichEnc="diy",
         whichDec=whichDec,
         device=device,
-        numEnc=args.numEnc
+        numEnc=args.numEnc,
+        coordinates=args.coordinates
         # numFC=args.numFC,
     )
 
@@ -161,7 +176,7 @@ if __name__ == "__main__":
 
         for loc_idx_2 in range(0, len(loc_2), 1):
             # print(f"Test set created for location pair: {loc_1[loc_idx_1]}, {loc_2[loc_idx_2]}")
-            createTestSet(loc_1[loc_idx_1], loc_2[loc_idx_2])
+            createTestSet(loc_1[loc_idx_1], loc_2[loc_idx_2], coordinates=args.coordinates)
 
             dataset = TensorDataset(test_cues, test_label)
 
@@ -216,5 +231,5 @@ if __name__ == "__main__":
             
         vis_pred.report(
             fixed_src = locLabel[loc_1[loc_idx_1]],
-            path = args.plotDir
+            # path = args.plotDir
         )

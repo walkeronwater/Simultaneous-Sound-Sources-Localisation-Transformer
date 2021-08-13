@@ -436,6 +436,7 @@ class VisualisePrediction:
             plt.figure(figsize=(12, 6), dpi=100)
             plt.scatter(self.sound_list[src_idx].azim_target, self.sound_list[src_idx].elev_target, color='red')
             plt.scatter(self.sound_list[src_idx].azim_pred, self.sound_list[src_idx].elev_pred, color='blue')
+            plt.legend(["target", "prediction"])
             for j in range(len(self.sound_list[src_idx].azim_target)):
                 plt.plot(
                     [self.sound_list[src_idx].azim_target[j], self.sound_list[src_idx].azim_pred[j]],
@@ -446,7 +447,7 @@ class VisualisePrediction:
             plt.yticks(np.linspace(-90, 90, 13))
             # plt.axis([-180, 180, -90, 90])
             # plt.axis("square", emit=False)
-            plt.legend(["target", "prediction"])
+            # plt.legend(*scatter.legend_elements())
             plt.xlabel("Azimuth")
             plt.ylabel("Elevation")
 
