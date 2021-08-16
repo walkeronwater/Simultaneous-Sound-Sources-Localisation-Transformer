@@ -442,17 +442,29 @@ def spherical2Cartesian(val):
 
     return np.array([x,y,z])
 
-# [TODO] tensorise
 def cartesian2Spherical(val):
     """
     val (nd array): order (x, y, z)
     """
-    x, y, z = val[0], val[1], val[2]
-    r = np.sqrt(x**2 + y**2 + z**2)
-    elev = np.arcsin(z/r)
-    azim = np.arctan(y/x)
+    # x, y, z = val[0], val[1], val[2]
+    # r = np.sqrt(x**2 + y**2 + z**2)
+    # elev = np.arcsin(z/r)
+    # azim = np.arctan(y/x)
+    # return np.array((elev, azim))
 
-    return np.array((elev, azim))
+    batch_size, tensor_len = val.shape
+    out = torch.empty(batch_size, int(tensor_len/3*2))
+    out = torch.empty(batch_size, int(tensor_len/3*2))
+    for i in range(0, val.shape[-1], 3):
+        out[:,int(2*i/3)] = torch.arcsin(val[:,i+2])
+        out[:,int(2*i/3+1)] = torch.arcsin(torch.div(val[:,i+1], val[:,i]))
+
+    # for i in range(0, val.shape[-1], 3):
+    #     elev = torch.arcsin(val[:,i+2]])
+    #     azim = torch.arcsin(torch.div(val[:,i+1], val[:,i]))
+
+    # return torch.stack([elev,azim], dim=-1)
+    return out
 
 if __name__ == "__main__":
     # class CuesShape:
