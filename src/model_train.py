@@ -165,8 +165,8 @@ if __name__ == "__main__":
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 
     """set learning rate scheduler"""
-    # scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
-    scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True)
+    scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
+    # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True)
 
     """set early stopping"""
     early_stop = EarlyStopping(args.patience)
@@ -236,7 +236,8 @@ if __name__ == "__main__":
             val_loss = val_sum_loss / (i + 1)
             print('Validation Loss: %.04f | Validation Acc: %.04f '
                 % (val_loss, val_acc))
-            scheduler.step(val_loss)
+            scheduler.step()
+            # scheduler.step(val_loss)
         
         if args.isSave:
             saveCurves(
