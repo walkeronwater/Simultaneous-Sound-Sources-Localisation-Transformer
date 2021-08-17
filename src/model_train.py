@@ -147,7 +147,9 @@ if __name__ == "__main__":
         whichDec=args.whichDec,
         device=device,
         numEnc=args.numEnc,
-        coordinates=args.coordinates
+        coordinates=args.coordinates,
+        dropout=args.valDropout,
+        forward_expansion=4,
         # numFC=args.numFC,
     )
     if flag_var['isHPC']:
