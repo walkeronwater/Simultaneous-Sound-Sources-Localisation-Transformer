@@ -93,7 +93,7 @@ if __name__ == "__main__":
         "isDebug": args.isDebug,
         "isHPC": args.isHPC,
         "isContinue": args.isContinue,
-        "isSave": args.isSave
+        "isSave": args.isSave,
         "isLogging": args.isLogging
     }
     for idx in flag_var.keys():
