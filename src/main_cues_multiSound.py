@@ -237,7 +237,7 @@ def createCues_(
 #     return np.convolve(seq1, seq2)
 
 def createTrainingSet(frame_duration):
-    timeFlag = True
+    """load HRIRs and audio files"""
     hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
     src_1_path = glob(os.path.join(args.trainAudioDir+"/speech_male/*"))
     src_2_path = glob(os.path.join(args.trainAudioDir+"/speech_female/*"))
@@ -254,7 +254,7 @@ def createTrainingSet(frame_duration):
     print(f"Total available number of audio slices: {src_1_count}, {src_2_count}")
     
     # audio indexes
-    
+    """Instantiate binaural cue classes"""
     audio_index_1 = 0
     audio_index_2 = 0
     src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=frame_duration)
@@ -264,10 +264,11 @@ def createTrainingSet(frame_duration):
     binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method="standardise")
     save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
     
-    start_time = time.time()
     slice_idx_1 = 0
     slice_idx_2 = 0
     count = 0
+    start_time = time.time()
+    timeFlag = True
     # start with male-female
     flag = [1, 0]
     while True:
@@ -320,17 +321,90 @@ def createTrainingSet(frame_duration):
                 # print(f"magL shape: {magL.shape}")
 
                 save_cues(cuesList=[magL, phaseL, magR, phaseR], locIndex=[loc_idx_1, loc_idx_2])
-                if save_cues.fileCount == args.Nsample:
-                    return
+            if save_cues.fileCount >= args.Nsample:
+                return
             if timeFlag:
                 print(f"One location loop costs {(time.time()-start_time)} seconds.")
                 timeFlag = False
+
         slice_idx_1 += 1
         slice_idx_2 += 1
         count += 1
         print(count)
         if count >= src_1_count or count >= src_2_count or audio_index_1 >= len(src_1_path)-1 or audio_index_2 >= len(src_2_path)-1:
             return
+
+def createTestSet(frame_duration):
+    """load HRIRs and audio files"""
+    hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
+    src_1_path = glob(os.path.join(args.trainAudioDir+"/speech_male/*"))
+    src_2_path = glob(os.path.join(args.trainAudioDir+"/speech_female/*"))
+    print(f"Total available number of audio files: {len(src_1_path)}, {len(src_2_path)}")
+    
+    src_1_count = 0
+    src_2_count = 0
+    for i in range(len(src_1_path)):
+        src_1 = AudioSignal(path=src_1_path[i], slice_duration=frame_duration)
+        src_1_count += len(src_1.slice_list)
+    for i in range(len(src_2_path)):
+        src_2 = AudioSignal(path=src_2_path[i], slice_duration=frame_duration)
+        src_2_count += len(src_2.slice_list)
+    print(f"Total available number of audio slices: {src_1_count}, {src_2_count}")
+    
+    # audio indexes
+    """Instantiate binaural cue classes"""
+    audio_index_1 = 0
+    audio_index_2 = 0
+    src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=frame_duration)
+    src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=frame_duration)
+    binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src_1.fs_audio)
+    loc_region = LocRegion(locLabel=locLabel)
+    binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method="standardise")
+    save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
+    slice_idx_1 = 0
+    slice_idx_2 = 0
+    count = 0
+    while True:
+        print(f"Current audio (src 1): {audio_index_1}, and (src 2): {audio_index_2}")
+        print(f"Number of slices (audio 1): {len(src_1.slice_list)}, and (audio 2): {len(src_2.slice_list)}")
+        print(f"Source indexes: {slice_idx_1, slice_idx_2}")
+    
+        if slice_idx_1 >= len(src_1.slice_list)-1:
+            slice_idx_1 = 0
+            audio_index_1 += 1
+        if slice_idx_2 >= len(src_2.slice_list)-1:
+            slice_idx_2 = 0
+            audio_index_2 += 1
+        
+        src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=frame_duration)
+        src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=frame_duration)
+        sig_sliced_1 = src_1(idx=slice_idx_1)
+        sig_sliced_2 = src_2(idx=slice_idx_2)
+        sig_sliced_1 = src_1.apply_gain(sig_sliced_1, target_power=-20)
+        sig_sliced_2 = src_2.apply_gain(sig_sliced_2, target_power=-20)
+        for loc_1 in loc_region.high_left + loc_region.low_left + loc_region.azim_dict[0] + loc_region.azim_dict[180]:
+            for loc_2 in loc_region.high_right + loc_region.low_right + loc_region.azim_dict[0] + loc_region.azim_dict[180]:
+                if (loc_1 in loc_region.azim_dict[0] and loc_2 in loc_region.azim_dict[0]) \
+                    or (loc_1 in loc_region.azim_dict[180] and loc_2 in loc_region.azim_dict[180]):
+                    continue
+
+                sigL_1, sigR_1 = binaural_sig(sig_sliced_1, loc_1)
+                sigL_2, sigR_2 = binaural_sig(sig_sliced_2, loc_2)
+                magL, phaseL, magR, phaseR = binaural_cues(sigL_1+sigL_2, sigR_1+sigR_2)
+                # print(f"magL shape: {magL.shape}")
+
+                save_cues(cuesList=[magL, phaseL, magR, phaseR], locIndex=[loc_1, loc_2])
+        
+        slice_idx_1 += 1
+        slice_idx_2 += 1
+        count += 1
+        print(count)
+        if count >= src_1_count or count >= src_2_count or audio_index_1 >= len(src_1_path)-1 or audio_index_2 >= len(src_2_path)-1:
+            return
+        
+        if save_cues.fileCount >= args.Nsample:
+            return
+
 
 """
 This will create two folders containing data for training, validation. Each dataset will be
@@ -379,5 +453,5 @@ if __name__ == "__main__":
     # if not os.path.isdir(args.cuesDir+"/valid/"):
     #     os.mkdir(args.cuesDir+"/valid/")
     
-    createTrainingSet(frame_duration=args.frameDuration)
+    createTestSet(frame_duration=args.frameDuration)
     
