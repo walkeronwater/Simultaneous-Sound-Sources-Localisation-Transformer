@@ -57,6 +57,7 @@ if __name__ == "__main__":
     parser.add_argument('--isContinue', default="True", type=str, help='Continue training?')
     parser.add_argument('--isSave', default="True", type=str, help='Save checkpoints?')
     parser.add_argument('--coordinates', default="spherical", type=str, help='Spherical or Cartesian')
+    parser.add_argument('--isLogging', default="False", type=str, help='Log down prediction in a csv file')
 
     args = parser.parse_args()
     print("Data directory: ", args.dataDir)
@@ -93,6 +94,7 @@ if __name__ == "__main__":
         "isHPC": args.isHPC,
         "isContinue": args.isContinue,
         "isSave": args.isSave
+        "isLogging": args.isLogging
     }
     for idx in flag_var.keys():
         flag_var[idx] = True if flag_var[idx][0].lower() == "t" else False
@@ -149,6 +151,7 @@ if __name__ == "__main__":
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device, coordinates=args.coordinates)
     
     error_src = TwoSourceError()
+    csv_flag = False
     """test iteration"""
     test_correct = 0.0
     test_total = 0.0
@@ -169,7 +172,35 @@ if __name__ == "__main__":
                     "Output shape: ", outputs.shape, "\n",
                     "Test Outputs: ", outputs[:5]
                 )
-            
+            if flag_var["isLogging"]:
+                if csv_flag:
+                    with open('test_log.csv', 'a') as csvFile:
+                            for batch_idx in range(outputs.shape[0]):
+                                for i in range(outputs.shape[1]):
+                                    csvFile.write(str(radian2Degree(outputs[batch_idx, i].item())))
+                                    csvFile.write(',')
+                                for i in range(outputs.shape[1]):
+                                    csvFile.write(str(radian2Degree(labels[batch_idx, i].item())))
+                                    csvFile.write(',')
+                                csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 0:2].unsqueeze(0), labels[batch_idx, 0:2].unsqueeze(0)).item())))
+                                csvFile.write(',')
+                                csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 2:4].unsqueeze(0), labels[batch_idx, 2:4].unsqueeze(0)).item())))
+                                csvFile.write('\n')
+                elif os.path.isfile('test_log.csv'):
+                    csv_flag = True
+                    with open('test_log.csv', 'w') as csvFile:
+                        for batch_idx in range(outputs.shape[1]):
+                            for i in range(Nsound*2):
+                                csvFile.write(str(radian2Degree(outputs[batch_idx, i].item())))
+                                csvFile.write(',')
+                            for i in range(outputs.shape[1]):
+                                csvFile.write(str(radian2Degree(labels[batch_idx, i].item())))
+                                csvFile.write(',')
+                            csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 0:2].unsqueeze(0), labels[batch_idx, 0:2].unsqueeze(0)).item())))
+                            csvFile.write(',')
+                            csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 2:4].unsqueeze(0), labels[batch_idx, 2:4].unsqueeze(0)).item())))
+                            csvFile.write('\n')
+
             test_loss = cost_func(outputs, labels)
             test_sum_loss += test_loss.item()
 
