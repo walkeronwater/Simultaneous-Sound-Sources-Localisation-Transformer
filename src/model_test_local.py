@@ -162,10 +162,10 @@ if __name__ == "__main__":
             
             if flag_var["isDebug"]:
                 print(
-                    # "Input shape: ", inputs.shape, "\n",
-                    # "label shape: ", labels.shape, "\n",
+                    "Input shape: ", inputs.shape, "\n",
+                    "label shape: ", labels.shape, "\n",
                     "labels: ", labels[:5], "\n",
-                    # "Output shape: ", outputs.shape, "\n",
+                    "Output shape: ", outputs.shape, "\n",
                     "Test Outputs: ", outputs[:5]
                 )
 
