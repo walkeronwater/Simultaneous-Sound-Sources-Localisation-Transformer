@@ -164,7 +164,7 @@ if __name__ == "__main__":
                 print(
                     # "Input shape: ", inputs.shape, "\n",
                     # "label shape: ", labels.shape, "\n",
-                    # "labels: ", labels[:5], "\n",
+                    "labels: ", labels[:5], "\n",
                     # "Output shape: ", outputs.shape, "\n",
                     "Test Outputs: ", outputs[:5]
                 )
