@@ -15,8 +15,8 @@ from loss import *
 def createTestSet(loc_idx_1, loc_idx_2, coordinates):
     audio_index_1 = 15
     audio_index_2 = 5
-    src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
-    src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
+    src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=args.frameDuration)
+    src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=args.frameDuration)
     # binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src_1.fs_audio)
     # binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method="standardise")
 
@@ -29,12 +29,12 @@ def createTestSet(loc_idx_1, loc_idx_2, coordinates):
         if slice_idx_1 >= len(src_1.slice_list):
             slice_idx_1 = 0
             audio_index_1 += 1
-            src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
+            src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=args.frameDuration)
             
         if slice_idx_2 >= len(src_2.slice_list):
             slice_idx_2 = 0
             audio_index_2 += 1
-            src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
+            src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=args.frameDuration)
         
 
         sig_sliced_1 = src_1(idx=slice_idx_1)
@@ -60,7 +60,6 @@ def createTestSet(loc_idx_1, loc_idx_2, coordinates):
                     axis=-1
                 )
         )
-            
         
         count += 1
         if count >= Nsample:
@@ -87,11 +86,14 @@ if __name__ == "__main__":
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     parser.add_argument('--coordinates', default="spherical", type=str, help='Spherical or Cartesian')
+    parser.add_argument('--Ntime', default=0, type=int, help='Number of time window')
+    parser.add_argument('--frameDuration', default=1, type=float, help='Duration of frames')
     args = parser.parse_args()
     
     """define Nfreq, Ntime, Ncues"""
     Nfreq = 512
-    Ntime = 72
+    Ntime = 72 if args.Ntime == 0 else args.Ntime
+    
     Ncues = 4
     Nsound = 2
     task = "allRegression"
@@ -162,7 +164,7 @@ if __name__ == "__main__":
     src_2_path = glob(os.path.join(args.src2_dir + "/*"))
 
     
-    src_1 = AudioSignal(path=src_1_path[0], slice_duration=1)
+    src_1 = AudioSignal(path=src_1_path[0], slice_duration=args.frameDuration)
     binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src_1.fs_audio)
     binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method="standardise")
     loc_region = LocRegion(locLabel=locLabel)
@@ -199,6 +201,9 @@ if __name__ == "__main__":
                 for i, (inputs, labels) in enumerate(test_loader, 0):
                     inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
                     outputs = model(inputs)
+                    if args.coordinates.lower() == "cartesian":
+                        outputs = cartesian2Spherical(outputs)
+                        labels = cartesian2Spherical(labels)
 
                     if isDebug:
                         print(
@@ -213,7 +218,7 @@ if __name__ == "__main__":
                             "Loss of source 2: ", radian2Degree(torch.mean(cost_func.calDoALoss(outputs[:, 2:4], labels[:, 2:4]))).item(), "\n",
                             "RMS angle difference of both sources: ", radian2Degree(torch.mean(cost_func(outputs, labels))).item())
                         raise SystemExit
-
+                    
                     test_loss = cost_func(outputs, labels)
                     vis_pred(
                         outputs, labels,

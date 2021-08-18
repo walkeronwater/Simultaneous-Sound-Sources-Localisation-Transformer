@@ -454,10 +454,12 @@ def cartesian2Spherical(val):
 
     batch_size, tensor_len = val.shape
     out = torch.empty(batch_size, int(tensor_len/3*2))
-    out = torch.empty(batch_size, int(tensor_len/3*2))
     for i in range(0, val.shape[-1], 3):
-        out[:,int(2*i/3)] = torch.arcsin(val[:,i+2])
-        out[:,int(2*i/3+1)] = torch.arcsin(torch.div(val[:,i+1], val[:,i]))
+        r = torch.sqrt(val[:,i] **2 + val[:,i+1] **2 + val[:,i+2] **2)
+        out[:,int(2*i/3)] = torch.asin(torch.div(val[:,i+2], r))
+        temp = torch.atan2(val[:,i+1], val[:,i])
+        temp[temp < 0] += 2*pi
+        out[:,int(2*i/3+1)] = temp
 
     # for i in range(0, val.shape[-1], 3):
     #     elev = torch.arcsin(val[:,i+2]])

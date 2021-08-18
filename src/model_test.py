@@ -118,7 +118,7 @@ if __name__ == "__main__":
     checkpoint = torch.load(model_dir+"param_bestValLoss.pth.tar")
     model.load_state_dict(checkpoint['model'], strict=True)
 
-    cost_func = CostFunc(task=task, Nsound=Nsound, device=device)
+    cost_func = CostFunc(task=task, Nsound=Nsound, device=device, coordinates=args.coordinates)
 
     """mix sound sources with noise"""
     src_path = glob(os.path.join(audio_dir+"/*"))
@@ -126,9 +126,11 @@ if __name__ == "__main__":
     binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src.fs_audio)
     binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method="standardise")
     loc_region = LocRegion(locLabel=locLabel)
+    
     for val_SNR in valSNRList:
+        confusion = Confusion()
         vis_pred = VisualisePrediction(Nsound=Nsound)
-        for loc_idx in range(0,187,35):
+        for loc_idx in range(0,168,1):
             print(f"Test set created for location: {loc_idx}, with SNR {val_SNR}")
             createTestSet(loc_idx, val_SNR)
 
@@ -155,7 +157,7 @@ if __name__ == "__main__":
                             "Output shape: ", outputs.shape, "\n",
                             "Outputs: ", outputs[:5]
                         )
-                    print(f"RMS angle error of two sources (over one batch): {torch.mean(radian2Degree(cost_func.calDoALoss(outputs, labels))).item():.2f}")
+                    print(f"RMS angle error (over one batch): {torch.mean(radian2Degree(cost_func.calDoALoss(outputs, labels))).item():.2f}")
                     
                     test_loss = cost_func(outputs, labels)
                     vis_pred(
@@ -168,4 +170,8 @@ if __name__ == "__main__":
                 print('Test Loss: %.04f | Test Acc: %.04f '
                     % (test_loss, test_acc))
             
-        vis_pred.report()
+        # vis_pred.report()   
+        vis_pred.report(
+            fixed_src = locLabel[loc_idx],
+            # path = args.plotDir
+        )

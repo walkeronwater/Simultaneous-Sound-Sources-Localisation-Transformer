@@ -155,7 +155,12 @@ class LocRegion:
             return "LR"
         else:
             return "None"
+    
+    def getElev(self, locIndex):
+        return self.locLabel[locIndex,0]
 
+    def getAzim(self, locIndex):
+        return self.locLabel[locIndex,1]
 
 
 if __name__ == "__main__":
