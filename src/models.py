@@ -3,7 +3,7 @@ import torch.nn as nn
 from graphviz import Source
 from torchviz import make_dot
 
-from utils_model import *
+from utils_train import *
 
 class SelfAttention(nn.Module):
     """

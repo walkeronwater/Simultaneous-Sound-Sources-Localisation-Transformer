@@ -59,70 +59,6 @@ class CostFunc:
         loss = torch.atan(F.hardtanh(torch.norm(cross_product, dim=1)/dot_product, min_val=-1, max_val=1))
         return torch.absolute(loss)
 
-class Confusion:
-    def __init__(self):
-        self.se_UD = 0.0
-        self.se_LR = 0.0
-        self.se_FB = 0.0
-    
-    def __call__(self, outputs, labels):
-        for i in range(outputs.shape[0]):
-            while outputs[i, 1] > pi*2:
-                outputs[i, 1] -= pi*2
-            while outputs[i, 1] < 0:
-                outputs[i, 1] += pi*2
-            while outputs[i, 0] > pi*2:
-                outputs[i, 0] -= pi*2
-            while outputs[i, 0] < 0:
-                outputs[i, 0] += pi*2
-            if pi/2 < outputs[i, 0] < pi*3/2:
-                outputs[i, 0] = pi - outputs[i, 0]
-            elif pi*3/2 < outputs[i, 0] < pi*2:
-                outputs[i, 0] -= 2*pi
-
-        self.up_down(outputs, labels)
-        self.left_right(outputs, labels)
-        self.front_back(outputs, labels)
-
-    def LR_loss(self, output):
-        angle_diff = torch.acos(
-            F.hardtanh(
-                torch.sqrt(
-                    torch.square(torch.cos(output[:, 0])) * torch.square(torch.cos(output[:, 1]))
-                    + torch.square(torch.sin(output[:, 0]))
-                ), min_val=-1, max_val=1
-            )
-        )
-        for i in range(angle_diff.shape[0]):
-            if pi < output[i, 1] < pi*2:
-                angle_diff[i] = -angle_diff[i]
-                print("LR: ",radian2Degree(angle_diff[i]))
-        return angle_diff
-    
-    def FB_loss(self, output):
-        angle_diff = torch.acos(
-            F.hardtanh(
-                torch.sqrt(
-                    torch.square(torch.cos(output[:, 0])) * torch.square(torch.sin(output[:, 1]))
-                    + torch.square(torch.sin(output[:, 0]))
-                ), min_val=-1, max_val=1
-            )
-        )
-        for i in range(angle_diff.shape[0]):
-            if pi/2 <= output[i, 1] <= pi*3/2:
-                angle_diff[i] = -angle_diff[i]
-                # print("FB: ",radian2Degree(angle_diff[i]))
-        return angle_diff
-    
-    def up_down(self, pred, target):
-        self.se_UD += torch.sum(torch.square(pred[:,0] - target[:,0])).item()
-
-    def left_right(self, pred, target):
-        self.se_LR += torch.sum(torch.square(self.LR_loss(pred) - self.LR_loss(target))).item()
-    
-    def front_back(self, pred, target):
-        self.se_FB += torch.sum(torch.square(self.FB_loss(pred) - self.FB_loss(target))).item()
-
 def DoALoss(output, target):
     # target should be (elev, azim)
     # sine: azimuth
@@ -155,12 +91,14 @@ if __name__ == "__main__":
 
     outputs_reg = torch.tensor(
         [
+            [0, -pi/2],
             [0, -pi/2]
         ]
     )
     labels_reg = torch.tensor(
         [
-            [0, pi/2]
+            [0, pi/2],
+            [0, -pi/2]
         ]
     )
 
@@ -172,7 +110,9 @@ if __name__ == "__main__":
         ]
     )
 
-    # print(cost_func(outputs_reg, labels_reg))
+    print(radian2Degree(cost_func.calDoALoss(outputs_reg, labels_reg)))
+
+    raise SystemExit
     confusion = Confusion()
     confusion(outputs_reg, labels_reg)
     print(f"{confusion.se_LR}, {confusion.se_UD}, {confusion.se_FB}")

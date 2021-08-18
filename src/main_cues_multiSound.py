@@ -453,5 +453,6 @@ if __name__ == "__main__":
     # if not os.path.isdir(args.cuesDir+"/valid/"):
     #     os.mkdir(args.cuesDir+"/valid/")
     
+    # createTrainSet(frame_duration=args.frameDuration)
     createTestSet(frame_duration=args.frameDuration)
     

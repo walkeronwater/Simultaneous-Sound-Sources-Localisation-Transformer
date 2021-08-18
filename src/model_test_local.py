@@ -27,10 +27,10 @@ from torchsummary import summary
 
 from load_data import *
 from utils import *
-from utils_model import *
+from utils_train import *
+from utils_test import *
 from models import *
 from loss import *
-
 
 
 if __name__ == "__main__":
@@ -147,7 +147,8 @@ if __name__ == "__main__":
 
     """set cost function"""
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device, coordinates=args.coordinates)
-
+    
+    error_src = TwoSourceError()
     """test iteration"""
     test_correct = 0.0
     test_total = 0.0
@@ -168,10 +169,19 @@ if __name__ == "__main__":
                     "Output shape: ", outputs.shape, "\n",
                     "Test Outputs: ", outputs[:5]
                 )
-
+            
             test_loss = cost_func(outputs, labels)
             test_sum_loss += test_loss.item()
-        test_loss = test_sum_loss / (i + 1)
-        test_acc = radian2Degree(test_loss)
-        print('Test Loss: %.04f | RMS angle error in degree: %.04f '
-            % (test_loss, test_acc))
+
+            loss_1 = radian2Degree(cost_func.calDoALoss(outputs[:, 0:2], labels[:, 0:2]))
+            loss_2 = radian2Degree(cost_func.calDoALoss(outputs[:, 2:4], labels[:, 2:4]))
+
+            """visualise predicted location vs ground truth"""
+            error_src(outputs, labels, loss_1, loss_2)
+
+    test_loss = test_sum_loss / (i + 1)
+    test_acc = radian2Degree(test_loss)
+    print('Test Loss: %.04f | RMS angle error in degree: %.04f '
+        % (test_loss, test_acc))
+    error_src.plotPrediction()
+    error_src.plotError()

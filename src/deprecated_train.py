@@ -27,7 +27,7 @@ from torchsummary import summary
 
 from load_data import *
 from utils import *
-from utils_model import *
+from utils_train import *
 from model_transformer import *
 from model_CNN import *
 from model_RNN import *

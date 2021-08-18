@@ -22,7 +22,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from torchsummary import summary
 
-from utils_model import *
+from utils_train import *
 from model_transformer import DecoderFC
 
 class CNNModel(nn.Module):

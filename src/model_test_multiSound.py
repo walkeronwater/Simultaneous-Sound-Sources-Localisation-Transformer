@@ -7,7 +7,7 @@ import torch.nn as nn
 
 from load_data import *
 from utils import *
-from utils_model import *
+from utils_train import *
 from models import *
 from loss import *
 

@@ -32,6 +32,93 @@ from loss import *
 from main_train import *
 from main_cues import *
 
+class SourcePrediction:
+    """
+    Store the prediction for a single sound source
+    """
+    def __init__(self):
+        self.elev_pred = []
+        self.elev_target = []
+        self.azim_pred = []
+        self.azim_target = []
+            
+    def __call__(self, outputs, labels):
+        """
+        Args:
+            outputs: shape of (batch size, 2)
+            labels: shape of (batch size, 2)
+        """
+        
+        self.elev_pred.extend([radian2Degree(i) for i in outputs[:, 0].tolist()])
+        self.elev_target.extend([radian2Degree(i) for i in labels[:, 0].tolist()])
+        self.azim_pred.extend([radian2Degree(i) for i in outputs[:, 1].tolist()])
+        self.azim_target.extend([radian2Degree(i) for i in labels[:, 1].tolist()])
+
+        # for i in range(outputs.shape[0]):
+        #     self.elev_pred.append(outputs[i, 0].item())
+        #     self.elev_target.append(labels[i, 0].item())
+        #     self.azim_pred.append(outputs[i, 1].item())
+        #     self.azim_target.append(labels[i, 1].item())
+
+
+class VisualisePrediction:
+    """
+    Support multiple sound-source prediction
+    """
+    def __init__(self, Nsound):
+        self.sound_list = []
+        for i in range(Nsound):
+            self.sound_list.append(SourcePrediction())
+        self.Nsound = Nsound
+
+    def __call__(self, outputs, labels):
+        """
+        Args:
+            outputs: shape of (batch size, 2*Nsound)
+            labels: shape of (batch size, 2*Nsound)
+        """
+        for i in range(self.Nsound):
+            self.sound_list[i](outputs[:,2*i:2*(i+1)], labels[:,2*i:2*(i+1)])
+
+    def report(self):
+        # print(f"{len(self.elev_pred)}, {len(self.elev_target)}, {len(self.azim_pred)}, {len(self.azim_pred)}")
+        for i in range(self.Nsound):
+            x = np.linspace(-45, 90, 100)
+            y = x
+            plt.figure()
+            plt.scatter(self.sound_list[i].elev_target, self.sound_list[i].elev_pred, color='blue')
+            plt.plot(x, y,'-r')
+            plt.xticks(range(-45, 91, 15))
+            plt.yticks(range(-45, 91, 15))
+            plt.xlabel("Ground truth")
+            plt.ylabel("Prediction")
+            plt.title(f"Elevation of sound source {i}")
+            plt.show()
+
+            x = np.linspace(0, 345, 100)
+            y = x
+            plt.figure()
+            plt.scatter(self.sound_list[i].azim_target, self.sound_list[i].azim_pred, color='blue')
+            plt.plot(x, y,'-r')
+            plt.xticks(range(0, 360, 30))
+            plt.yticks(range(0, 360, 30))
+            plt.xlabel("Ground truth")
+            plt.ylabel("Prediction")
+            plt.title(f"Azimuth of sound source {i}")
+            plt.show()
+
+            plt.figure()
+            plt.scatter(self.sound_list[i].azim_target, self.sound_list[i].elev_target, color='red')
+            plt.scatter(self.sound_list[i].azim_pred, self.sound_list[i].elev_pred, color='blue')
+            plt.xticks(range(0, 360, 30))
+            plt.yticks(range(-45, 91, 15))
+            plt.xlabel("Elevation")
+            plt.ylabel("Azmiuth")
+            plt.title(f"Prediction and target of sound source {i}")
+            plt.show()
+
+    def plotRegression(self, pred_list, target_list):
+        pass
 
 def regressionAcc(output, label, locLabel, device):
     correct = 0
@@ -130,7 +217,6 @@ class ConfusionEval:
         #     pred_[i] = self.convertLR(pred[i,1])
         #     target_[i] = self.convertLR(target[i,1])
         # self.rms_LR += torch.sum(torch.square(pred_ - target_)).item()
-        pass
 
     def front_back(self, pred, target):
         self.rms_FB += torch.sum(torch.square(self.FB_loss(pred) - self.FB_loss(target))).item()
