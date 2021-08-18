@@ -239,9 +239,6 @@ def createCues_(
 def createTrainingSet(frame_duration):
     """load HRIRs and audio files"""
     hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
-    src_1_path = glob(os.path.join(args.trainAudioDir+"/speech_male/*"))
-    src_2_path = glob(os.path.join(args.trainAudioDir+"/speech_female/*"))
-    print(f"Total available number of audio files: {len(src_1_path)}, {len(src_2_path)}")
     
     src_1_count = 0
     src_2_count = 0
@@ -337,9 +334,6 @@ def createTrainingSet(frame_duration):
 def createTestSet(frame_duration):
     """load HRIRs and audio files"""
     hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
-    src_1_path = glob(os.path.join(args.trainAudioDir+"/speech_male/*"))
-    src_2_path = glob(os.path.join(args.trainAudioDir+"/speech_female/*"))
-    print(f"Total available number of audio files: {len(src_1_path)}, {len(src_2_path)}")
     
     src_1_count = 0
     src_2_count = 0
@@ -413,8 +407,8 @@ by the user input.
 """
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Create cues')
-    parser.add_argument('trainAudioDir', type=str, help='Directory of audio files for training')
-    parser.add_argument('validAudioDir', type=str, help='Directory of audio files for validation')
+    parser.add_argument('src1Dir', type=str, help='Directory of audio files for source 1')
+    parser.add_argument('src2Dir', type=str, help='Directory of audio files for source 2')
     parser.add_argument('hrirDir', type=str, help='Directory of HRIR files')
     parser.add_argument('cuesDir', type=str, help='Directory of cues to be saved')
     parser.add_argument('Nsound', type=int, help='Number of sound')
@@ -427,8 +421,8 @@ if __name__ == "__main__":
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
-    print("Training audio files directory: ", args.trainAudioDir)
-    print("Validation audio files directory: ", args.validAudioDir)
+    # print("Training audio files directory: ", args.trainAudioDir)
+    # print("Validation audio files directory: ", args.validAudioDir)
     print("HRIR files directory: ", args.hrirDir)
     args.trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
     print("Train validation split: ", args.trainValidSplit)
@@ -452,6 +446,10 @@ if __name__ == "__main__":
     #     os.mkdir(args.cuesDir+"/train/")
     # if not os.path.isdir(args.cuesDir+"/valid/"):
     #     os.mkdir(args.cuesDir+"/valid/")
+
+    src_1_path = glob(os.path.join(args.src1Dir + "/*"))
+    src_2_path = glob(os.path.join(args.src2Dir + "/*"))
+    print(f"Total available number of audio files: {len(src_1_path)}, {len(src_2_path)}")
     
     # createTrainSet(frame_duration=args.frameDuration)
     createTestSet(frame_duration=args.frameDuration)
