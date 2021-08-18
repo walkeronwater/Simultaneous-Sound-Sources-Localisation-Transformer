@@ -160,7 +160,7 @@ class BinauralSignal:
         if self.val_SNR >= 100:
             return (sigL, sigR)
         else:
-            # print(f"current SNR {self.val_SNR} noise tyep {self.noise_type}")
+            # print(f"current SNR {self.val_SNR} noise type {self.noise_type}")
             return (sigL + self.noiseGenerator(sigL), sigR + self.noiseGenerator(sigR))
     
 
