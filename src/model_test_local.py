@@ -178,8 +178,8 @@ if __name__ == "__main__":
                 if not csv_flag:
                     csv_flag = True
                     with open(csv_name, 'w') as csvFile:
-                        for batch_idx in range(outputs.shape[1]):
-                            for i in range(Nsound*2):
+                        for batch_idx in range(outputs.shape[0]):
+                            for i in range(outputs.shape[1]):
                                 csvFile.write(str(radian2Degree(outputs[batch_idx, i].item())))
                                 csvFile.write(',')
                             for i in range(outputs.shape[1]):
