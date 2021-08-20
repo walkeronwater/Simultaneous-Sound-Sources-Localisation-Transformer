@@ -29,6 +29,7 @@ from load_data import *
 from utils import *
 from utils_train import *
 from models import *
+from model_CRNN import *
 from loss import *
 
 def data_parallel(module, input, device_ids, output_device=None):
@@ -137,21 +138,40 @@ if __name__ == "__main__":
     task = args.task
 
     """load model"""
-    model = TransformerModel(
-        task=task,
-        Ntime=Ntime,
-        Nfreq=Nfreq,
-        Ncues=Ncues,
-        Nsound=Nsound,
-        whichEnc="diy",
-        whichDec=args.whichDec,
-        device=device,
-        numEnc=args.numEnc,
-        coordinates=args.coordinates,
-        dropout=args.valDropout,
-        forward_expansion=4,
-        # numFC=args.numFC,
-    )
+    if args.whichModel.lower() == "transformer":
+        model = TransformerModel(
+            task=task,
+            Ntime=Ntime,
+            Nfreq=Nfreq,
+            Ncues=Ncues,
+            Nsound=Nsound,
+            whichEnc="diy",
+            whichDec=args.whichDec,
+            device=device,
+            numEnc=args.numEnc,
+            coordinates=args.coordinates,
+            dropout=args.valDropout,
+            forward_expansion=4,
+            # numFC=args.numFC,
+        )
+    elif args.whichModel.lower() == "crnn":
+        model = CRNN(
+            task=task,
+            Ntime=Ntime,
+            Nfreq=Nfreq,
+            Ncues=Ncues,
+            Nsound=Nsound,
+            whichDec="src",
+            num_conv_layers=4,
+            num_recur_layers=2,
+            dropout=0.1,
+            device=device,
+            isDebug=False,
+            coordinates="spherical"
+        )
+    else:
+        raise SystemExit("Unsupported model.")
+
     if flag_var['isHPC']:
         if torch.cuda.device_count() > 1:
             print("Let's use", torch.cuda.device_count(), "GPUs!")
@@ -165,8 +185,10 @@ if __name__ == "__main__":
     optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 
     """set learning rate scheduler"""
-    scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
-    # scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True)
+    if args.whichModel.lower() == "transformer":
+        scheduler = StepLR(optimizer, step_size=5, gamma=0.5)
+    else:
+        scheduler = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=5, verbose=True)
 
     """set early stopping"""
     early_stop = EarlyStopping(args.patience)
@@ -236,8 +258,11 @@ if __name__ == "__main__":
             val_loss = val_sum_loss / (i + 1)
             print('Validation Loss: %.04f | Validation Acc: %.04f '
                 % (val_loss, val_acc))
-            scheduler.step()
-            # scheduler.step(val_loss)
+            
+            if args.whichModel.lower() == "transformer":
+                scheduler.step()
+            else:
+                scheduler.step(val_loss)
         
         if args.isSave:
             saveCurves(

@@ -5,6 +5,16 @@ from torchviz import make_dot
 
 from utils_train import *
 
+"""
+TransformerModel
+    EncoderDIYTransformer
+        Encoder
+            TransformerBlock
+                SelfAttention
+    DecoderSrcCls / DecoderSrcReg / DecoderEAReg
+        FCModules
+"""
+
 class SelfAttention(nn.Module):
     """
     Self attention module for (time, freq) dependency learning
