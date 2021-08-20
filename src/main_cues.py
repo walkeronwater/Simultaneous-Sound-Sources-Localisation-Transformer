@@ -22,7 +22,7 @@ from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
 
-from load_data import *
+from data_loader import *
 from utils import *
 
 """

@@ -24,7 +24,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from torchsummary import summary
 
-from load_data import *
+from data_loader import *
 from utils import *
 from models import *
 

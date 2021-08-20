@@ -1,10 +1,11 @@
 from math import pi
+import numpy as np
 import torch
 import torch.nn as nn
 from torch import Tensor
 import torch.nn.functional as F
 
-from utils import radian2Degree, degree2Radian
+from utils import radian2Degree, degree2Radian, getAngleDiff, getManhattanDiff
 
 class CostFunc:
     def __init__(
@@ -68,6 +69,7 @@ def DoALoss(output, target):
 
     return torch.absolute(loss)
 
+
 def cost_manhattan(output, target):
     # torch.stack(torch.sin(target[:, 0]) torch.cos(target[:, 0]))
 
@@ -82,6 +84,12 @@ def cost_multiSound(output, target):
     return DoALoss(output[:, 0:2], target[:, 0:2]) + DoALoss(output[:, 2:4], target[:, 2:4])
 
 if __name__ == "__main__":
+    temp_1 = np.array([0, 6.22])
+    temp_2 = np.array([0, 0])
+    res = getManhattanDiff(temp_1, temp_2)
+    print(res)
+    raise SystemExit
+
     cost_func = CostFunc(
         task="allRegression",
         Nsound=2,

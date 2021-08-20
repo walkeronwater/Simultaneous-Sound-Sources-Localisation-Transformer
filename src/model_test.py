@@ -5,7 +5,7 @@ import soundfile as sf
 import torch
 import torch.nn as nn
 
-from load_data import *
+from data_loader import *
 from utils import *
 from utils_train import *
 from utils_test import *
