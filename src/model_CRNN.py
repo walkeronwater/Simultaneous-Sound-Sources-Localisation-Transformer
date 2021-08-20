@@ -77,6 +77,8 @@ class CRNN(nn.Module):
             nn.BatchNorm1d(256),
             nn.ReLU(),
             nn.Dropout(dropout),
+            nn.Linear(256, 256),
+            nn.ReLU(),
             nn.Linear(256, 2, bias=False)
         )
 
@@ -85,6 +87,8 @@ class CRNN(nn.Module):
             nn.BatchNorm1d(256),
             nn.ReLU(),
             nn.Dropout(dropout),
+            nn.Linear(256, 256),
+            nn.ReLU(),
             nn.Linear(256, 2, bias=False)
         )
 
