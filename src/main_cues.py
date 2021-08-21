@@ -111,7 +111,7 @@ if __name__ == "__main__":
     parser.add_argument('Nsample', type=int, help='Number of samples?')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--valSNRList', default="-5,0,5,10,15,20,25,30,35", type=str, help='Range of SNR')
-    parser.add_argument('--Ncues', default=5, type=int, help='Number of cues?')
+    parser.add_argument('--Ncues', default=4, type=int, help='Number of cues?')
     parser.add_argument('--prepMethod', default="minmax", type=str, help='Preprocessing method')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
