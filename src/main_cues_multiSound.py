@@ -105,7 +105,9 @@ def createTrainingSet(src_1, src_1_count, src_2, src_2_count):
                     # print(f"magL shape: {magL.shape}")
 
                     save_cues(cuesList=[magL, phaseL, magR, phaseR], loc_idx_list=[loc_1, loc_2])
-                    if save_cues.fileCount >= args.Nsample:
+                    # if save_cues.fileCount >= args.Nsample:
+                    #     return
+                    if count_file >= args.Nsample:
                         return
 
                     count_file += 1
