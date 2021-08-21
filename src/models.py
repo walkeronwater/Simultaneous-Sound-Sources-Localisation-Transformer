@@ -225,7 +225,8 @@ class FCModules(nn.Module):
         input_size,
         output_size,
         activation,
-        dropout
+        dropout,
+        num_FC_layers=4
     ):
         super(FCModules, self).__init__()
         if activation.lower() == "tanh":
@@ -233,7 +234,29 @@ class FCModules(nn.Module):
         elif activation.lower() == "relu":
             act_func = nn.ReLU()
 
-        self.FC_blocks = nn.Sequential(
+        self.FC_1 = nn.Sequential(
+            nn.Linear(input_size, output_size, bias=False)
+        )
+
+        self.FC_2 = nn.Sequential(
+            nn.Linear(input_size, 256),
+            nn.BatchNorm1d(256),
+            nn.Dropout(dropout),
+            act_func,
+            nn.Linear(256, output_size, bias=False)
+        )
+        
+        self.FC_3 = nn.Sequential(
+            nn.Linear(input_size, 256),
+            nn.BatchNorm1d(256),
+            nn.Dropout(dropout),
+            act_func,
+            nn.Linear(256, 256),
+            act_func,
+            nn.Linear(256, output_size, bias=False)
+        )
+
+        self.FC_4 = nn.Sequential(
             nn.Linear(input_size, 256),
             nn.BatchNorm1d(256),
             act_func,
@@ -245,8 +268,17 @@ class FCModules(nn.Module):
             nn.Linear(256, output_size, bias=False)
         )
 
+        self.num_FC_layers = num_FC_layers
+
     def forward(self, inputs):
-        return self.FC_blocks(inputs)
+        if self.num_FC_layers == 1:
+            return self.FC_1(inputs)
+        if self.num_FC_layers == 2:
+            return self.FC_2(inputs)
+        if self.num_FC_layers == 3:
+            return self.FC_3(inputs)
+        if self.num_FC_layers == 4:
+            return self.FC_4(inputs)
 
 class DecoderSrcCls(nn.Module):
     """
@@ -256,7 +288,8 @@ class DecoderSrcCls(nn.Module):
         self,
         enc_out_size,
         Nsound,
-        dropout
+        dropout,
+        num_FC_layers
     ):
         super(DecoderSrcCls, self).__init__()
 
@@ -264,7 +297,8 @@ class DecoderSrcCls(nn.Module):
             input_size=enc_out_size,
             output_size=187,
             activation="tanh",
-            dropout=dropout
+            dropout=dropout,
+            num_FC_layers=num_FC_layers
         )
 
     def forward(self, enc_out):
@@ -282,7 +316,8 @@ class DecoderSrcReg(nn.Module):
         enc_out_size,
         Nsound,
         dropout,
-        coordinates = "spherical"
+        coordinates="spherical",
+        num_FC_layers=4
     ):
         super(DecoderSrcReg, self).__init__()
         if coordinates.lower() == "spherical":
@@ -295,7 +330,8 @@ class DecoderSrcReg(nn.Module):
                     input_size=enc_out_size,
                     output_size=output_size,
                     activation="relu",
-                    dropout=dropout
+                    dropout=dropout,
+                    num_FC_layers=num_FC_layers
                 )
                 for _ in range(Nsound)
             ]
@@ -316,7 +352,8 @@ class DecoderEAReg(nn.Module):
         self,
         enc_out_size,
         Nsound,
-        dropout
+        dropout,
+        num_FC_layers=4
     ):
         super(DecoderEAReg, self).__init__()
         self.Nsound = Nsound
@@ -366,7 +403,7 @@ class TransformerModel(nn.Module):
         whichEnc,
         whichDec,
         numEnc=6,
-        numFC=3,
+        numFC=4,
         heads=8,
         device="cpu",
         forward_expansion=4,
@@ -398,20 +435,23 @@ class TransformerModel(nn.Module):
             self.dec = DecoderEAReg(
                 enc_out_size=Nfreq*Ntime*Ncues,
                 Nsound=Nsound,
-                dropout=dropout
+                dropout=dropout,
+                num_FC_layers = numFC
             )
         elif whichDec.lower() == "src":
             self.dec = DecoderSrcReg(
                 enc_out_size=Nfreq * Ntime * Ncues,
                 Nsound=Nsound,
                 dropout=dropout,
-                coordinates=coordinates
+                coordinates=coordinates,
+                num_FC_layers = numFC
             )
         elif whichDec.lower() == "cls":
             self.dec = DecoderSrcCls(
                 enc_out_size=Nfreq * Ntime * Ncues,
                 Nsound=Nsound,
-                dropout=dropout
+                dropout=dropout,
+                num_FC_layers = numFC
             )
 
     def forward(self, inputs):
@@ -468,7 +508,9 @@ if __name__ == "__main__":
         whichEnc="diy",
         whichDec="src",
         numEnc=3,
-        device=device
+        device=device,
+        coordinates="spherical",
+        numFC=4
     )
     model = model.to(device)
 

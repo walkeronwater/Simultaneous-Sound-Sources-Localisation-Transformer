@@ -46,6 +46,11 @@ def data_parallel(module, input, device_ids, output_device=None):
     return nn.parallel.gather(outputs, output_device)
 
 if __name__ == "__main__":
+    """
+    Template running:
+        python model_train.py ./saved_0908_temp/ ./model/temp/ 0 "allRegression" "transformer" 2 "src" --numEnc 3 --numFC 4 --batchSize 4 --isSave "F"
+    """
+
     parser = argparse.ArgumentParser(description='Training hyperparamters')
     parser.add_argument('dataDir', type=str, help='Directory of saved cues')
     parser.add_argument('modelDir', type=str, help='Directory of model to be saved at')
@@ -56,9 +61,9 @@ if __name__ == "__main__":
     parser.add_argument('whichDec', type=str, help='Which decoder structure')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
-    parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
+    parser.add_argument('--numFC', default=4, type=int, help='Number of FC layers')
     parser.add_argument('--lrRate', default=1e-4, type=float, help='Learning rate')
-    parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
+    parser.add_argument('--valDropout', default=0.1, type=float, help='Dropout value')
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
     parser.add_argument('--whichBest', default="bestValLoss", type=str, help='Best of acc or loss')
@@ -149,10 +154,10 @@ if __name__ == "__main__":
             whichDec=args.whichDec,
             device=device,
             numEnc=args.numEnc,
+            numFC=args.numFC,
             coordinates=args.coordinates,
             dropout=args.valDropout,
-            forward_expansion=4,
-            # numFC=args.numFC,
+            forward_expansion=4
         )
     elif args.whichModel.lower() == "crnn":
         model = CRNN(
