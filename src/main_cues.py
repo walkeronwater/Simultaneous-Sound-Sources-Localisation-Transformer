@@ -25,97 +25,10 @@ import torch.nn.functional as F
 from data_loader import *
 from utils import *
 
-"""
-class CuesShape:
-    def __init__(
-        self,
-        Nfreq = 512,
-        Ntime = 44,
-        Ncues = 5,
-        Nloc = 187,
-        lenSliceInSec = 0.5,
-        valSNRList = [-5,0,5,10,15,20,25,30,35]
-    ):
-        self.Nfreq = Nfreq
-        self.Ntime = Ntime
-        self.Ncues = Ncues
-        self.Nloc = Nloc
-        self.lenSliceInSec = lenSliceInSec
-        self.valSNRList = valSNRList
-
-def createCues(path, Nsample, cuesShape, prep_method, dirName):
-    Nfreq = cuesShape.Nfreq
-    Ntime = cuesShape.Ntime
-    Ncues = cuesShape.Ncues
-    Nloc = cuesShape.Nloc
-    lenSliceInSec = cuesShape.lenSliceInSec
-    valSNRList = cuesShape.valSNRList
-    preprocess = Preprocess(prep_method=prep_method)
-    fileCount = 0
-    print("Creating cues in ", dirName)
-    for audioIndex in range(len(path)):
-        if fileCount == Nsample:
-            break
-        print("Audio index: ", audioIndex)
-        audio, fs_audio = sf.read(path[audioIndex])
-        # audio = librosa.resample(audio, fs_audio, fs_HRIR)
-        #[TODO] change fs_HRIR to fs_audio
-        audioSliceList = audioSliceGenerator(audio, fs_HRIR, lenSliceInSec)
-
-        for sliceIndex in range(len(audioSliceList)):
-            if fileCount == Nsample:
-                break
-            audioSlice = audio[audioSliceList[sliceIndex]]
-
-            for locIndex in range(Nloc):
-                if fileCount == Nsample:
-                    break
-
-                # hrirLeft_re = librosa.resample(hrirSet[locIndex, 0], fs_HRIR, fs_audio)
-                # hrirRight_re = librosa.resample(hrirSet[locIndex, 1], fs_HRIR, fs_audio)
-                sigLeft = np.convolve(audioSlice, hrirSet_re[locIndex, 0])
-                sigRight = np.convolve(audioSlice, hrirSet_re[locIndex, 1])
-
-                # print("Location index: ", locIndex)
-                # showSpectrogram(sigLeft, fs_HRIR)
-                # showSpectrogram(sigRight, fs_HRIR)
-                
-                for valSNR in valSNRList:
-                    if fileCount == Nsample:
-                        break
-                
-                    specLeft = calSpectrogram(sigLeft + noiseGenerator(sigLeft, valSNR))
-                    specRight = calSpectrogram(sigRight + noiseGenerator(sigRight, valSNR))
-
-                    ipdCues = preprocess(calIPD(specLeft, specRight))
-                    ildCues = preprocess(calILD(specLeft, specRight))
-                    r_l, theta_l  = cartesian2euler(specLeft)
-                    r_r, theta_r  = cartesian2euler(specRight)
-                    r_l = preprocess(r_l)
-                    theta_l = preprocess(theta_l)
-                    r_r = preprocess(r_r)
-                    theta_r = preprocess(theta_r)
-
-                    if Ncues == 6:
-                        cues = concatCues([ipdCues, ildCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
-                    elif Ncues == 5:
-                        cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
-                    elif Ncues == 4:
-                        cues = concatCues([r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
-                    elif Ncues == 2:
-                        cues = concatCues([ipdCues, ildCues], (Nfreq, Ntime))
-
-                    saveCues(cues, locIndex, dirName, fileCount, locLabel)
-
-                    fileCount += 1
-                    if fileCount % (Nloc*len(valSNRList)) == 0:
-                        print("# location set ("+str(Nloc*len(valSNRList))+" samples per set): ",
-                            fileCount // (Nloc*len(valSNRList)))
-"""
-
 def createTrainingSet():
     timeFlag = True
-    hrirSet, locLabel, fs_HRIR = loadHRIR(args.hrirDir + "/IRC*")
+    load_hrir = LoadHRIR(path="./HRTF/IRC*")
+
     path_1 = glob(os.path.join(args.trainAudioDir+"/speech_male/*"))
     path_2 = glob(os.path.join(args.trainAudioDir+"/speech_female/*"))
     
@@ -136,25 +49,18 @@ def createTrainingSet():
     for i in range(len(src_path)):
         src = AudioSignal(path=src_path[i], slice_duration=1)
         src_count += len(src.slice_list)
-    
-    path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
-    print(hrirSet.shape)
 
     # audio indexes
-    
-    audio_index_1 = 0
-    audio_index_2 = 0
-    src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=1)
-    src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=1)
-    binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src.fs_audio)
-    loc_region = LocRegion(locLabel=locLabel)
-    binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method="standardise")
-    save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
+    audio_index = 0
+    src = AudioSignal(path=src_path[audio_index], slice_duration=1)
+    binaural_sig = BinauralSignal(hrir=load_hrir.hrir_set, fs_hrir=load_hrir.fs_HRIR, fs_audio=src.fs_audio)
+    binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method=args.prepMethod)
+    save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=load_hrir.loc_label)
     
     start_time = time.time()
     slice_idx = 0
     count = 0
+    count_file = 0
     while True:
         if slice_idx >= len(src.slice_list):
             slice_idx = 0
@@ -166,16 +72,20 @@ def createTrainingSet():
         
         sig_sliced = src(idx=slice_idx)
 
-        for loc_idx in range(loc_region.Nloc):
+        print("locations: ",load_hrir.loc_label.shape[0])
+        for loc_idx in range(load_hrir.loc_label.shape[0]):
             for val_SNR in args.valSNRList:
                 binaural_sig.val_SNR = val_SNR
 
                 sigL, sigR = binaural_sig(sig_sliced, loc_idx)
                 magL, phaseL, magR, phaseR = binaural_cues(sigL, sigR)
 
-                save_cues(cuesList=[magL, phaseL, magR, phaseR], locIndex=[loc_idx])
-                if save_cues.fileCount == args.Nsample:
+                save_cues(cuesList=[magL, phaseL, magR, phaseR], loc_idx_list=[loc_idx])
+                
+                if count_file >= args.Nsample:
                     return
+
+                count_file += 1
 
                 if timeFlag:
                     print(f"One location loop costs {(time.time()-start_time)} seconds.")
@@ -202,7 +112,7 @@ if __name__ == "__main__":
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--valSNRList', default="-5,0,5,10,15,20,25,30,35", type=str, help='Range of SNR')
     parser.add_argument('--Ncues', default=5, type=int, help='Number of cues?')
-    parser.add_argument('--prepMethod', default="None", type=str, help='Preprocessing method')
+    parser.add_argument('--prepMethod', default="minmax", type=str, help='Preprocessing method')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
 
     args = parser.parse_args()
@@ -242,71 +152,5 @@ if __name__ == "__main__":
     #     os.mkdir(dirName+"/valid/")
     # raise SystemExit('debug')
 
-    """
-    print(trainAudioPath)
-    createCues(trainAudioPath, Nsample_train, cuesShape, args.prepMethod, dirName=args.cuesDir+"/train/")
-    print(validAudioPath)
-    createCues(validAudioPath, Nsample_valid, cuesShape, args.prepMethod, dirName=args.cuesDir+"/valid/")
-    """
     createTrainingSet()
 
-
-
-
-    '''
-    for audioIndex in range(len(trainAudioPath)):
-        if fileCount == Nsample_train:
-            break
-        print("Audio index: ", audioIndex)
-        audio, fs_audio = sf.read(path[audioIndex])
-        # audio = librosa.resample(audio, fs_audio, fs_HRIR)
-
-        audioSliceList = audioSliceGenerator(audio, fs_HRIR, lenSliceInSec)
-
-        for sliceIndex in range(len(audioSliceList)):
-            if fileCount == Nsample_train:
-                break
-            audioSlice = audio[audioSliceList[sliceIndex]]
-
-            for locIndex in range(Nloc):
-                if fileCount == Nsample_train:
-                    break
-
-                hrirLeft_re = librosa.resample(hrirSet[locIndex, 0], fs_HRIR, fs_audio)
-                hrirRight_re = librosa.resample(hrirSet[locIndex, 1], fs_HRIR, fs_audio)
-                sigLeft = np.convolve(audioSlice, hrirLeft_re)
-                sigRight = np.convolve(audioSlice, hrirRight_re)
-
-                # print("Location index: ", locIndex)
-                # showSpectrogram(sigLeft, fs_HRIR)
-                # showSpectrogram(sigRight, fs_HRIR)
-                
-                for valSNR in valSNRList:
-                    if fileCount == Nsample:
-                        break
-                
-                    specLeft = calSpectrogram(sigLeft + noiseGenerator(sigLeft, valSNR))
-                    specRight = calSpectrogram(sigRight + noiseGenerator(sigRight, valSNR))
-
-                    ipdCues = calIPD(specLeft, specRight)
-                    ildCues = calILD(specLeft, specRight)
-                    r_l, theta_l  = cartesian2euler(specLeft)
-                    r_r, theta_r  = cartesian2euler(specRight)
-
-                    cues = concatCues([ipdCues, r_l, theta_l, r_r, theta_r], (Nfreq, Ntime))
-
-                    # save cues onto disk
-                    if isDisk:
-                        saveCues(cues, locIndex, dirName, fileCount, locLabel)
-                    else:
-                        cues_[fileCount] = cues
-                        labels_[fileCount] = labels
-
-                    # if fileCount == 1:
-                    #     raise SystemExit("Debugging")
-
-                    fileCount += 1
-                    if fileCount % (Nloc*len(valSNRList)) == 0:
-                        print("# location set ("+str(Nloc*len(valSNRList))+" samples per set): ",
-                            fileCount // (Nloc*len(valSNRList)))
-    '''
