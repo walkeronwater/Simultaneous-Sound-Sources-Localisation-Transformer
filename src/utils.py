@@ -59,9 +59,9 @@ def degree2Radian(val):
     return val/180*pi
 
 def linear2dbfs(val, factor="amplitude"):
-    if factor.lower == "amplitude":
+    if factor.lower() == "amplitude":
         return 20*np.log10(val)
-    elif factor.lower == "power":
+    elif factor.lower() == "power":
         return 10*np.log10(val**2)
 
 def spherical2Cartesian(val):
