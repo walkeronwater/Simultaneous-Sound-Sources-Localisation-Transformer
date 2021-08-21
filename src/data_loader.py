@@ -312,11 +312,16 @@ class BinauralSignal:
     
 
     def noiseGenerator(self, seq):
+        # if self.noise_type.lower() == "gaussian":
+        #     sig_power = 10*np.log10(np.mean(np.power(seq, 2)))
+        #     noise_power = np.power(10, (sig_power - self.val_SNR)/10)
+        #     noise_sig = np.random.normal(0, np.sqrt(noise_power), seq.shape)
+            # print(noise_power)
+            # return noise_sig
         if self.noise_type.lower() == "gaussian":
-            sig_power = 10*np.log10(np.mean(np.power(seq, 2)))
-            noise_power = np.power(10, (sig_power - self.val_SNR)/10)
-            noise_sig = np.random.normal(0, np.sqrt(noise_power), seq.shape)
-            return noise_sig
+            p_sig = np.var(seq)
+            p_noise = p_sig/np.power(10, self.val_SNR/10)
+            return np.random.normal(0, np.sqrt(p_noise), seq.shape)
 
 class BinauralCues:
     def __init__(self, fs_audio, prep_method):
