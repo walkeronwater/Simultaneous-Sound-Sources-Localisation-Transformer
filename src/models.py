@@ -152,27 +152,22 @@ class Encoder(nn.Module):
                 for _ in range(num_layers)
             ]
         )
-        # fixed positional encoding
-        # self.positional_encodings = torch.linspace(0, 1, Ntime)
-        # self.positional_encodings = self.positional_encodings.repeat((batchSize, Nfreq, 1))
-        # self.positional_encodings = self.positional_encodings.permute(0, 2, 1).to(device)
-        # learnable postional embedding
-        # self.position_embedding = nn.Embedding(max_length, Nfreq)
+        
+        self.pos_enc = nn.Embedding(Ntime, Nfreq)
 
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         N, Ntime, Nfreq = x.shape
-
-        # positions = torch.arange(0, seq_length).expand(N, seq_length).to(self.device)
         
-        positional_encodings = torch.linspace(0, 1, Ntime)
-        positional_encodings = positional_encodings.repeat((N, Nfreq, 1))
-        positional_encodings = positional_encodings.permute(0, 2, 1).to(self.device)
-        # print(f"positional encoding shape: {positional_encodings.shape}")
-        # print(positional_encodings[0,:,0])
+        # pos_enc = torch.linspace(0, 1, Ntime)
+        # pos_enc = pos_enc.repeat((N, Nfreq, 1))
+        # pos_enc = pos_enc.permute(0, 2, 1).to(self.device)
+        # print(f"positional encoding shape: {pos_enc.shape}")
+        # print(pos_enc[0,:,0])
+        pos_enc = torch.arange(0, Ntime).expand(N, Ntime).to(self.device)
         
-        out = x + positional_encodings
+        out = x + self.pos_enc(pos_enc)
         out = self.dropout(out)
 
         # In the Encoder the query, key, value are all the same, it's in the

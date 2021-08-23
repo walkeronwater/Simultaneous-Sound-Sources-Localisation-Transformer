@@ -5,7 +5,6 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-import shutil
 import h5py
 import csv
 import pandas as pd
