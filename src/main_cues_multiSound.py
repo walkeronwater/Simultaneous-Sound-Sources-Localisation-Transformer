@@ -103,10 +103,8 @@ def createTrainingSet(src_1, src_1_count, src_2, src_2_count):
                     sigL_2, sigR_2 = binaural_sig(sig_sliced_2, loc_2)
                     magL, phaseL, magR, phaseR = binaural_cues(sigL_1+sigL_2, sigR_1+sigR_2)
                     # print(f"magL shape: {magL.shape}")
-
                     save_cues(cuesList=[magL, phaseL, magR, phaseR], loc_idx_list=[loc_1, loc_2])
-                    # if save_cues.fileCount >= args.Nsample:
-                    #     return
+                    
                     if count_file >= args.Nsample:
                         return
 
