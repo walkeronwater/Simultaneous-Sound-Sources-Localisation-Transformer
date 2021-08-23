@@ -169,6 +169,7 @@ if __name__ == "__main__":
             whichDec="src",
             num_conv_layers=4,
             num_recur_layers=2,
+            num_FC_layers=args.numEnc,
             dropout=0.1,
             device=device,
             isDebug=False,
@@ -223,7 +224,7 @@ if __name__ == "__main__":
                 print(
                     # "Input shape: ", inputs.shape, "\n",
                     # "label shape: ", labels.shape, "\n",
-                    "labels: ", labels[:5], "\n",
+                    "Training labels: ", labels[:5], "\n",
                     # "Output shape: ", outputs.shape, "\n",
                     "Training Outputs: ", outputs[:5]
                 )
@@ -251,13 +252,13 @@ if __name__ == "__main__":
                 
                 if flag_var["isDebug"]:
                     print(
-                        # "Input shape: ", inputs.shape, "\n",
+                        "Input shape: ", inputs.shape, "\n",
                         # "label shape: ", labels.shape, "\n",
-                        # "labels: ", labels[:5], "\n",
+                        "Validation labels: ", labels[:5], "\n",
                         # "Output shape: ", outputs.shape, "\n",
                         "Validation Outputs: ", outputs[:5]
                     )
-
+                    
                 val_loss = cost_func(outputs, labels)
                 val_sum_loss += val_loss.item()
             val_loss = val_sum_loss / (i + 1)

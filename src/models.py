@@ -263,6 +263,7 @@ class FCModules(nn.Module):
             nn.Linear(256, output_size, bias=False)
         )
 
+        self.input_size = input_size
         self.num_FC_layers = num_FC_layers
 
     def forward(self, inputs):

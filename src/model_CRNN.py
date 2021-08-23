@@ -24,6 +24,7 @@ from torchsummary import summary
 
 from utils import *
 from utils_train import *
+from models import FCModules
 
 class CRNN(nn.Module):
     def __init__(
@@ -36,6 +37,7 @@ class CRNN(nn.Module):
         whichDec,
         num_conv_layers=4,
         num_recur_layers=2,
+        num_FC_layers=4,
         device="cpu",
         dropout=0.1,
         isDebug=False,
@@ -71,25 +73,22 @@ class CRNN(nn.Module):
             num_layers=num_recur_layers,
             batch_first=True
         )
-        
-        self.FC_blocks_elev = nn.Sequential(
-            nn.Linear(52*256, 256),
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 2, bias=False)
-        )
 
-        self.FC_blocks_azim = nn.Sequential(
-            nn.Linear(52*256, 256),
-            nn.BatchNorm1d(256),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 2, bias=False)
+        if coordinates.lower() == "spherical":
+            output_size = 2
+        elif coordinates.lower() == "cartesian":
+            output_size = 3
+        self.FC_layers = nn.ModuleList(
+            [
+                FCModules(
+                    input_size=10*256,
+                    output_size=output_size,
+                    activation="relu",
+                    dropout=dropout,
+                    num_FC_layers=num_FC_layers
+                )
+                for _ in range(Nsound)
+            ]
         )
 
         self.isDebug = isDebug
@@ -109,14 +108,19 @@ class CRNN(nn.Module):
         out = torch.flatten(out, 2, -1)
         if self.isDebug: print(f"Flattened output: {out.shape}")
 
-        out, (hn, cn) = self.recur_layers(out, None)
-        if self.isDebug: print(f"RNN output: {out.shape}")
+        out_recur, (hn, cn) = self.recur_layers(out, None)
+        if self.isDebug: print(f"RNN output: {out_recur.shape}")
 
-        out = torch.flatten(out, 1, -1)
-        out_elev = self.FC_blocks_elev(out)
-        out_azim = self.FC_blocks_azim(out)
+        out_recur = torch.flatten(out_recur, 1, -1)
+        assert (
+            out_recur.shape[-1] == self.FC_layers[0].input_size
+        ), f"{out_recur.shape} is not equal to {self.FC_layers[0].input_size}"
+        
+        out = []
+        for layers in self.FC_layers:
+            out.append(layers(out_recur))
 
-        out = torch.cat([out_elev, out_azim], dim=-1)
+        out = torch.cat(out, dim=-1)
 
         return out
 
