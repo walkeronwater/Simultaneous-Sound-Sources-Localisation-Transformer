@@ -254,8 +254,8 @@ class FCModules(nn.Module):
         self.FC_4 = nn.Sequential(
             nn.Linear(input_size, 256),
             nn.BatchNorm1d(256),
-            act_func,
             nn.Dropout(dropout),
+            act_func,
             nn.Linear(256, 256),
             act_func,
             nn.Linear(256, 256),
