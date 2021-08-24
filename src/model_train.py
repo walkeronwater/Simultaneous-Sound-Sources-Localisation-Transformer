@@ -169,8 +169,8 @@ if __name__ == "__main__":
             whichDec="src",
             num_conv_layers=4,
             num_recur_layers=2,
-            num_FC_layers=args.numEnc,
-            dropout=0.1,
+            num_FC_layers=args.numFC,
+            dropout=args.valDropout,
             device=device,
             isDebug=False,
             coordinates="spherical"
