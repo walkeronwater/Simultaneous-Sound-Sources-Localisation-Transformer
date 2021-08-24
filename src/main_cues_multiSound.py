@@ -144,7 +144,7 @@ def createTestSet(src_1, src_1_count, src_2, src_2_count):
                 
                 if args.valSNR <100:
                     print("Mixed with noise")
-                    binaural_sig.val_SNR = args.val_SNR
+                    binaural_sig.val_SNR = args.valSNR
                 
                 sigL_1, sigR_1 = binaural_sig(sig_sliced_1, loc_1)
                 sigL_2, sigR_2 = binaural_sig(sig_sliced_2, loc_2)
