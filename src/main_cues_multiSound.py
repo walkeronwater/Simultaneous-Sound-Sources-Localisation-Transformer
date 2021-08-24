@@ -32,11 +32,11 @@ from utils import *
 #     return np.convolve(seq1, seq2)
 
 def nextAudioSlicePair(slice_idx_1, audio_index_1, slice_idx_2, audio_index_2, src_1, src_2, flag):
-    if slice_idx_1 >= len(src_1.slice_list)-1:
+    if slice_idx_1 >= len(src_1.slice_list)-2:
         audio_index_1 += 1
         slice_idx_1 = 0
         src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=args.frameDuration)
-    if slice_idx_2 >= len(src_2.slice_list)-1:
+    if slice_idx_2 >= len(src_2.slice_list)-2:
         audio_index_2 += 1
         slice_idx_2 = 0
         src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=args.frameDuration)

@@ -485,16 +485,17 @@ class VisualiseCues:
         # fig.set_figwidth(5)
         plt.show()
     
-    def showCues(self, data, figTitle):
+    def showCues(self, ax, data, figTitle):
         # data shape: (Nfreq, Ntime)
-        for i in range(0, self.Ntime, 10):
-            plt.plot(self.freq_axis, data[:,i])
-        plt.xlabel("Frequency")
-        plt.ylabel(figTitle)
-        plt.title(figTitle)
-        plt.legend(range(0, self.Ntime, 10))
-        plt.grid()
-        plt.show()
+        for i in range(0, self.Ntime, 5):
+            ax.plot(self.freq_axis, data[:,i], label='t='+str(i))
+        # ax.set_xlabel("Frequency")
+        # ax.set_ylabel(figTitle)
+        ax.title.set_text(figTitle)
+        # plt.legend(range(0, self.Ntime, 5))
+        # ax.legend()
+        ax.grid()
+        return ax
 
     # def __call__(self, data, figTitle):
     #     self.showSpectrogram(data, figTitle=figTitle, isLog=False)
