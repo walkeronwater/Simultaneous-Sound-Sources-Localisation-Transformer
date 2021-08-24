@@ -81,11 +81,9 @@ def createTrainingSet():
                 magL, phaseL, magR, phaseR = binaural_cues(sigL, sigR)
 
                 save_cues(cuesList=[magL, phaseL, magR, phaseR], loc_idx_list=[loc_idx])
-                
+                count_file += 1
                 if count_file >= args.Nsample:
                     return
-
-                count_file += 1
 
                 if timeFlag:
                     print(f"One location loop costs {(time.time()-start_time)} seconds.")
