@@ -22,7 +22,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 from torchsummary import summary
 
-from load_data import *
+from data_loader import *
 from utils_train import *
 from utils import *
 
@@ -184,6 +184,9 @@ class Confusion:
     Implement LR UD FB confusion
     """
     def __init__(self):
+        """
+        squared error of UD, LR FB confusion
+        """
         self.se_UD = 0.0
         self.se_LR = 0.0
         self.se_FB = 0.0
@@ -219,7 +222,7 @@ class Confusion:
         for i in range(angle_diff.shape[0]):
             if pi < output[i, 1] < pi*2:
                 angle_diff[i] = -angle_diff[i]
-                print("LR: ",radian2Degree(angle_diff[i]))
+                # print("LR: ",radian2Degree(angle_diff[i]))
         return angle_diff
     
     def FB_loss(self, output):
@@ -258,6 +261,7 @@ class TwoSourceError:
         self.azim_target_2 = []
         self.loss_1 = []
         self.loss_2 = []
+        self.loss_dict = {}
 
     def __call__(self, outputs, labels, loss_1, loss_2):
         self.elev_pred_1.extend(
@@ -278,6 +282,7 @@ class TwoSourceError:
         self.azim_target_2.extend(labels[:,3].tolist())
         self.loss_1.extend(loss_1.tolist())
         self.loss_2.extend(loss_2.tolist())
+        self.loss_dict
 
     def unwrapPrediction(self, val, type_input:str):
         if type_input.lower() == "azim":
