@@ -143,7 +143,6 @@ def createTestSet(src_1, src_1_count, src_2, src_2_count):
                     continue
                 
                 if args.valSNR <100:
-                    print("Mixed with noise")
                     binaural_sig.val_SNR = args.valSNR
                 
                 sigL_1, sigR_1 = binaural_sig(sig_sliced_1, loc_1)
@@ -198,7 +197,8 @@ if __name__ == "__main__":
     print("Preprocessing method: ", args.prepMethod)
     print("Number of sound: ", args.Nsound)
     print("Number of samples: ", args.Nsample)
-
+    if args.valSNR <100:
+        print("Mixed with noise")
     Nsample_train = int(args.trainValidSplit[0]*args.Nsample)
     Nsample_valid = int(args.trainValidSplit[1]*args.Nsample)
     print("Training data volume: ", Nsample_train)
