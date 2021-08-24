@@ -105,6 +105,8 @@ class LoadHRIR:
         elev = l['elev_v'][0][0]
         azim = l['azim_v'][0][0]
         # remove the location at elev 90
+        hrir_set_l = np.delete(hrir_set_l,(-1), axis = 0)
+        hrir_set_r = np.delete(hrir_set_r,(-1), axis = 0)
         elev = np.delete(elev,(-1), axis = 0)
         azim = np.delete(azim,(-1), axis = 0)
 

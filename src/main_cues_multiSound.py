@@ -31,13 +31,15 @@ from utils import *
 # def conv(seq1, seq2):
 #     return np.convolve(seq1, seq2)
 
-def nextAudioSlicePair(slice_idx_1, audio_index_1, slice_idx_2, audio_index_2, flag):
+def nextAudioSlicePair(slice_idx_1, audio_index_1, slice_idx_2, audio_index_2, src_1, src_2, flag):
     if slice_idx_1 >= len(src_1.slice_list)-1:
-        slice_idx_1 = 0
         audio_index_1 += 1
+        slice_idx_1 = 0
+        src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=args.frameDuration)
     if slice_idx_2 >= len(src_2.slice_list)-1:
-        slice_idx_2 = 0
         audio_index_2 += 1
+        slice_idx_2 = 0
+        src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=args.frameDuration)
 
     if flag == [1,0]:
         sig_sliced_1 = src_1(idx=slice_idx_1)
@@ -57,7 +59,7 @@ def nextAudioSlicePair(slice_idx_1, audio_index_1, slice_idx_2, audio_index_2, f
     sig_sliced_1 = src_1.apply_gain(sig_sliced_1, target_power=-20)
     sig_sliced_2 = src_2.apply_gain(sig_sliced_2, target_power=-20)
 
-    return sig_sliced_1, sig_sliced_2, slice_idx_1, audio_index_1, slice_idx_2, audio_index_2
+    return sig_sliced_1, sig_sliced_2, slice_idx_1, audio_index_1, slice_idx_2, audio_index_2, src_1, src_2
 
 def selectSlices():
     pass
@@ -75,10 +77,6 @@ def createTrainingSet(src_1, src_1_count, src_2, src_2_count):
         print(f"Current audio (src 1): {audio_index_1}, and (src 2): {audio_index_2}")
         print(f"Number of slices (audio 1): {len(src_1.slice_list)}, and (audio 2): {len(src_2.slice_list)}")
         print(f"Source indexes: {slice_idx_1, slice_idx_2}")
-    
-        src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=args.frameDuration)
-        src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=args.frameDuration)
-
         for bias in range(0,4):
             if count%4 == 0:
                 flag=[1,0]
@@ -90,12 +88,12 @@ def createTrainingSet(src_1, src_1_count, src_2, src_2_count):
                 flag=[0,0]
 
             print(f"Flag: {flag}")
-            sig_sliced_1, sig_sliced_2, slice_idx_1, audio_index_1, slice_idx_2, audio_index_2 = nextAudioSlicePair(
-                slice_idx_1, audio_index_1, slice_idx_2, audio_index_2, flag=flag
+            sig_sliced_1, sig_sliced_2, slice_idx_1, audio_index_1, slice_idx_2, audio_index_2, src_1, src_2 = nextAudioSlicePair(
+                slice_idx_1, audio_index_1, slice_idx_2, audio_index_2, src_1, src_2, flag=flag
             )
 
-            for loc_1 in range(bias, 185, 2):
-                for loc_2 in range(bias, 185, 2):
+            for loc_1 in range(bias, load_hrir.hrir_set.shape[0], 2):
+                for loc_2 in range(bias, load_hrir.hrir_set.shape[0], 2):
                     if getManhattanDiff(load_hrir.loc_label[loc_1], load_hrir.loc_label[loc_2]) <= 30:
                         continue
                     
