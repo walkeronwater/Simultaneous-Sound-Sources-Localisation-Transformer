@@ -51,7 +51,7 @@ if __name__ == "__main__":
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
     parser.add_argument('--whichBest', default="bestValLoss", type=str, help='Best of acc or loss')
     parser.add_argument('--patience', default=10, type=int, help='Early stopping patience?')
-    parser.add_argument('--Ncues', default=5, type=int, help='Number of cues')
+    parser.add_argument('--Ncues', default=4, type=int, help='Number of cues')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--isContinue', default="True", type=str, help='Continue training?')
