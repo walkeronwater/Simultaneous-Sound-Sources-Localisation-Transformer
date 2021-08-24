@@ -216,7 +216,7 @@ class Preprocess:
             return seq
 
 class AudioSignal:
-    def __init__(self, path, slice_duration):
+    def __init__(self, path, slice_duration, filter_type=None):
         """
         read an audio file, calculate the mean power in dBFS
 
@@ -225,6 +225,12 @@ class AudioSignal:
             slice_duration (float): duration of audio slices in second 
         """
         self.sig, self.fs_audio = sf.read(path)
+        if filter_type.lower()[0] == "b":
+            self.sig = self.band_pass(self.sig, f_low=1400, f_high=1800, fs=self.fs_audio)
+        elif filter_type.lower()[0] == "h":
+            self.sig = self.high_pass(self.sig, f_high=1800, fs=self.fs_audio)
+        elif filter_type.lower()[0] == "l":
+            self.sig = self.low_pass(self.sig, f_high=1400, fs=self.fs_audio)
         self.slice_duration = slice_duration
         # mean power in dbfs
         self.mean_power = 10*np.log10(np.mean(np.power(self.sig, 2)))
@@ -264,6 +270,42 @@ class AudioSignal:
         mean_power = 10*np.log10(np.mean(np.power(sliced_sig, 2)))
         sliced_sig *= np.power(10, (target_power - self.mean_power)/20)
         return sliced_sig
+
+    def band_pass(self.sig, f_low, f_high, fs):
+        b, a = signal.butter(N=6, Wn=[2*f_low/fs, 2*f_high/fs], btype='band')
+        w, h = signal.freqs(b, a)
+        # plt.semilogx(w, 20 * np.log10(abs(h)))
+        filtered = signal.lfilter(b, a, sig)
+        plt.plot(sig)
+        plt.plot(filtered)
+        plt.legend(["raw","filtered"])
+        plt.show()
+        plt.close()
+        return filtered
+
+    def low_pass(self, sig, f_low, fs):
+        b, a = signal.butter(N=6, Wn=2*f_low/fs, btype='lowpass')
+        w, h = signal.freqs(b, a)
+        # plt.semilogx(w, 20 * np.log10(abs(h)))
+        filtered = signal.lfilter(b, a, sig)
+        plt.plot(sig)
+        plt.plot(filtered)
+        plt.legend(["raw","filtered"])
+        plt.show()
+        plt.close()
+        return filtered
+
+    def high_pass(sig, f_high, fs):
+        b, a = signal.butter(N=6, Wn=2*f_high/fs, btype='highpass')
+        w, h = signal.freqs(b, a)
+        # plt.semilogx(w, 20 * np.log10(abs(h)))
+        filtered = signal.lfilter(b, a, sig)
+        plt.plot(sig)
+        plt.plot(filtered)
+        plt.legend(["raw","filtered"])
+        plt.show()
+        plt.close()
+        return filtered
 
 class BinauralSignal:
     def __init__(self, hrir, fs_hrir, fs_audio, val_SNR=100, noise_type="Gaussian"):

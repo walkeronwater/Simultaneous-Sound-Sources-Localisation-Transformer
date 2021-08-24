@@ -35,11 +35,11 @@ def nextAudioSlicePair(slice_idx_1, audio_index_1, slice_idx_2, audio_index_2, s
     if slice_idx_1 >= len(src_1.slice_list)-2:
         audio_index_1 += 1
         slice_idx_1 = 0
-        src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=args.frameDuration)
+        src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=args.frameDuration, filter_type=args.filterType)
     if slice_idx_2 >= len(src_2.slice_list)-2:
         audio_index_2 += 1
         slice_idx_2 = 0
-        src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=args.frameDuration)
+        src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=args.frameDuration, filter_type=args.filterType)
 
     if flag == [1,0]:
         sig_sliced_1 = src_1(idx=slice_idx_1)
@@ -184,6 +184,7 @@ if __name__ == "__main__":
     parser.add_argument('--job', default="train", type=str, help='Trainset or testset?')
     parser.add_argument('--mix', default="mf", type=str, help='Mixing strategy?')
     parser.add_argument('--valSNR', default=100, type=int, help='SNR value')
+    parser.add_argument('--filterType', default="None", type=str, help='Filter')
 
     args = parser.parse_args()
     # print("Training audio files directory: ", args.trainAudioDir)
@@ -226,8 +227,8 @@ if __name__ == "__main__":
     audio_index_1 = 0
     audio_index_2 = 0
     """Instantiate binaural cue classes"""
-    src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=args.frameDuration)
-    src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=args.frameDuration)
+    src_1 = AudioSignal(path=src_1_path[audio_index_1], slice_duration=args.frameDuration, filter_type=args.filterType)
+    src_2 = AudioSignal(path=src_2_path[audio_index_2], slice_duration=args.frameDuration, filter_type=args.filterType)
     binaural_sig = BinauralSignal(hrir=load_hrir.hrir_set, fs_hrir=load_hrir.fs_HRIR, fs_audio=src_1.fs_audio)
     binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method=args.prepMethod)
     save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=load_hrir.loc_label)
