@@ -156,6 +156,8 @@ def createTestSet(src_1, src_1_count, src_2, src_2_count):
         slice_idx_1 += 1
         slice_idx_2 += 1
         count += 1
+        if count >= args.Nsample:
+            return
         print(f"{count, count_file}")
         if count >= src_1_count or count >= src_2_count or audio_index_1 >= len(src_1_path)-1 or audio_index_2 >= len(src_2_path)-1:
             return
