@@ -231,7 +231,7 @@ class AudioSignal:
             elif filter_type.lower()[0] == "h":
                 self.sig = self.high_pass(self.sig, f_high=1800, fs=self.fs_audio)
             elif filter_type.lower()[0] == "l":
-                self.sig = self.low_pass(self.sig, f_high=1400, fs=self.fs_audio)
+                self.sig = self.low_pass(self.sig, f_low=1400, fs=self.fs_audio)
         self.slice_duration = slice_duration
         # mean power in dbfs
         self.mean_power = 10*np.log10(np.mean(np.power(self.sig, 2)))
