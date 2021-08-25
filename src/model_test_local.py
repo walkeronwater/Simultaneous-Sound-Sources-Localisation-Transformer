@@ -30,6 +30,7 @@ from utils import *
 from utils_train import *
 from utils_test import *
 from models import *
+from model_CRNN import *
 from loss import *
 
 
