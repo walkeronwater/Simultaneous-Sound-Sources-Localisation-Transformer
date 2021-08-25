@@ -123,21 +123,22 @@ if __name__ == "__main__":
     task = args.task
 
     """load model"""
-    model = TransformerModel(
-        task=task,
-        Ntime=Ntime,
-        Nfreq=Nfreq,
-        Ncues=Ncues,
-        Nsound=Nsound,
-        whichEnc="diy",
-        whichDec=args.whichDec,
-        device=device,
-        numEnc=args.numEnc,
-        coordinates=args.coordinates,
-        dropout=args.valDropout,
-        forward_expansion=4,
-        numFC=args.numFC,
-    )
+    if args.whichModel.lower() == "transformer":
+        model = TransformerModel(
+            task=task,
+            Ntime=Ntime,
+            Nfreq=Nfreq,
+            Ncues=Ncues,
+            Nsound=Nsound,
+            whichEnc="diy",
+            whichDec=args.whichDec,
+            device=device,
+            numEnc=args.numEnc,
+            coordinates=args.coordinates,
+            dropout=args.valDropout,
+            forward_expansion=4,
+            numFC=args.numFC,
+        )
     elif args.whichModel.lower() == "crnn":
         model = CRNN(
             task=task,
