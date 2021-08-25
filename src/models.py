@@ -160,13 +160,13 @@ class Encoder(nn.Module):
     def forward(self, x):
         N, Ntime, Nfreq = x.shape
         
-        pos_enc = torch.linspace(0, 1, Ntime)
-        pos_enc = pos_enc.repeat((N, Nfreq, 1))
-        pos_enc = pos_enc.permute(0, 2, 1).to(self.device)
-        # print(f"positional encoding shape: {pos_enc.shape}")
-        # print(pos_enc[0,:,0])
+        # pos_enc = torch.linspace(0, 1, Ntime)
+        # pos_enc = pos_enc.repeat((N, Nfreq, 1))
+        # pos_enc = pos_enc.permute(0, 2, 1).to(self.device)
+        # # print(f"positional encoding shape: {pos_enc.shape}")
+        # # print(pos_enc[0,:,0])
 
-        # pos_enc = torch.arange(0, Ntime).expand(N, Ntime).to(self.device)
+        pos_enc = torch.arange(0, Ntime).expand(N, Ntime).to(self.device)
         
         out = x + self.pos_enc(pos_enc)
         out = self.dropout(out)
