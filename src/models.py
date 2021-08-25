@@ -134,7 +134,8 @@ class Encoder(nn.Module):
         heads,
         device,
         forward_expansion,
-        dropout
+        dropout,
+        is_pos_enc=True
     ):
 
         super(Encoder, self).__init__()
@@ -154,7 +155,7 @@ class Encoder(nn.Module):
         )
         
         self.pos_enc = nn.Embedding(Ntime, Nfreq)
-
+        self.is_pos_enc = is_pos_enc
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
@@ -165,11 +166,12 @@ class Encoder(nn.Module):
         # pos_enc = pos_enc.permute(0, 2, 1).to(self.device)
         # # print(f"positional encoding shape: {pos_enc.shape}")
         # # print(pos_enc[0,:,0])
-
-        pos_enc = torch.arange(0, Ntime).expand(N, Ntime).to(self.device)
-        
-        out = x + self.pos_enc(pos_enc)
-        out = self.dropout(out)
+        if self.is_pos_enc:
+            pos_enc = torch.arange(0, Ntime).expand(N, Ntime).to(self.device)
+            out = x + self.pos_enc(pos_enc)
+            out = self.dropout(out)
+        else:
+            out = self.dropout(x)
 
         # In the Encoder the query, key, value are all the same, it's in the
         # decoder this will change. This might look a bit odd in this case.
@@ -191,7 +193,8 @@ class EncoderDIYTransformer(nn.Module):
         device,
         forward_expansion,
         dropout,
-        isDebug
+        isDebug,
+        is_pos_enc
     ):
         super(EncoderDIYTransformer, self).__init__()
         self.encoder = Encoder(
@@ -201,7 +204,8 @@ class EncoderDIYTransformer(nn.Module):
             heads,
             device,
             forward_expansion,
-            dropout
+            dropout,
+            is_pos_enc=is_pos_enc
         )
     def forward(self, inputs):
         out = torch.flatten(inputs.permute(0, 2, 1, 3), -2, -1)
@@ -406,7 +410,8 @@ class TransformerModel(nn.Module):
         forward_expansion=4,
         dropout=0.1,
         isDebug=False,
-        coordinates="spherical"
+        coordinates="spherical",
+        is_pos_enc=True
     ):
         super(TransformerModel, self).__init__()
 
@@ -421,7 +426,8 @@ class TransformerModel(nn.Module):
             device,
             forward_expansion,
             dropout,
-            isDebug
+            isDebug,
+            is_pos_enc
         )
 
         assert(

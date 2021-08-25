@@ -74,6 +74,7 @@ if __name__ == "__main__":
     parser.add_argument('--isContinue', default="True", type=str, help='Continue training?')
     parser.add_argument('--isSave', default="True", type=str, help='Save checkpoints?')
     parser.add_argument('--coordinates', default="spherical", type=str, help='Spherical or Cartesian')
+    parser.add_argument('--isPosEnc', default="True", type=str, help='Positional encoding')
 
     args = parser.parse_args()
     print("Data directory: ", args.dataDir)
@@ -109,7 +110,8 @@ if __name__ == "__main__":
         "isDebug": args.isDebug,
         "isHPC": args.isHPC,
         "isContinue": args.isContinue,
-        "isSave": args.isSave
+        "isSave": args.isSave,
+        "isPosEnc": args.isPosEnc
     }
     for idx in flag_var.keys():
         flag_var[idx] = True if flag_var[idx][0].lower() == "t" else False
@@ -157,7 +159,8 @@ if __name__ == "__main__":
             numFC=args.numFC,
             coordinates=args.coordinates,
             dropout=args.valDropout,
-            forward_expansion=4
+            forward_expansion=4,
+            is_pos_enc=flag_var["isPosEnc"]
         )
     elif args.whichModel.lower() == "crnn":
         model = CRNN(
