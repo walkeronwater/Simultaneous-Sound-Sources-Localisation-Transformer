@@ -1,0 +1,19 @@
+#PBS -l walltime=24:00:00
+#PBS -l select=1:ncpus=16:mem=16gb
+
+module load anaconda3/personal
+source activate py38
+cd /rds/general/user/yh2520/ephemeral/Simultaneous-Sound-Localisation-Transformer/src
+
+python main_cues.py ./audio_train/ ./audio_valid/ ./HRTF/ ./Spectral_1600K_1Sound_minmax_2108/train/ 1280000
+
+
+
+#PBS -l walltime=24:00:00
+#PBS -l select=1:ncpus=16:mem=16gb
+
+module load anaconda3/personal
+source activate py38
+cd /rds/general/user/yh2520/ephemeral/Simultaneous-Sound-Localisation-Transformer/src
+
+python main_cues_multiSound.py ./audio_train/speech_male/ ./audio_train/speech_female/ ./HRTF/ ./Spectral_1600K_2Sound_minmax/ 2 1280000

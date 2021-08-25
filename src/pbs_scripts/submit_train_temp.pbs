@@ -1,0 +1,18 @@
+#PBS -l walltime=24:00:00
+#PBS -l select=1:ncpus=16:mem=96gb:ngpus=4:gpu_type=RTX6000
+
+module load anaconda3/personal
+source activate py38
+cd /rds/general/user/yh2520/home/Simultaneous-Sound-Localisation-Transformer/src
+
+python3 model_train.py "./Spectral_1600K_2Sound_minmax/" "./model/2008_2Sound_crnn/" 16 "allRegression" "crnn" 2 "src" --numEnc 6 --batchSize 256 --numEpoch 30 --valDropout 0.1 --lrRate 1e-4 --Ncues 4 --isHPC "True" --coordinates "spherical"
+
+
+#PBS -l walltime=24:00:00
+#PBS -l select=1:ncpus=16:mem=96gb:ngpus=4:gpu_type=RTX6000
+
+module load anaconda3/personal
+source activate py38
+cd /rds/general/user/yh2520/home/Simultaneous-Sound-Localisation-Transformer/src
+
+python model_train.py "./Spectral_1600K_2Sound_minmax/" "./model/tf_src_enc3_drop1/" 16 "allRegression" "transformer" 2 "src" --numEnc 3 --batchSize 256 --numEpoch 30 --valDropout 0.1 --lrRate 1e-4 --Ncues 4 --isHPC "True" --coordinates "spherical"
