@@ -44,7 +44,7 @@ if __name__ == "__main__":
     parser.add_argument('whichDec', type=str, help='Which decoder structure')
     parser.add_argument('--trainValidSplit', default="0.8, 0.2", type=str, help='Training Validation split')
     parser.add_argument('--numEnc', default=6, type=int, help='Number of encoder layers')
-    parser.add_argument('--numFC', default=3, type=int, help='Number of FC layers')
+    parser.add_argument('--numFC', default=4, type=int, help='Number of FC layers')
     parser.add_argument('--lrRate', default=1e-4, type=float, help='Learning rate')
     parser.add_argument('--valDropout', default=0.3, type=float, help='Dropout value')
     parser.add_argument('--numEpoch', default=30, type=int, help='Number of epochs')
@@ -136,8 +136,27 @@ if __name__ == "__main__":
         coordinates=args.coordinates,
         dropout=args.valDropout,
         forward_expansion=4,
-        # numFC=args.numFC,
+        numFC=args.numFC,
     )
+    elif args.whichModel.lower() == "crnn":
+        model = CRNN(
+            task=task,
+            Ntime=Ntime,
+            Nfreq=Nfreq,
+            Ncues=Ncues,
+            Nsound=Nsound,
+            whichDec="src",
+            num_conv_layers=4,
+            num_recur_layers=2,
+            num_FC_layers=args.numFC,
+            dropout=args.valDropout,
+            device=device,
+            isDebug=False,
+            coordinates="spherical"
+        )
+    else:
+        raise SystemExit("Unsupported model.")
+
     if flag_var['isHPC']:
         if torch.cuda.device_count() > 1:
             print("Let's use", torch.cuda.device_count(), "GPUs!")
