@@ -1,7 +1,10 @@
 src/__pycache__/
 src/model/*temp
-src/model/temp/
 src/*dali
 .vscode
 src/runs/temp/
+src/*untrack
+src/experiments/
+src/test_*
+.idea
 src/*temp
