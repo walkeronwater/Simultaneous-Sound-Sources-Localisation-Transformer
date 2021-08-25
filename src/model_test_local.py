@@ -174,7 +174,7 @@ if __name__ == "__main__":
     
     error_src = TwoSourceError()
     csv_flag = False
-    csv_name = args.logName + ".csv"
+    csv_name = dir_var['model'] + args.logName + ".csv"
     """test iteration"""
     test_correct = 0.0
     test_total = 0.0
