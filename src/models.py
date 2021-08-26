@@ -154,21 +154,20 @@ class Encoder(nn.Module):
             ]
         )
         
-        self.pos_enc = nn.Embedding(Ntime, Nfreq)
         self.is_pos_enc = is_pos_enc
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
         N, Ntime, Nfreq = x.shape
         
-        # pos_enc = torch.linspace(0, 1, Ntime)
-        # pos_enc = pos_enc.repeat((N, Nfreq, 1))
-        # pos_enc = pos_enc.permute(0, 2, 1).to(self.device)
-        # # print(f"positional encoding shape: {pos_enc.shape}")
-        # # print(pos_enc[0,:,0])
         if self.is_pos_enc:
-            pos_enc = torch.arange(0, Ntime).expand(N, Ntime).to(self.device)
-            out = x + self.pos_enc(pos_enc)
+            pos_enc = torch.linspace(0, 1, Ntime)
+            pos_enc = pos_enc.repeat((N, Nfreq, 1))
+            pos_enc = pos_enc.permute(0, 2, 1).to(self.device)
+            # print(f"positional encoding shape: {pos_enc.shape}")
+            # print(pos_enc[0,:,0])
+            
+            out = x + pos_enc
             out = self.dropout(out)
         else:
             out = self.dropout(x)
