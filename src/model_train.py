@@ -53,6 +53,11 @@ def randomSeed(seed_idx=1234):
     random.seed(seed_idx)
     np.random.seed(seed_idx)
 
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    numpy.random.seed(worker_seed)
+    random.seed(worker_seed)
+
 def getCurTime():
     return datetime.now().strftime("%m%d%H%M")
 
@@ -79,7 +84,7 @@ if __name__ == "__main__":
     parser.add_argument('--batchSize', default=32, type=int, help='Batch size')
     parser.add_argument('--whichBest', default="bestValLoss", type=str, help='Best of acc or loss')
     parser.add_argument('--patience', default=10, type=int, help='Early stopping patience?')
-    parser.add_argument('--Ncues', default=5, type=int, help='Number of cues')
+    parser.add_argument('--Ncues', default=4, type=int, help='Number of cues')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--isContinue', default="True", type=str, help='Continue training?')
@@ -130,21 +135,29 @@ if __name__ == "__main__":
 
     """load dataset"""
     path = "./HRTF/IRC*"
-    _, locLabel, _ = loadHRIR(path)
+    load_hrir = LoadHRIR(path)
 
     train_dataset = CuesDataset(dir_var["data"] + "/train/",
-                                args.task, args.Nsound, locLabel, coordinates=args.coordinates, isDebug=False)
+                                args.task, args.Nsound, load_hrir.loc_label, coordinates=args.coordinates,
+                                isDebug=False
+                            )
     valid_dataset = CuesDataset(dir_var["data"] + "/valid/",
-                                args.task, args.Nsound, locLabel, coordinates=args.coordinates, isDebug=False)
+                                args.task, args.Nsound, load_hrir.loc_label, coordinates=args.coordinates,
+                                isDebug=False
+                            )
     print(f"Dataset length: {train_dataset.__len__()}, {valid_dataset.__len__()}")
     
+    g = torch.Generator()
+    g.manual_seed(1234)
     isPersistent = True if args.numWorker > 0 else False
     train_loader = MultiEpochsDataLoader(
         dataset=train_dataset, batch_size=args.batchSize, shuffle=True, num_workers=args.numWorker,
+        worker_init_fn=seed_worker, generator=g,
         persistent_workers=isPersistent
     )
     valid_loader = MultiEpochsDataLoader(
         dataset=valid_dataset, batch_size=args.batchSize, shuffle=False, num_workers=args.numWorker,
+        worker_init_fn=seed_worker, generator=g,
         persistent_workers=isPersistent
     )
 
@@ -218,9 +231,7 @@ if __name__ == "__main__":
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device, coordinates=args.coordinates)
 
     """tensorboard"""
-    writer = SummaryWriter(f'runs/temp/tryingout_tensorboard')
     print(getCurTime())
-    
     writer = SummaryWriter(f"{dir_var['model']}/tensorboard/{getCurTime()}")
 
     """training-validation iteration"""
@@ -255,7 +266,8 @@ if __name__ == "__main__":
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=1)
             optimizer.step()
         train_loss = train_sum_loss / (i + 1)
-        print('Training Loss: %.04f | RMS angle (degree): %.04f '
+        train_acc = radian2Degree(train_loss)
+        print('Training Loss: %.04f | RMS angle error (degree): %.04f '
                   % (train_loss, train_acc))
         
         val_correct = 0.0
@@ -281,7 +293,8 @@ if __name__ == "__main__":
                 val_loss = cost_func(outputs, labels)
                 val_sum_loss += val_loss.item()
             val_loss = val_sum_loss / (i + 1)
-            print('Validation Loss: %.04f | Validation Acc: %.04f '
+            val_acc = radian2Degree(val_loss)
+            print('Validation Loss: %.04f | RMS angle error (degree): %.04f '
                 % (val_loss, val_acc))
             
             if args.whichModel.lower() == "transformer":
@@ -301,6 +314,8 @@ if __name__ == "__main__":
             )
         writer.add_scalar('Training Loss', train_loss, global_step=epoch+1)
         writer.add_scalar('Validation Loss', val_loss, global_step=epoch+1)
+        writer.add_scalar('Training RMS angle error', train_acc, global_step=epoch+1)
+        writer.add_scalar('Validation RMS angle error', val_acc, global_step=epoch+1)
 
         if early_stop.count == 0 and args.isSave:
             saveParam(

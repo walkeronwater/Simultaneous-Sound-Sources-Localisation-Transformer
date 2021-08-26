@@ -115,9 +115,10 @@ class MyDataset(torch.utils.data.Dataset):
 
         return data, labels
 
-
 class CuesDataset(torch.utils.data.Dataset):
-    def __init__(self, filePath, task, Nsound, locLabel, coordinates="spherical", isDebug=False):
+    def __init__(
+        self, filePath, task, Nsound, locLabel, coordinates="spherical", isDebug=False
+    ):
         super(CuesDataset, self).__init__()
         self.filePath = filePath
         self.task = task
@@ -285,7 +286,7 @@ def loadCheckpoint(model, optimizer, scheduler, loadPath, task, phase, whichBest
 class WrappedModel(nn.Module):
 	def __init__(self, module):
 		super(WrappedModel, self).__init__()
-		self.module = module # that I actually define.
+		self.module = module
 	def forward(self, x):
 		return self.module(x)
 
