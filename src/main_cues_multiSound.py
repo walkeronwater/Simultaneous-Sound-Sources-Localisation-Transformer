@@ -233,6 +233,18 @@ if __name__ == "__main__":
     binaural_cues = BinauralCues(fs_audio=src_1.fs_audio, prep_method=args.prepMethod)
     save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=load_hrir.loc_label)
     
+    """create paths if not exist"""
+    if not os.path.isdir(args.cuesDir):
+        os.mkdir(args.cuesDir)
+    try:
+        os.path.isdir(args.cuesDir+"/train")
+    except:
+        os.mkdir(args.cuesDir+"/train")
+    try:
+        os.path.isdir(args.cuesDir+"/valid")
+    except:
+        os.mkdir(args.cuesDir+"/valid")
+
     if args.job.lower() == "train":
         createTrainingSet(
             src_1, src_1_count,src_2, src_2_count
