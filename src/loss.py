@@ -33,7 +33,12 @@ class CostFunc:
         else:
             if "regression" in self.task.lower():
                 if self.coordinates.lower() == "spherical":
-                    return torch.sqrt(torch.mean(torch.square(self.calDoALoss(outputs[:, 0:2], labels[:, 0:2]) + self.calDoALoss(outputs[:, 2:4], labels[:, 2:4]))))
+                    return torch.sqrt(torch.mean(torch.square(
+                        torch.min(
+                            self.calDoALoss(outputs[:, 0:2], labels[:, 0:2]) + self.calDoALoss(outputs[:, 2:4], labels[:, 2:4]),
+                            self.calDoALoss(outputs[:, 2:4], labels[:, 0:2]) + self.calDoALoss(outputs[:, 0:2], labels[:, 2:4])
+                            )
+                        )))
                 elif self.coordinates.lower() == "cartesian":
                     return torch.sqrt(torch.mean(torch.square(self.calDoALossCartesian(outputs[:, 0:3], labels[:, 0:3]) + self.calDoALossCartesian(outputs[:, 3:6], labels[:, 3:6]))))
             elif "class" in self.task.lower():
@@ -84,41 +89,27 @@ def cost_multiSound(output, target):
     return DoALoss(output[:, 0:2], target[:, 0:2]) + DoALoss(output[:, 2:4], target[:, 2:4])
 
 if __name__ == "__main__":
-    temp_1 = np.array([0, 6.22])
-    temp_2 = np.array([0, 0])
-    res = getManhattanDiff(temp_1, temp_2)
-    print(res)
-    raise SystemExit
-
     cost_func = CostFunc(
         task="allRegression",
         Nsound=2,
         device="cpu",
-        coordinates="cartesian"
+        coordinates="spherical"
     )
 
     outputs_reg = torch.tensor(
         [
-            [0, -pi/2],
-            [0, -pi/2]
+            [0, -pi/2, 0, pi/2],
+            [0, -pi/2, 0, pi/2],
         ]
     )
     labels_reg = torch.tensor(
         [
-            [0, pi/2],
-            [0, -pi/2]
+            [0, -pi, 0, -pi],
+            [0, -pi, 0, pi],
         ]
     )
 
-    outputs_cls = torch.rand((2,187))
-    labels_cls = torch.tensor(
-        [
-            [1,2],
-            [0,2]
-        ]
-    )
-
-    print(radian2Degree(cost_func.calDoALoss(outputs_reg, labels_reg)))
+    print(radian2Degree(cost_func(outputs_reg, labels_reg)))
 
     raise SystemExit
     confusion = Confusion()
