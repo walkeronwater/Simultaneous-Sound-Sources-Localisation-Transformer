@@ -174,7 +174,7 @@ if __name__ == "__main__":
     
     """load from checkpoint"""
     checkpoint = torch.load(dir_var['model']+"param_bestValLoss.pth.tar")
-    model.load_state_dict(checkpoint['model'])
+    model.load_state_dict(checkpoint['model'], strict=True)
 
     print("Model created")
     """set cost function"""
