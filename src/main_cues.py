@@ -94,6 +94,72 @@ def createTrainingSet():
         if count >= src_count:
             return
 
+def createTestSet():
+    timeFlag = True
+    load_hrir = LoadHRIR(path="./HRTF/IRC*")
+
+    path_1 = glob(os.path.join(args.trainAudioDir+"/speech_male/*"))
+    path_2 = glob(os.path.join(args.trainAudioDir+"/speech_female/*"))
+    
+    src_path = []
+    flag = True
+    i, j = 0, 0
+    while i < len(path_1) and j < len(path_2):
+        if flag:
+            src_path.append(path_1[i])
+            i += 1
+            flag = False
+        else:
+            src_path.append(path_2[j])
+            j += 1
+            flag = True
+
+    src_count = 0
+    for i in range(len(src_path)):
+        src = AudioSignal(path=src_path[i], slice_duration=1)
+        src_count += len(src.slice_list)
+
+    # audio indexes
+    audio_index = 0
+    src = AudioSignal(path=src_path[audio_index], slice_duration=1)
+    binaural_sig = BinauralSignal(hrir=load_hrir.hrir_set, fs_hrir=load_hrir.fs_HRIR, fs_audio=src.fs_audio)
+    binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method=args.prepMethod)
+    save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=load_hrir.loc_label)
+    
+    start_time = time.time()
+    slice_idx = 0
+    count = 0
+    count_file = 0
+    while True:
+        if slice_idx >= len(src.slice_list):
+            slice_idx = 0
+            audio_index += 1
+            src = AudioSignal(path=src_path[audio_index], slice_duration=1)
+
+        print(f"Current audio: {src_path[audio_index]}")
+        # print(f"Number of slices: {len(src.slice_list)}")
+        
+        sig_sliced = src(idx=slice_idx)
+
+        print("locations: ",load_hrir.loc_label.shape[0])
+        for loc_idx in range(load_hrir.loc_label.shape[0]):
+            for val_SNR in args.valSNRList:
+                binaural_sig.val_SNR = val_SNR
+
+                sigL, sigR = binaural_sig(sig_sliced, loc_idx)
+                magL, phaseL, magR, phaseR = binaural_cues(sigL, sigR)
+
+                save_cues(cuesList=[magL, phaseL, magR, phaseR], loc_idx_list=[loc_idx])
+                count_file += 1
+
+                if timeFlag:
+                    print(f"One location loop costs {(time.time()-start_time)} seconds.")
+                    timeFlag = False
+        slice_idx += 1
+        count += 1
+        # print(count)
+        if count >= src_count or count>= args.Nsample:
+            return
 
 """
 This will create two folders containing data for training, validation. Each dataset will be
@@ -112,6 +178,7 @@ if __name__ == "__main__":
     parser.add_argument('--Ncues', default=4, type=int, help='Number of cues?')
     parser.add_argument('--prepMethod', default="minmax", type=str, help='Preprocessing method')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
+    parser.add_argument('--job', default="train", type=str, help='Trainset or testset?')
 
     args = parser.parse_args()
     print("Training audio files directory: ", args.trainAudioDir)
@@ -150,5 +217,8 @@ if __name__ == "__main__":
     #     os.mkdir(dirName+"/valid/")
     # raise SystemExit('debug')
 
-    createTrainingSet()
+    if args.job.lower() == "train":
+        createTrainingSet()
+    elif args.job.lower() == "test":
+        createTestSet()
 
