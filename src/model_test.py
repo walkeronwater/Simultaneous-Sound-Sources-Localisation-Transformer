@@ -96,7 +96,7 @@ if __name__ == "__main__":
     task = "allRegression"
     whichDec = args.whichDec
     num_workers = 0
-    Nsample = 32
+    Nsample = 8
     batch_size = 32
     valSNRList = [-5,0,5,10,15,20,25,30,35]
 
