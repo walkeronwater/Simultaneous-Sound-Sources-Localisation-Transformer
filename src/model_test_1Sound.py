@@ -194,7 +194,7 @@ if __name__ == "__main__":
     csv_name = dir_var['model'] + args.logName + ".csv"
     
     fb, lr, ud, error = [], [], [], []
-    
+    for val_SNR in valSNRList:
             test_correct = 0.0
             test_total = 0.0
             test_sum_loss = 0.0
