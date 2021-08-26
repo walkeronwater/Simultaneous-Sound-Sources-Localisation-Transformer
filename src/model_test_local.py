@@ -24,6 +24,7 @@ from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
 from torchsummary import summary
+# import pynvml
 
 from data_loader import *
 from utils import *
@@ -102,11 +103,12 @@ if __name__ == "__main__":
         flag_var[idx] = True if flag_var[idx][0].lower() == "t" else False
     
     """load dataset"""
-    path = "./HRTF/IRC*"
-    _, locLabel, _ = loadHRIR(path)
+    # path = "./HRTF/IRC*"
+    # _, locLabel, _ = loadHRIR(path)
+    load_hrir = LoadHRIR(path="./HRTF/IRC*")
 
     test_dataset = CuesDataset(dir_var["data"],
-                                args.task, args.Nsound, locLabel, coordinates=args.coordinates, isDebug=False)
+                                args.task, args.Nsound, load_hrir.loc_label, coordinates=args.coordinates, isDebug=False)
     print(f"Dataset length: {test_dataset.__len__()}")
     
     isPersistent = True if args.numWorker > 0 else False
@@ -162,13 +164,19 @@ if __name__ == "__main__":
     if flag_var['isHPC']:
         if torch.cuda.device_count() > 1:
             print("Let's use", torch.cuda.device_count(), "GPUs!")
-        model = nn.DataParallel(model)
+    model = nn.DataParallel(model)
     model = model.to(device)
-
+    
+    # pynvml.nvmlInit()
+    # handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+    # meminfo = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    # print(meminfo.used)
+    
     """load from checkpoint"""
     checkpoint = torch.load(dir_var['model']+"param_bestValLoss.pth.tar")
     model.load_state_dict(checkpoint['model'], strict=True)
 
+    print("Model created")
     """set cost function"""
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device, coordinates=args.coordinates)
     
@@ -182,6 +190,7 @@ if __name__ == "__main__":
     test_loss = 0.0
     test_acc = 0.0
     model.eval()
+    print("Started testing")
     with torch.no_grad():
         for i, (inputs, labels) in enumerate(test_loader, 0):
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
