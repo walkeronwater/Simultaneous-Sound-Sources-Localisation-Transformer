@@ -10,6 +10,7 @@ from utils import *
 from utils_train import *
 from utils_test import *
 from models import *
+from model_CRNN import *
 from loss import *
 
 
@@ -59,6 +60,7 @@ if __name__ == "__main__":
     parser.add_argument('whichDec', type=str, help='Which decoder')
     
     parser.add_argument('--numEnc', default=3, type=int, help='Number of encoder layers')
+    parser.add_argument('--numFC', default=4, type=int, help='Number of FC layers')
     parser.add_argument('--isHPC', default="False", type=str, help='isHPC?')
     parser.add_argument('--isDebug', default="False", type=str, help='isDebug?')
     parser.add_argument('--coordinates', default="spherical", type=str, help='Spherical or Cartesian')
@@ -88,7 +90,7 @@ if __name__ == "__main__":
 
     """define Nfreq, Ntime, Ncues"""
     Nfreq = 512
-    Ntime = 72
+    Ntime = 30
     Ncues = 4
     Nsound = 1
     task = "allRegression"
@@ -109,22 +111,44 @@ if __name__ == "__main__":
 
     """load model"""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = TransformerModel(
-        task=task,
-        Ntime=Ntime,
-        Nfreq=Nfreq,
-        Ncues=Ncues,
-        Nsound=Nsound,
-        whichEnc="diy",
-        whichDec=whichDec,
-        device=device,
-        numEnc=args.numEnc
-        # numFC=args.numFC,
-    )
+    if args.whichModel.lower() == "transformer":
+        model = TransformerModel(
+            task=task,
+            Ntime=Ntime,
+            Nfreq=Nfreq,
+            Ncues=Ncues,
+            Nsound=Nsound,
+            whichEnc="diy",
+            whichDec=args.whichDec,
+            device=device,
+            numEnc=args.numEnc,
+            coordinates=args.coordinates,
+            forward_expansion=4,
+            numFC=args.numFC,
+        )
+        print("model: transformer")
+    elif args.whichModel.lower() == "crnn":
+        model = CRNN(
+            task=task,
+            Ntime=Ntime,
+            Nfreq=Nfreq,
+            Ncues=Ncues,
+            Nsound=Nsound,
+            whichDec="src",
+            num_conv_layers=4,
+            num_recur_layers=2,
+            num_FC_layers=args.numFC,
+            device=device,
+            isDebug=False,
+            coordinates="spherical"
+        )
+        print("model: CRNN")
+    else:
+        raise SystemExit("Unsupported model.")
     if flag_var["isHPC"]:
         if torch.cuda.device_count() > 1:
             print("Let's use", torch.cuda.device_count(), "GPUs!")
-        model = nn.DataParallel(model)
+    model = nn.DataParallel(model)
     model = model.to(device)
     
     # model, val_optim = loadCheckpoint(
@@ -139,13 +163,13 @@ if __name__ == "__main__":
     cost_func = CostFunc(task=task, Nsound=Nsound, device=device, coordinates=args.coordinates)
 
     csv_flag = False
-    csv_name = args.logName + ".csv"
+    csv_name = dir_var['model'] + args.logName + ".csv"
     """mix sound sources with noise"""
     src_path = glob(os.path.join(dir_var["audio"] + "/*"))
     src = AudioSignal(path=src_path[0], slice_duration=1)
     binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src.fs_audio)
-    binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method="standardise")
-    loc_region = LocRegion(locLabel=locLabel)
+    binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method="minmax")
+    loc_region = LocRegion(loc_label=locLabel)
     
     fb, lr, ud, error = [], [], [], []
     for val_SNR in valSNRList:
@@ -228,7 +252,7 @@ if __name__ == "__main__":
                 test_acc = radian2Degree(test_loss)
                 print('Test Loss: %.04f | RMS angle error in degree: %.04f '
                     % (test_loss, test_acc))
-        error.append(radian2Degree())
+        # error.append(radian2Degree())
         fb.append(radian2Degree(np.sqrt(confusion.se_FB/count)))
         ud.append(radian2Degree(np.sqrt(confusion.se_UD/count)))
         lr.append(radian2Degree(np.sqrt(confusion.se_LR/count)))
