@@ -24,6 +24,7 @@ from sklearn.utils import class_weight
 from torch.autograd import Variable
 import torch.nn.functional as F
 from torchsummary import summary
+from datetime import datetime
 
 from data_loader import *
 from utils import *
@@ -44,6 +45,16 @@ def data_parallel(module, input, device_ids, output_device=None):
     replicas = replicas[:len(inputs)]
     outputs = nn.parallel.parallel_apply(replicas, inputs)
     return nn.parallel.gather(outputs, output_device)
+
+
+"""Reproducible random seed"""
+def randomSeed(seed_idx=1234):
+    torch.manual_seed(seed_idx)
+    random.seed(seed_idx)
+    np.random.seed(seed_idx)
+
+def getCurTime():
+    return datetime.now().strftime("%m%d%H%M")
 
 if __name__ == "__main__":
     """
@@ -77,23 +88,24 @@ if __name__ == "__main__":
     parser.add_argument('--isPosEnc', default="True", type=str, help='Positional encoding')
 
     args = parser.parse_args()
-    print("Data directory: ", args.dataDir)
-    print("Model directory: ", args.modelDir)
-    print("Number of workers: ", args.numWorker)
-    print("Task: ", args.task)
-    trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
-    print("Train validation split: ", trainValidSplit)
-    print("Model: ", args.whichModel)
-    print("Number of encoder layers: ", args.numEnc)
-    print("Number of FC layers: ", args.numFC)
-    print("Learning rate: ", args.lrRate)
-    print("Dropout value: ", args.valDropout)
-    print("Number of epochs: ", args.numEpoch)
-    print("Batch size: ", args.batchSize)
-    print("Early stopping patience: ", args.patience)
-    print("Number of cues: ", args.Ncues)
-    print("Number of sound: ", args.Nsound)
-    print("Decoder structure: ", args.whichDec)
+    if True:
+        print("Data directory: ", args.dataDir)
+        print("Model directory: ", args.modelDir)
+        print("Number of workers: ", args.numWorker)
+        print("Task: ", args.task)
+        trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
+        print("Train validation split: ", trainValidSplit)
+        print("Model: ", args.whichModel)
+        print("Number of encoder layers: ", args.numEnc)
+        print("Number of FC layers: ", args.numFC)
+        print("Learning rate: ", args.lrRate)
+        print("Dropout value: ", args.valDropout)
+        print("Number of epochs: ", args.numEpoch)
+        print("Batch size: ", args.batchSize)
+        print("Early stopping patience: ", args.patience)
+        print("Number of cues: ", args.Ncues)
+        print("Number of sound: ", args.Nsound)
+        print("Decoder structure: ", args.whichDec)
 
     """check input directories end up with /"""
     dir_var = {
@@ -207,8 +219,12 @@ if __name__ == "__main__":
 
     """tensorboard"""
     writer = SummaryWriter(f'runs/temp/tryingout_tensorboard')
+    print(getCurTime())
+    
+    writer = SummaryWriter(f"{dir_var['model']}/tensorboard/{getCurTime()}")
 
     """training-validation iteration"""
+    randomSeed()
     pre_epoch = 0
     for epoch in range(pre_epoch, pre_epoch + args.numEpoch):
         print("\nEpoch %d, lr = %f" % ((epoch + 1), getLR(optimizer)))
