@@ -304,14 +304,27 @@ class TwoSourceError:
     def plotPrediction(self):
         # marker_size = [i for i in self.loss_1]
         # marker_size = [1 for i in self.loss_1]
-        marker_size = [5*round(i//15+1) for i in self.loss_1]
+        # marker_size = [5*round(i//15+1) for i in self.loss_1]
+        marker_size = []
+        for i in self.loss_1:
+            if i<=15:
+                marker_size.append(20)
+            elif i<=30:
+                marker_size.append(15)
+            elif i<=45:
+                marker_size.append(10)
+            elif i<=60:
+                marker_size.append(5)
+            else:
+                marker_size.append(1)
+        marker_size = [i for i in self.loss_1]
 
         plt.figure(figsize=(12, 6), dpi=100)
         plt.scatter(
             [radian2Degree(i) for i in self.azim_target_1],
             [radian2Degree(i) for i in self.elev_target_1],
             color='red',
-            s = marker_size
+            # s = marker_size
         )
         plt.scatter(
             [radian2Degree(i) for i in self.azim_pred_1],
@@ -331,14 +344,27 @@ class TwoSourceError:
 
         # marker_size = [i for i in self.loss_2]
         # marker_size = [1 for i in self.loss_2]
-        marker_size = [5*round(i//15+1) for i in self.loss_2]
+        # marker_size = [5*round(i//15+1) for i in self.loss_2]
+        marker_size = []
+        for i in self.loss_2:
+            if i<=15:
+                marker_size.append(20)
+            elif i<=30:
+                marker_size.append(15)
+            elif i<=45:
+                marker_size.append(10)
+            elif i<=60:
+                marker_size.append(5)
+            else:
+                marker_size.append(1)
+        marker_size = [i for i in self.loss_2]
 
         plt.figure(figsize=(12, 6), dpi=100)
         plt.scatter(
             [radian2Degree(i) for i in self.azim_target_2],
             [radian2Degree(i) for i in self.elev_target_2],
             color='red',
-            s = marker_size
+            # s = marker_size
         )
         plt.scatter(
             [radian2Degree(i) for i in self.azim_pred_2],

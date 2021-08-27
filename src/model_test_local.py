@@ -251,4 +251,4 @@ if __name__ == "__main__":
     print('Test Loss: %.04f | RMS angle error in degree: %.04f '
         % (test_loss, test_acc))
     error_src.plotPrediction()
-    error_src.plotError()
+    # error_src.plotError()
