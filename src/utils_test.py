@@ -309,13 +309,13 @@ class TwoSourceError:
             [radian2Degree(i) for i in self.azim_target_1],
             [radian2Degree(i) for i in self.elev_target_1],
             color='red',
-            s = marker_size
+            # s = marker_size
         )
         plt.scatter(
             [radian2Degree(i) for i in self.azim_pred_1],
             [radian2Degree(i) for i in self.elev_pred_1],
             color='blue',
-            s = marker_size
+            # s = marker_size
         )
         plt.xticks(np.linspace(0, 360, 25))
         plt.yticks(np.linspace(-90, 90, 13))
@@ -333,13 +333,13 @@ class TwoSourceError:
             [radian2Degree(i) for i in self.azim_target_2],
             [radian2Degree(i) for i in self.elev_target_2],
             color='red',
-            s = marker_size
+            # s = marker_size
         )
         plt.scatter(
             [radian2Degree(i) for i in self.azim_pred_2],
             [radian2Degree(i) for i in self.elev_pred_2],
             color='blue',
-            s = marker_size
+            # s = marker_size
         )
         plt.xticks(np.linspace(0, 360, 25))
         plt.yticks(np.linspace(-90, 90, 13))
