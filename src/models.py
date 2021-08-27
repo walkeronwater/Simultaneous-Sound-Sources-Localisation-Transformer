@@ -474,7 +474,7 @@ if __name__ == "__main__":
     path = "./HRTF/IRC*"
     _, locLabel, _ = loadHRIR(path)
 
-    path = "./saved_0808_temp/"
+    path = "./train_cues_untrack/"
     csvF = pd.read_csv(path+"/train/dataLabels.csv", header=None)
 
 
@@ -512,7 +512,8 @@ if __name__ == "__main__":
         numEnc=3,
         device=device,
         coordinates="spherical",
-        numFC=4
+        numFC=4,
+        is_pos_enc="F"
     )
     model = model.to(device)
 
@@ -523,4 +524,4 @@ if __name__ == "__main__":
         max outputs: {torch.max(outputs)}, \
         labels: {labels.shape}")
 
-    # summary(model, (Nfreq, Ntime, Ncues))
+    summary(model, (Nfreq, Ntime, Ncues))

@@ -143,7 +143,7 @@ if __name__ == "__main__":
     path = "./HRTF/IRC*"
     _, locLabel, _ = loadHRIR(path)
 
-    path = "./saved_0808_temp/"
+    path = "./train_cues_untrack/"
     csvF = pd.read_csv(path+"/train/dataLabels.csv", header=None)
 
 
@@ -185,10 +185,15 @@ if __name__ == "__main__":
         coordinates="spherical"
     )
     model = model.to(device)
+    print(model)
 
     inputs, labels = next(iter(train_loader))
     outputs = model(inputs.to(device))
-
+    pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(pytorch_total_params)
+    raise SystemExit
     print(f"inputs: {inputs.shape},\
         max outputs: {torch.max(outputs)}, \
         labels: {labels.shape}")
+
+    # summary(model, (Nfreq, Ntime, Ncues))
