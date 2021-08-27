@@ -303,19 +303,20 @@ class TwoSourceError:
 
     def plotPrediction(self):
         marker_size = [i for i in self.loss_1]
+        marker_size = [i/10 for i in self.loss_1]
 
         plt.figure(figsize=(12, 6), dpi=100)
         plt.scatter(
             [radian2Degree(i) for i in self.azim_target_1],
             [radian2Degree(i) for i in self.elev_target_1],
             color='red',
-            # s = marker_size
+            s = marker_size
         )
         plt.scatter(
             [radian2Degree(i) for i in self.azim_pred_1],
             [radian2Degree(i) for i in self.elev_pred_1],
             color='blue',
-            # s = marker_size
+            s = marker_size
         )
         plt.xticks(np.linspace(0, 345, 24))
         plt.yticks(np.linspace(-90, 75, 12))
@@ -327,19 +328,21 @@ class TwoSourceError:
         plt.show()
         plt.close()
 
-        marker_size = [i for i in self.loss_2]
+        # marker_size = [i for i in self.loss_2]
+        marker_size = [i/10 for i in self.loss_2]
+
         plt.figure(figsize=(12, 6), dpi=100)
         plt.scatter(
             [radian2Degree(i) for i in self.azim_target_2],
             [radian2Degree(i) for i in self.elev_target_2],
             color='red',
-            # s = marker_size
+            s = marker_size
         )
         plt.scatter(
             [radian2Degree(i) for i in self.azim_pred_2],
             [radian2Degree(i) for i in self.elev_pred_2],
             color='blue',
-            # s = marker_size
+            s = marker_size
         )
         plt.xticks(np.linspace(0, 345, 24))
         plt.yticks(np.linspace(-90, 75, 12))
