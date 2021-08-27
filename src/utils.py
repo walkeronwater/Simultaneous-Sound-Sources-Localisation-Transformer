@@ -121,7 +121,7 @@ def getAngleDiff(loc_label_1, loc_label_2):
                         )
                     ), dtype=np.float32
                 )
-    print(angle_diff.dtype)
+    # print(angle_diff.dtype)
     return angle_diff
 
 def getManhattanDiff(loc_label_1, loc_label_2):
