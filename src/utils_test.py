@@ -366,12 +366,31 @@ class TwoSourceError:
             [radian2Degree(i) for i in self.azim_target_2],
             self.loss_2
         )
-        plt.xticks(np.linspace(0, 360, 25))
-        plt.yticks(np.linspace(-90, 90, 13))
+        plt.xticks(np.linspace(0, 345, 24))
+        plt.yticks(np.linspace(0, 345, 24))
         plt.xlabel("Azimuth")
         plt.ylabel("RMS angle error")
         plt.legend(["Source 1", "Source 2"])
         plt.title("Azimuth error")
+        plt.grid()
+        plt.show()
+        plt.close()
+
+        plt.figure(figsize=(12, 6), dpi=100)
+        plt.scatter(
+            [radian2Degree(i) for i in self.elev_target_1],
+            self.loss_1
+        )
+        plt.scatter(
+            [radian2Degree(i) for i in self.elev_target_2],
+            self.loss_2
+        )
+        plt.xticks(np.linspace(-90, 75, 12))
+        plt.yticks(np.linspace(-90, 75, 12))
+        plt.xlabel("Elevation")
+        plt.ylabel("RMS angle error")
+        plt.legend(["Source 1", "Source 2"])
+        plt.title("Elevation error")
         plt.grid()
         plt.show()
         plt.close()
