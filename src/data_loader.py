@@ -172,7 +172,7 @@ class LocRegion:
     
     def getLocIdx(self, loc_array):
         for idx in self.loc_label[0]:
-            if self.loc_label[idx, 0] == loc_array[0] and self.loc_label[idx, 1] == loc_array[1]:
+            if round(self.loc_label[idx, 0]) == round(loc_array[0]) and round(self.loc_label[idx, 1]) == round(loc_array[1]):
                 return idx
         raise SystemError("getLocIdx not found.")
 
