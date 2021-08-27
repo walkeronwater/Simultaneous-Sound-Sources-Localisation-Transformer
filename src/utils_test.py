@@ -317,8 +317,8 @@ class TwoSourceError:
             color='blue',
             # s = marker_size
         )
-        plt.xticks(np.linspace(0, 360, 25))
-        plt.yticks(np.linspace(-90, 90, 13))
+        plt.xticks(np.linspace(0, 345, 24))
+        plt.yticks(np.linspace(-90, 75, 12))
         plt.xlabel("Azimuth")
         plt.ylabel("Elevation")
         plt.legend(["target", "prediction"])
@@ -341,8 +341,8 @@ class TwoSourceError:
             color='blue',
             # s = marker_size
         )
-        plt.xticks(np.linspace(0, 360, 25))
-        plt.yticks(np.linspace(-90, 90, 13))
+        plt.xticks(np.linspace(0, 345, 24))
+        plt.yticks(np.linspace(-90, 75, 12))
         plt.xlabel("Azimuth")
         plt.ylabel("Elevation")
         plt.legend(["target", "prediction"])
