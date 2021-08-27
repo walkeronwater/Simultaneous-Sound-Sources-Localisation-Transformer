@@ -55,7 +55,7 @@ def randomSeed(seed_idx=1234):
 
 def seed_worker(worker_id):
     worker_seed = torch.initial_seed() % 2**32
-    numpy.random.seed(worker_seed)
+    np.random.seed(worker_seed)
     random.seed(worker_seed)
 
 def getCurTime():
