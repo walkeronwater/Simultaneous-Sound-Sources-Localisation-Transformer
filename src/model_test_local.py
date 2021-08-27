@@ -59,27 +59,29 @@ if __name__ == "__main__":
     parser.add_argument('--isContinue', default="True", type=str, help='Continue training?')
     parser.add_argument('--isSave', default="True", type=str, help='Save checkpoints?')
     parser.add_argument('--coordinates', default="spherical", type=str, help='Spherical or Cartesian')
+    parser.add_argument('--isPosEnc', default="True", type=str, help='Positional encoding')
     parser.add_argument('--isLogging', default="False", type=str, help='Log down prediction in a csv file')
     parser.add_argument('--logName', default="test_log", type=str, help='Log down prediction in a csv file')
 
     args = parser.parse_args()
-    print("Data directory: ", args.dataDir)
-    print("Model directory: ", args.modelDir)
-    print("Number of workers: ", args.numWorker)
-    print("Task: ", args.task)
-    trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
-    print("Train validation split: ", trainValidSplit)
-    print("Model: ", args.whichModel)
-    print("Number of encoder layers: ", args.numEnc)
-    print("Number of FC layers: ", args.numFC)
-    print("Learning rate: ", args.lrRate)
-    print("Dropout value: ", args.valDropout)
-    print("Number of epochs: ", args.numEpoch)
-    print("Batch size: ", args.batchSize)
-    print("Early stopping patience: ", args.patience)
-    print("Number of cues: ", args.Ncues)
-    print("Number of sound: ", args.Nsound)
-    print("Decoder structure: ", args.whichDec)
+    if True:
+        print("Data directory: ", args.dataDir)
+        print("Model directory: ", args.modelDir)
+        print("Number of workers: ", args.numWorker)
+        print("Task: ", args.task)
+        trainValidSplit = [float(item) for item in args.trainValidSplit.split(',')]
+        print("Train validation split: ", trainValidSplit)
+        print("Model: ", args.whichModel)
+        print("Number of encoder layers: ", args.numEnc)
+        print("Number of FC layers: ", args.numFC)
+        print("Learning rate: ", args.lrRate)
+        print("Dropout value: ", args.valDropout)
+        print("Number of epochs: ", args.numEpoch)
+        print("Batch size: ", args.batchSize)
+        print("Early stopping patience: ", args.patience)
+        print("Number of cues: ", args.Ncues)
+        print("Number of sound: ", args.Nsound)
+        print("Decoder structure: ", args.whichDec)
 
     """check input directories end up with /"""
     dir_var = {
@@ -97,18 +99,19 @@ if __name__ == "__main__":
         "isHPC": args.isHPC,
         "isContinue": args.isContinue,
         "isSave": args.isSave,
-        "isLogging": args.isLogging
+        "isLogging": args.isLogging,
+        "isPosEnc": args.isPosEnc
     }
     for idx in flag_var.keys():
         flag_var[idx] = True if flag_var[idx][0].lower() == "t" else False
     
     """load dataset"""
-    # path = "./HRTF/IRC*"
-    # _, locLabel, _ = loadHRIR(path)
     load_hrir = LoadHRIR(path="./HRTF/IRC*")
 
     test_dataset = CuesDataset(dir_var["data"],
-                                args.task, args.Nsound, load_hrir.loc_label, coordinates=args.coordinates, isDebug=False)
+                                args.task, args.Nsound, load_hrir.loc_label, coordinates=args.coordinates,
+                                isDebug=False
+                            )
     print(f"Dataset length: {test_dataset.__len__()}")
     
     isPersistent = True if args.numWorker > 0 else False
@@ -141,6 +144,7 @@ if __name__ == "__main__":
             dropout=args.valDropout,
             forward_expansion=4,
             numFC=args.numFC,
+            is_pos_enc=flag_var["isPosEnc"]
         )
     elif args.whichModel.lower() == "crnn":
         model = CRNN(
