@@ -170,6 +170,12 @@ class LocRegion:
         else:
             return "None"
     
+    def getLocIdx(self, loc_array):
+        for idx in self.loc_label[0]:
+            if self.loc_label[idx] == loc_array:
+                return idx
+        raise SystemError("getLocIdx not found.")
+
     def getElev(self, loc_idx):
         return self.loc_label[loc_idx,0]
 
