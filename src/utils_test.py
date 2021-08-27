@@ -308,15 +308,15 @@ class TwoSourceError:
         marker_size = []
         for i in self.loss_1:
             if i<=15:
-                marker_size.append(20)
-            elif i<=30:
-                marker_size.append(15)
-            elif i<=45:
                 marker_size.append(10)
+            elif i<=30:
+                marker_size.append(8)
+            elif i<=45:
+                marker_size.append(6)
             elif i<=60:
-                marker_size.append(5)
+                marker_size.append(4)
             else:
-                marker_size.append(1)
+                marker_size.append(2)
         marker_size = [i for i in self.loss_1]
 
         plt.figure(figsize=(12, 6), dpi=100)
@@ -348,15 +348,15 @@ class TwoSourceError:
         marker_size = []
         for i in self.loss_2:
             if i<=15:
-                marker_size.append(20)
-            elif i<=30:
-                marker_size.append(15)
-            elif i<=45:
                 marker_size.append(10)
+            elif i<=30:
+                marker_size.append(8)
+            elif i<=45:
+                marker_size.append(6)
             elif i<=60:
-                marker_size.append(5)
+                marker_size.append(4)
             else:
-                marker_size.append(1)
+                marker_size.append(2)
         marker_size = [i for i in self.loss_2]
 
         plt.figure(figsize=(12, 6), dpi=100)
