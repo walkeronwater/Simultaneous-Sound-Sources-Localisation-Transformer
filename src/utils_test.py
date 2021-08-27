@@ -303,7 +303,7 @@ class TwoSourceError:
 
     def plotPrediction(self):
         marker_size = [i for i in self.loss_1]
-        marker_size = [i/10 for i in self.loss_1]
+        marker_size = [1 for i in self.loss_1]
 
         plt.figure(figsize=(12, 6), dpi=100)
         plt.scatter(
@@ -329,7 +329,7 @@ class TwoSourceError:
         plt.close()
 
         # marker_size = [i for i in self.loss_2]
-        marker_size = [i/10 for i in self.loss_2]
+        marker_size = [1 for i in self.loss_2]
 
         plt.figure(figsize=(12, 6), dpi=100)
         plt.scatter(
