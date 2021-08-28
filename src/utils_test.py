@@ -312,9 +312,9 @@ class TwoSourceError:
             elif i<=30:
                 marker_size.append(2.5)
             elif i<=45:
-                marker_size.append(1)
+                marker_size.append(0)
             elif i<=60:
-                marker_size.append(0.5)
+                marker_size.append(0)
             else:
                 marker_size.append(0)
 
