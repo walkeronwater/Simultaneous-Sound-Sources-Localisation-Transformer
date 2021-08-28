@@ -91,6 +91,7 @@ if __name__ == "__main__":
     parser.add_argument('--isSave', default="True", type=str, help='Save checkpoints?')
     parser.add_argument('--coordinates', default="spherical", type=str, help='Spherical or Cartesian')
     parser.add_argument('--isPosEnc', default="True", type=str, help='Positional encoding')
+    parser.add_argument('--numConvLayer', default=0, type=int, help='Number of conv layers')
 
     args = parser.parse_args()
     if True:
@@ -185,7 +186,8 @@ if __name__ == "__main__":
             coordinates=args.coordinates,
             dropout=args.valDropout,
             forward_expansion=4,
-            is_pos_enc=flag_var["isPosEnc"]
+            is_pos_enc=flag_var["isPosEnc"],
+            num_conv_layers=args.numConvLayer
         )
     elif args.whichModel.lower() == "crnn":
         model = CRNN(

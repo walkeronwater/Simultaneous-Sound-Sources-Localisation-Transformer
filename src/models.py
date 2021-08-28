@@ -206,9 +206,12 @@ class EncoderDIYTransformer(nn.Module):
             dropout,
             is_pos_enc=is_pos_enc
         )
+        self.isDebug = isDebug
+
     def forward(self, inputs):
         out = torch.flatten(inputs.permute(0, 2, 1, 3), -2, -1)
         out = self.encoder(out)
+        if self.isDebug: print(f"Encoder output shape: {out.shape}")
         
         # encList = []
         # for i in range(inputs.shape[-1]):
@@ -410,24 +413,49 @@ class TransformerModel(nn.Module):
         dropout=0.1,
         isDebug=False,
         coordinates="spherical",
-        is_pos_enc=True
+        is_pos_enc=True,
+        num_conv_layers=0
     ):
         super(TransformerModel, self).__init__()
 
-        self.enc = EncoderDIYTransformer(
-            task,
-            Ntime,
-            Nfreq,
-            Ncues,
-            Nsound,
-            numEnc,
-            heads,
-            device,
-            forward_expansion,
-            dropout,
-            isDebug,
-            is_pos_enc
-        )
+        self.is_cnn = False
+        if num_conv_layers > 0:
+            # [TODO]: hardcoded CNN
+            self.enc_cnn = CNNModules(Ncues=Ncues, isDebug=isDebug)
+            enc_out_size = 64*10*4
+            self.is_cnn = True
+            
+            self.enc = EncoderDIYTransformer(
+                task,
+                10,
+                64,
+                Ncues,
+                Nsound,
+                numEnc,
+                heads,
+                device,
+                forward_expansion,
+                dropout,
+                isDebug,
+                is_pos_enc
+            )
+        else:
+            enc_out_size = Nfreq*Ntime*Ncues
+
+            self.enc = EncoderDIYTransformer(
+                task,
+                Ntime,
+                Nfreq,
+                Ncues,
+                Nsound,
+                numEnc,
+                heads,
+                device,
+                forward_expansion,
+                dropout,
+                isDebug,
+                is_pos_enc
+            )
 
         assert(
             whichDec.lower() in ["ea","src","cls"]
@@ -435,14 +463,14 @@ class TransformerModel(nn.Module):
 
         if whichDec.lower() == "ea":
             self.dec = DecoderEAReg(
-                enc_out_size=Nfreq*Ntime*Ncues,
+                enc_out_size=enc_out_size,
                 Nsound=Nsound,
                 dropout=dropout,
                 num_FC_layers = numFC
             )
         elif whichDec.lower() == "src":
             self.dec = DecoderSrcReg(
-                enc_out_size=Nfreq * Ntime * Ncues,
+                enc_out_size=enc_out_size,
                 Nsound=Nsound,
                 dropout=dropout,
                 coordinates=coordinates,
@@ -450,17 +478,66 @@ class TransformerModel(nn.Module):
             )
         elif whichDec.lower() == "cls":
             self.dec = DecoderSrcCls(
-                enc_out_size=Nfreq * Ntime * Ncues,
+                enc_out_size=enc_out_size,
                 Nsound=Nsound,
                 dropout=dropout,
                 num_FC_layers = numFC
             )
 
     def forward(self, inputs):
-        enc_out = self.enc(inputs)
+        if self.is_cnn:
+            enc_out = self.enc_cnn(inputs)
+            enc_out = self.enc(enc_out)
+        else:
+            enc_out = self.enc(inputs)
         out = self.dec(enc_out)
         return out
 
+class CNNModules(nn.Module):
+    def __init__(
+        self,
+        num_conv_layers=4,
+        Ncues=4,
+        isDebug=False
+    ):
+        super(CNNModules, self).__init__()
+
+        self.conv_1 = nn.Sequential(
+            nn.Conv2d(Ncues, 64, (3,3), stride=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, (3,3), stride=1),
+            nn.ReLU(),
+            nn.MaxPool2d((1,4))
+        )
+        self.conv_blocks = nn.Sequential(
+            nn.Conv2d(64, 64, (3,3), stride=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, (3,3), stride=1),
+            nn.ReLU(),
+            nn.MaxPool2d((1,2))
+        )
+
+        self.conv_layers = nn.ModuleList(
+            [
+                self.conv_blocks
+                for _ in range(num_conv_layers)
+            ]
+        )
+
+        self.isDebug = isDebug
+
+    def forward(self, inputs):
+        inputs = inputs.permute(0, 3, 2, 1)
+        if self.isDebug: print(f"After input permutation: {inputs.shape}")
+
+        out = self.conv_1(inputs)
+        for layers in self.conv_layers:
+            out = layers(out)
+        
+        # out = out.permute(0, 2, 1, 3)
+        if self.isDebug: print(f"CNN output: {out.shape}")
+
+        return out
 
 def weight_init(m):
     if isinstance(m, nn.Linear):
@@ -513,15 +590,21 @@ if __name__ == "__main__":
         device=device,
         coordinates="spherical",
         numFC=4,
-        is_pos_enc="F"
+        is_pos_enc="F",
+        num_conv_layers=4,
+        isDebug=True
     )
+
+    # model = CNNModules()
+
     model = model.to(device)
 
     inputs, labels = next(iter(train_loader))
     outputs = model(inputs.to(device))
 
-    print(f"inputs: {inputs.shape},\
+    print(f"inputs shape: {inputs.shape},\
+        outputs shape: {outputs.shape}, \
         max outputs: {torch.max(outputs)}, \
         labels: {labels.shape}")
 
-    summary(model, (Nfreq, Ntime, Ncues))
+    # summary(model, (Nfreq, Ntime, Ncues))
