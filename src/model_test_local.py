@@ -196,7 +196,7 @@ if __name__ == "__main__":
     model.eval()
     print("Started testing")
     with torch.no_grad():
-        for i, (inputs, labels) in enumerate(test_loader, 0):
+        for batch_i, (inputs, labels) in enumerate(test_loader, 0):
             inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
             outputs = model(inputs)
             
@@ -274,7 +274,7 @@ if __name__ == "__main__":
                             csvFile.write(str(loss_2[batch_idx]))
                             csvFile.write('\n')
 
-    test_loss = test_sum_loss / (i + 1)
+    test_loss = test_sum_loss / (batch_i + 1)
     test_acc = radian2Degree(test_loss)
     print('Test Loss: %.04f | RMS angle error in degree: %.04f '
         % (test_loss, test_acc))
