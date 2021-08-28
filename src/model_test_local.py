@@ -178,7 +178,7 @@ if __name__ == "__main__":
     
     """load from checkpoint"""
     checkpoint = torch.load(dir_var['model']+"param_bestValLoss.pth.tar")
-    model.load_state_dict(checkpoint['model'], strict=True)
+    model.load_state_dict(checkpoint['model'], strict=False)
 
     print("Model created")
     """set cost function"""
@@ -208,34 +208,6 @@ if __name__ == "__main__":
                     "Output shape: ", outputs.shape, "\n",
                     "Test Outputs: ", outputs[:5]
                 )
-            if flag_var["isLogging"]:
-                if not csv_flag:
-                    csv_flag = True
-                    with open(csv_name, 'w') as csvFile:
-                        for batch_idx in range(outputs.shape[0]):
-                            for i in range(outputs.shape[1]):
-                                csvFile.write(str(radian2Degree(outputs[batch_idx, i].item())))
-                                csvFile.write(',')
-                            for i in range(outputs.shape[1]):
-                                csvFile.write(str(radian2Degree(labels[batch_idx, i].item())))
-                                csvFile.write(',')
-                            csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 0:2].unsqueeze(0), labels[batch_idx, 0:2].unsqueeze(0)).item())))
-                            csvFile.write(',')
-                            csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 2:4].unsqueeze(0), labels[batch_idx, 2:4].unsqueeze(0)).item())))
-                            csvFile.write('\n')
-                else:
-                    with open(csv_name, 'a') as csvFile:
-                        for batch_idx in range(outputs.shape[0]):
-                            for i in range(outputs.shape[1]):
-                                csvFile.write(str(radian2Degree(outputs[batch_idx, i].item())))
-                                csvFile.write(',')
-                            for i in range(outputs.shape[1]):
-                                csvFile.write(str(radian2Degree(labels[batch_idx, i].item())))
-                                csvFile.write(',')
-                            csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 0:2].unsqueeze(0), labels[batch_idx, 0:2].unsqueeze(0)).item())))
-                            csvFile.write(',')
-                            csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 2:4].unsqueeze(0), labels[batch_idx, 2:4].unsqueeze(0)).item())))
-                            csvFile.write('\n')
 
             test_loss = cost_func(outputs, labels)
             test_sum_loss += test_loss.item()
@@ -271,6 +243,36 @@ if __name__ == "__main__":
 
             """visualise predicted location vs ground truth"""
             error_src(outputs, labels, loss_1, loss_2)
+            loss_1 = loss_1.tolist()
+            loss_2 = loss_2.tolist()
+            if flag_var["isLogging"]:
+                if not csv_flag:
+                    csv_flag = True
+                    with open(csv_name, 'w') as csvFile:
+                        for batch_idx in range(outputs.shape[0]):
+                            for i in range(outputs.shape[1]):
+                                csvFile.write(str(radian2Degree(outputs[batch_idx, i].item())))
+                                csvFile.write(',')
+                            for i in range(outputs.shape[1]):
+                                csvFile.write(str(radian2Degree(labels[batch_idx, i].item())))
+                                csvFile.write(',')
+                            csvFile.write(str(loss_1[batch_idx]))
+                            csvFile.write(',')
+                            csvFile.write(str(loss_2[batch_idx]))
+                            csvFile.write('\n')
+                else:
+                    with open(csv_name, 'a') as csvFile:
+                        for batch_idx in range(outputs.shape[0]):
+                            for i in range(outputs.shape[1]):
+                                csvFile.write(str(radian2Degree(outputs[batch_idx, i].item())))
+                                csvFile.write(',')
+                            for i in range(outputs.shape[1]):
+                                csvFile.write(str(radian2Degree(labels[batch_idx, i].item())))
+                                csvFile.write(',')
+                            csvFile.write(str(loss_1[batch_idx]))
+                            csvFile.write(',')
+                            csvFile.write(str(loss_2[batch_idx]))
+                            csvFile.write('\n')
 
     test_loss = test_sum_loss / (i + 1)
     test_acc = radian2Degree(test_loss)
