@@ -240,8 +240,34 @@ if __name__ == "__main__":
             test_loss = cost_func(outputs, labels)
             test_sum_loss += test_loss.item()
 
-            loss_1 = radian2Degree(cost_func.calDoALoss(outputs[:, 0:2], labels[:, 0:2]))
-            loss_2 = radian2Degree(cost_func.calDoALoss(outputs[:, 2:4], labels[:, 2:4]))
+            # print(torch.stack(
+            #         [
+            #             radian2Degree(cost_func.calDoALoss(outputs[:, 0:2], labels[:, 0:2])),
+            #             radian2Degree(cost_func.calDoALoss(outputs[:, 2:4], labels[:, 0:2]))
+            #         ],
+            #         dim=1
+            #     ).shape)
+            
+            loss_1 = torch.min(
+                torch.stack(
+                    [
+                        radian2Degree(cost_func.calDoALoss(outputs[:, 0:2], labels[:, 0:2])),
+                        radian2Degree(cost_func.calDoALoss(outputs[:, 2:4], labels[:, 0:2]))
+                    ],
+                    dim=1
+                ),
+                dim=1
+            )[0]
+            loss_2 = torch.min(
+                torch.stack(
+                    [
+                        radian2Degree(cost_func.calDoALoss(outputs[:, 0:2], labels[:, 2:4])),
+                        radian2Degree(cost_func.calDoALoss(outputs[:, 2:4], labels[:, 2:4]))
+                    ],
+                    dim=1
+                ),
+                dim=1
+            )[0]
 
             """visualise predicted location vs ground truth"""
             error_src(outputs, labels, loss_1, loss_2)

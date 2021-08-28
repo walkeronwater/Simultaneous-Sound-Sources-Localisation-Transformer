@@ -94,7 +94,7 @@ def createTrainingSet(src_1, src_1_count, src_2, src_2_count):
 
             for loc_1 in range(bias, load_hrir.hrir_set.shape[0], 2):
                 for loc_2 in range(bias, load_hrir.hrir_set.shape[0], 2):
-                    if getAngleDiff(load_hrir.loc_label[loc_1], load_hrir.loc_label[loc_2]) <= 30:
+                    if radian2Degree(getAngleDiff(load_hrir.loc_label[loc_1], load_hrir.loc_label[loc_2])) <= 30:
                         continue
                     
                     sigL_1, sigR_1 = binaural_sig(sig_sliced_1, loc_1)
@@ -139,7 +139,7 @@ def createTestSet(src_1, src_1_count, src_2, src_2_count):
 
         for loc_1 in range(load_hrir.hrir_set.shape[0]):
             for loc_2 in range(load_hrir.hrir_set.shape[0]):
-                if getAngleDiff(load_hrir.loc_label[loc_1], load_hrir.loc_label[loc_2]) <= 30:
+                if radian2Degree(getAngleDiff(load_hrir.loc_label[loc_1], load_hrir.loc_label[loc_2])) <= 30:
                     continue
                 
                 if args.valSNR <100:
