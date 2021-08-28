@@ -42,10 +42,10 @@ class CostFunc:
                 elif self.coordinates.lower() == "cartesian":
                     return torch.sqrt(torch.mean(torch.square(
                         torch.min(
-                            self.calDoALossCartesian(outputs[:, 0:3], labels[:, 0:3]) + self.calDoALossCartesian(outputs[:, 3:6], labels[:, 3:6],
-                            self.calDoALossCartesian(outputs[:, 3:6], labels[:, 0:3]) + self.calDoALossCartesian(outputs[:, 0:3], labels[:, 3:6]
-                        )
-                        )))))
+                            self.calDoALossCartesian(outputs[:, 0:3], labels[:, 0:3]) + self.calDoALossCartesian(outputs[:, 3:6], labels[:, 3:6]),
+                            self.calDoALossCartesian(outputs[:, 3:6], labels[:, 0:3]) + self.calDoALossCartesian(outputs[:, 0:3], labels[:, 3:6])
+                        ))
+                    ))
             elif "class" in self.task.lower():
                 labels_hot = torch.zeros(labels.size(0), 187).to(self.device)
                 labels_hot = labels_hot.scatter_(1, labels.to(torch.int64), 1.).float()
