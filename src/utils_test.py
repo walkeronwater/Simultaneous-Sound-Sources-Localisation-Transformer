@@ -308,29 +308,28 @@ class TwoSourceError:
         marker_size = []
         for i in self.loss_1:
             if i<=15:
-                marker_size.append(10)
+                marker_size.append(5)
             elif i<=30:
-                marker_size.append(8)
+                marker_size.append(2.5)
             elif i<=45:
-                marker_size.append(6)
+                marker_size.append(1)
             elif i<=60:
-                marker_size.append(4)
+                marker_size.append(0.5)
             else:
-                marker_size.append(2)
-        marker_size = [i for i in self.loss_1]
+                marker_size.append(0)
 
         plt.figure(figsize=(12, 6), dpi=100)
         plt.scatter(
             [radian2Degree(i) for i in self.azim_target_1],
             [radian2Degree(i) for i in self.elev_target_1],
             color='red',
-            # s = marker_size
+            s = marker_size
         )
         plt.scatter(
             [radian2Degree(i) for i in self.azim_pred_1],
             [radian2Degree(i) for i in self.elev_pred_1],
             color='blue',
-            s = marker_size
+            s = [5 for i in self.loss_1]
         )
         plt.xticks(np.linspace(0, 345, 24))
         plt.yticks(np.linspace(-90, 75, 12))
@@ -348,29 +347,28 @@ class TwoSourceError:
         marker_size = []
         for i in self.loss_2:
             if i<=15:
-                marker_size.append(10)
+                marker_size.append(5)
             elif i<=30:
-                marker_size.append(8)
+                marker_size.append(2.5)
             elif i<=45:
-                marker_size.append(6)
+                marker_size.append(1)
             elif i<=60:
-                marker_size.append(4)
+                marker_size.append(0.5)
             else:
-                marker_size.append(2)
-        marker_size = [i for i in self.loss_2]
+                marker_size.append(0)
 
         plt.figure(figsize=(12, 6), dpi=100)
         plt.scatter(
             [radian2Degree(i) for i in self.azim_target_2],
             [radian2Degree(i) for i in self.elev_target_2],
             color='red',
-            # s = marker_size
+            s = marker_size
         )
         plt.scatter(
             [radian2Degree(i) for i in self.azim_pred_2],
             [radian2Degree(i) for i in self.elev_pred_2],
             color='blue',
-            s = marker_size
+            s = [5 for i in self.loss_2]
         )
         plt.xticks(np.linspace(0, 345, 24))
         plt.yticks(np.linspace(-90, 75, 12))
