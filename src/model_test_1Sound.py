@@ -78,6 +78,7 @@ if __name__ == "__main__":
     parser.add_argument('--coordinates', default="spherical", type=str, help='Spherical or Cartesian')
     parser.add_argument('--isLogging', default="False", type=str, help='Log down prediction in a csv file')
     parser.add_argument('--logName', default="test_log", type=str, help='Log down prediction in a csv file')
+    parser.add_argument('--hrtfDir', default="None", type=str, help='HRTF dir')
 
     args = parser.parse_args()
     """check input directories end up with /"""
@@ -123,13 +124,13 @@ if __name__ == "__main__":
     task = "allRegression"
     whichDec = args.whichDec
     num_workers = 0
-    Nsample = 8
+    Nsample = 2
     batch_size = 32
     valSNRList = [-5,0,5,10,15,20,25,30,35]
 
     # path = args.hrirDir + "/IRC*"
     path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path=args.hrtfDir+"IRC*")
     
     # save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
     """create a tensor that stores all testing examples"""
