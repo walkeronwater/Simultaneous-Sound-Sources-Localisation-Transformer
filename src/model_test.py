@@ -110,6 +110,7 @@ if __name__ == "__main__":
     loss_all_subject_x = []
     for subject_idx in range(load_hrir.num_subject):
         load_hrir.load_subject(subject_idx)
+        print(f"Current subject: {subject_idx}")
         
         # save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
         """create a tensor that stores all testing examples"""
@@ -186,7 +187,7 @@ if __name__ == "__main__":
             vis_pred = VisualisePrediction(Nsound=Nsound)
             count = 0
             for loc_idx in range(0,186,1):
-                print(f"Test set created for location: {loc_idx}, with SNR {val_SNR}")
+                # print(f"Test set created for location: {loc_idx}, with SNR {val_SNR}")
                 createTestSet(loc_idx, val_SNR)
 
                 dataset = TensorDataset(test_cues, test_label)
@@ -212,7 +213,7 @@ if __name__ == "__main__":
                                 "Output shape: ", outputs.shape, "\n",
                                 "Outputs: ", outputs[:5]
                             )
-                        print(f"RMS angle error (over one batch): {torch.mean(radian2Degree(cost_func.calDoALoss(outputs, labels))).item():.2f}")
+                        # print(f"RMS angle error (over one batch): {torch.mean(radian2Degree(cost_func.calDoALoss(outputs, labels))).item():.2f}")
                         
                         test_loss = cost_func(outputs, labels)
                         vis_pred(
@@ -268,9 +269,9 @@ if __name__ == "__main__":
             fb.append(radian2Degree(np.sqrt(confusion.se_FB/count)))
             ud.append(radian2Degree(np.sqrt(confusion.se_UD/count)))
             lr.append(radian2Degree(np.sqrt(confusion.se_LR/count)))
-            print("UD: ", radian2Degree(np.sqrt(confusion.se_UD/count)))
-            print("FB: ", radian2Degree(np.sqrt(confusion.se_FB/count)))
-            print("LR: ", radian2Degree(np.sqrt(confusion.se_LR/count)))
+            # print("UD: ", radian2Degree(np.sqrt(confusion.se_UD/count)))
+            # print("FB: ", radian2Degree(np.sqrt(confusion.se_FB/count)))
+            # print("LR: ", radian2Degree(np.sqrt(confusion.se_LR/count)))
             
             # vis_pred.report(
             #     fixed_src = locLabel[loc_idx],
@@ -289,3 +290,6 @@ if __name__ == "__main__":
                         
         loss_all_subject.append(loss_allSNR/loss_allSNR_count)
         loss_all_subject_x.append(subject_idx)
+    
+    print(loss_all_subject)
+    print(loss_all_subject_x)
