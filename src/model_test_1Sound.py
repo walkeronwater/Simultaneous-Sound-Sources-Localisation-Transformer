@@ -265,24 +265,24 @@ if __name__ == "__main__":
                 print('Test Loss: %.04f | RMS angle error in degree: %.04f '
                     % (test_loss, test_acc))
         # error.append(radian2Degree())
-        fb.append(radian2Degree(np.sqrt(confusion.se_FB/count)))
-        ud.append(radian2Degree(np.sqrt(confusion.se_UD/count)))
-        lr.append(radian2Degree(np.sqrt(confusion.se_LR/count)))
-        print("UD: ", radian2Degree(np.sqrt(confusion.se_UD/count)))
-        print("FB: ", radian2Degree(np.sqrt(confusion.se_FB/count)))
-        print("LR: ", radian2Degree(np.sqrt(confusion.se_LR/count)))
+    #     fb.append(radian2Degree(np.sqrt(confusion.se_FB/count)))
+    #     ud.append(radian2Degree(np.sqrt(confusion.se_UD/count)))
+    #     lr.append(radian2Degree(np.sqrt(confusion.se_LR/count)))
+    #     print("UD: ", radian2Degree(np.sqrt(confusion.se_UD/count)))
+    #     print("FB: ", radian2Degree(np.sqrt(confusion.se_FB/count)))
+    #     print("LR: ", radian2Degree(np.sqrt(confusion.se_LR/count)))
         
-        # vis_pred.report(
-        #     fixed_src = locLabel[loc_idx],
-        #     # path = args.plotDir
-        # )
-    """Plot UD FB LR confusion"""
-    plt.plot(valSNRList, fb)
-    plt.plot(valSNRList, lr)
-    plt.plot(valSNRList, ud)
-    plt.xlabel("SNR")
-    plt.ylabel("RMS angle error in degree")
-    plt.legend(["Front-Back", "Left-right", "High-low"])
-    plt.title("Confusion plots")
-    plt.grid()
-    plt.show()
+    #     # vis_pred.report(
+    #     #     fixed_src = locLabel[loc_idx],
+    #     #     # path = args.plotDir
+    #     # )
+    # """Plot UD FB LR confusion"""
+    # plt.plot(valSNRList, fb)
+    # plt.plot(valSNRList, lr)
+    # plt.plot(valSNRList, ud)
+    # plt.xlabel("SNR")
+    # plt.ylabel("RMS angle error in degree")
+    # plt.legend(["Front-Back", "Left-right", "High-low"])
+    # plt.title("Confusion plots")
+    # plt.grid()
+    # plt.show()
