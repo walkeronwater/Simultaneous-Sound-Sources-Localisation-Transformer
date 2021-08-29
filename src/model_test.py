@@ -103,7 +103,7 @@ if __name__ == "__main__":
 
     # path = args.hrirDir + "/IRC*"
     path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = loadHRIR(path=args.hrtfDir+"IRC*")
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path=args.hrtfDir+"/IRC*")
     
     # save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
     """create a tensor that stores all testing examples"""
