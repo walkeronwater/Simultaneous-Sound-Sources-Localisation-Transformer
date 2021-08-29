@@ -291,5 +291,5 @@ if __name__ == "__main__":
         loss_all_subject.append(loss_allSNR/loss_allSNR_count)
         loss_all_subject_x.append(subject_idx)
         
-        print(loss_all_subject)
-        print(loss_all_subject_x)
+        print("loss list: ", loss_all_subject)
+        print("loss liss x: ", loss_all_subject_x)
