@@ -174,7 +174,7 @@ if __name__ == "__main__":
         """mix sound sources with noise"""
         src_path = glob(os.path.join(dir_var["audio"] + "/*"))
         src = AudioSignal(path=src_path[0], slice_duration=1)
-        binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src.fs_audio)
+        binaural_sig = BinauralSignal(hrir=load_hrir.hrir_set, fs_hrir=fs_HRIR, fs_audio=src.fs_audio)
         binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method="minmax")
         loc_region = LocRegion(loc_label=load_hrir.loc_label)
         
