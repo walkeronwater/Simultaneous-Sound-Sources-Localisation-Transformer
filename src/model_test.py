@@ -66,6 +66,7 @@ if __name__ == "__main__":
     parser.add_argument('--coordinates', default="spherical", type=str, help='Spherical or Cartesian')
     parser.add_argument('--isLogging', default="False", type=str, help='Log down prediction in a csv file')
     parser.add_argument('--logName', default="test_log_1Sound", type=str, help='Log down prediction in a csv file')
+    parser.add_argument('--hrtfDir', default="None", type=str, help='HRTF dir')
 
     args = parser.parse_args()
     """check input directories end up with /"""
@@ -102,7 +103,7 @@ if __name__ == "__main__":
 
     # path = args.hrirDir + "/IRC*"
     path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = loadHRIR(path)
+    hrirSet, locLabel, fs_HRIR = loadHRIR(path=args.hrtfDir+"IRC*")
     
     # save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
     """create a tensor that stores all testing examples"""
