@@ -109,7 +109,7 @@ if __name__ == "__main__":
     loss_all_subject = []
     loss_all_subject_x = []
     for subject_idx in range(load_hrir.num_subject):
-        load_subject(subject_idx)
+        load_hrir.load_subject(subject_idx)
         
         # save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
         """create a tensor that stores all testing examples"""
