@@ -264,7 +264,7 @@ if __name__ == "__main__":
                 test_acc = radian2Degree(test_loss)
                 print('Test Loss: %.04f | RMS angle error in degree: %.04f '
                     % (test_loss, test_acc))
-        error.append(radian2Degree())
+        # error.append(radian2Degree())
         fb.append(radian2Degree(np.sqrt(confusion.se_FB/count)))
         ud.append(radian2Degree(np.sqrt(confusion.se_UD/count)))
         lr.append(radian2Degree(np.sqrt(confusion.se_LR/count)))
