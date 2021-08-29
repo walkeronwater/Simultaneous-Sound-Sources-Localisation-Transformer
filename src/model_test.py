@@ -41,7 +41,7 @@ def createTestSet(loc_idx, val_SNR):
         #     return
         test_cues[count] = torch.tensor([magL, phaseL, magR, phaseR]).permute(1,2,0)
 
-        test_label[count] = torch.from_numpy(degree2Radian(locLabel[loc_idx]))
+        test_label[count] = torch.from_numpy(degree2Radian(load_hrir.loc_label[loc_idx]))
 
         count += 1
         if count >= Nsample:
@@ -103,175 +103,189 @@ if __name__ == "__main__":
 
     # path = args.hrirDir + "/IRC*"
     path = "./HRTF/IRC*"
-    hrirSet, locLabel, fs_HRIR = loadHRIR(path=args.hrtfDir+"/IRC*")
-    
-    # save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
-    """create a tensor that stores all testing examples"""
-    test_cues = torch.empty((Nsample, Nfreq, Ntime, Ncues))
-    test_label = torch.empty((Nsample, 2*Nsound))
+    # hrirSet, locLabel, fs_HRIR = loadHRIR(path=args.hrtfDir+"/IRC*")
+    load_hrir = LoadHRIR(path=args.hrtfDir+"/IRC*")
 
-    """load model"""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if args.whichModel.lower() == "transformer":
-        model = TransformerModel(
-            task=task,
-            Ntime=Ntime,
-            Nfreq=Nfreq,
-            Ncues=Ncues,
-            Nsound=Nsound,
-            whichEnc="diy",
-            whichDec=args.whichDec,
-            device=device,
-            numEnc=args.numEnc,
-            coordinates=args.coordinates,
-            forward_expansion=4,
-            numFC=args.numFC,
-        )
-        print("model: transformer")
-    elif args.whichModel.lower() == "crnn":
-        model = CRNN(
-            task=task,
-            Ntime=Ntime,
-            Nfreq=Nfreq,
-            Ncues=Ncues,
-            Nsound=Nsound,
-            whichDec="src",
-            num_conv_layers=4,
-            num_recur_layers=2,
-            num_FC_layers=args.numFC,
-            device=device,
-            isDebug=False,
-            coordinates="spherical"
-        )
-        print("model: CRNN")
-    else:
-        raise SystemExit("Unsupported model.")
-    if flag_var["isHPC"]:
-        if torch.cuda.device_count() > 1:
-            print("Let's use", torch.cuda.device_count(), "GPUs!")
-    model = nn.DataParallel(model)
-    model = model.to(device)
-    
-    # model, val_optim = loadCheckpoint(
-    #     model=model, optimizer=None, scheduler=None,
-    #     loadPath=model_dir,
-    #     task=task, phase="test", whichBest="bestValLoss"
-    # )
-
-    checkpoint = torch.load(dir_var["model"] + "param_bestValLoss.pth.tar")
-    model.load_state_dict(checkpoint['model'], strict=True)
-
-    cost_func = CostFunc(task=task, Nsound=Nsound, device=device, coordinates=args.coordinates)
-
-    csv_flag = False
-    csv_name = dir_var['model'] + args.logName + ".csv"
-    """mix sound sources with noise"""
-    src_path = glob(os.path.join(dir_var["audio"] + "/*"))
-    src = AudioSignal(path=src_path[0], slice_duration=1)
-    binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src.fs_audio)
-    binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method="minmax")
-    loc_region = LocRegion(loc_label=locLabel)
-    
-    fb, lr, ud, error = [], [], [], []
-    for val_SNR in valSNRList:
-        confusion = Confusion()
-        vis_pred = VisualisePrediction(Nsound=Nsound)
-        count = 0
-        for loc_idx in range(0,186,1):
-            print(f"Test set created for location: {loc_idx}, with SNR {val_SNR}")
-            createTestSet(loc_idx, val_SNR)
-
-            dataset = TensorDataset(test_cues, test_label)
-
-            test_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-
-            test_correct = 0.0
-            test_total = 0.0
-            test_sum_loss = 0.0
-            test_loss = 0.0
-            test_acc = 0.0
-            model.eval()
-            with torch.no_grad():
-                for i, (inputs, labels) in enumerate(test_loader, 0):
-                    inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
-                    outputs = model(inputs)
-
-                    if flag_var["isDebug"]:
-                        print(
-                            "Input shape: ", inputs.shape, "\n",
-                            "label shape: ", labels.shape, "\n",
-                            "labels: ", labels[:5], "\n",
-                            "Output shape: ", outputs.shape, "\n",
-                            "Outputs: ", outputs[:5]
-                        )
-                    print(f"RMS angle error (over one batch): {torch.mean(radian2Degree(cost_func.calDoALoss(outputs, labels))).item():.2f}")
-                    
-                    test_loss = cost_func(outputs, labels)
-                    vis_pred(
-                        outputs, labels,
-                        [loc_idx],
-                        [torch.mean(radian2Degree(cost_func.calDoALoss(outputs[:, 0:2], labels[:, 0:2]))).item()]
-                    )
-                    test_sum_loss += test_loss.item()
-
-                    if flag_var["isLogging"]:
-                        if not csv_flag:
-                            csv_flag = True
-                            with open(csv_name, 'w') as csvFile:
-                                for batch_idx in range(outputs.shape[0]):
-                                    csvFile.write(str(val_SNR))
-                                    csvFile.write(',')
-                                    csvFile.write(str(loc_idx))
-                                    csvFile.write(',')
-                                    for i in range(outputs.shape[1]):
-                                        csvFile.write(str(radian2Degree(outputs[batch_idx, i].item())))
-                                        csvFile.write(',')
-                                    for i in range(outputs.shape[1]):
-                                        csvFile.write(str(radian2Degree(labels[batch_idx, i].item())))
-                                        csvFile.write(',')
-                                    csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 0:2].unsqueeze(0), labels[batch_idx, 0:2].unsqueeze(0)).item())))
-                                    csvFile.write('\n')
-                        else:
-                            with open(csv_name, 'a') as csvFile:
-                                for batch_idx in range(outputs.shape[0]):
-                                    csvFile.write(str(val_SNR))
-                                    csvFile.write(',')
-                                    csvFile.write(str(loc_idx))
-                                    csvFile.write(',')
-                                    for i in range(outputs.shape[1]):
-                                        csvFile.write(str(radian2Degree(outputs[batch_idx, i].item())))
-                                        csvFile.write(',')
-                                    for i in range(outputs.shape[1]):
-                                        csvFile.write(str(radian2Degree(labels[batch_idx, i].item())))
-                                        csvFile.write(',')
-                                    csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 0:2].unsqueeze(0), labels[batch_idx, 0:2].unsqueeze(0)).item())))
-                                    csvFile.write('\n')
-                    confusion(outputs, labels)
-                    count += outputs.shape[0]
-                # print(f"UD: {confusion.se_UD}, LR: {confusion.se_LR}, FB: {confusion.se_FB}")
-                test_loss = test_sum_loss / (i + 1)
-                test_acc = radian2Degree(test_loss)
-                print('Test Loss: %.04f | RMS angle error in degree: %.04f '
-                    % (test_loss, test_acc))
-        # error.append(radian2Degree())
-        fb.append(radian2Degree(np.sqrt(confusion.se_FB/count)))
-        ud.append(radian2Degree(np.sqrt(confusion.se_UD/count)))
-        lr.append(radian2Degree(np.sqrt(confusion.se_LR/count)))
-        print("UD: ", radian2Degree(np.sqrt(confusion.se_UD/count)))
-        print("FB: ", radian2Degree(np.sqrt(confusion.se_FB/count)))
-        print("LR: ", radian2Degree(np.sqrt(confusion.se_LR/count)))
+    loss_all_subject = []
+    loss_all_subject_x = []
+    for subject_idx in range(load_hrir.num_subject):
+        load_subject(subject_idx)
         
-        # vis_pred.report(
-        #     fixed_src = locLabel[loc_idx],
-        #     # path = args.plotDir
+        # save_cues = SaveCues(savePath=args.cuesDir+"/", locLabel=locLabel)
+        """create a tensor that stores all testing examples"""
+        test_cues = torch.empty((Nsample, Nfreq, Ntime, Ncues))
+        test_label = torch.empty((Nsample, 2*Nsound))
+
+        """load model"""
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if args.whichModel.lower() == "transformer":
+            model = TransformerModel(
+                task=task,
+                Ntime=Ntime,
+                Nfreq=Nfreq,
+                Ncues=Ncues,
+                Nsound=Nsound,
+                whichEnc="diy",
+                whichDec=args.whichDec,
+                device=device,
+                numEnc=args.numEnc,
+                coordinates=args.coordinates,
+                forward_expansion=4,
+                numFC=args.numFC,
+            )
+            print("model: transformer")
+        elif args.whichModel.lower() == "crnn":
+            model = CRNN(
+                task=task,
+                Ntime=Ntime,
+                Nfreq=Nfreq,
+                Ncues=Ncues,
+                Nsound=Nsound,
+                whichDec="src",
+                num_conv_layers=4,
+                num_recur_layers=2,
+                num_FC_layers=args.numFC,
+                device=device,
+                isDebug=False,
+                coordinates="spherical"
+            )
+            print("model: CRNN")
+        else:
+            raise SystemExit("Unsupported model.")
+        if flag_var["isHPC"]:
+            if torch.cuda.device_count() > 1:
+                print("Let's use", torch.cuda.device_count(), "GPUs!")
+        model = nn.DataParallel(model)
+        model = model.to(device)
+        
+        # model, val_optim = loadCheckpoint(
+        #     model=model, optimizer=None, scheduler=None,
+        #     loadPath=model_dir,
+        #     task=task, phase="test", whichBest="bestValLoss"
         # )
-    """Plot UD FB LR confusion"""
-    plt.plot(valSNRList, fb)
-    plt.plot(valSNRList, lr)
-    plt.plot(valSNRList, ud)
-    plt.xlabel("SNR")
-    plt.ylabel("RMS angle error in degree")
-    plt.legend(["Front-Back", "Left-right", "High-low"])
-    plt.title("Confusion plots")
-    plt.grid()
-    plt.show()
+
+        checkpoint = torch.load(dir_var["model"] + "param_bestValLoss.pth.tar")
+        model.load_state_dict(checkpoint['model'], strict=True)
+
+        cost_func = CostFunc(task=task, Nsound=Nsound, device=device, coordinates=args.coordinates)
+
+        csv_flag = False
+        csv_name = dir_var['model'] + args.logName + ".csv"
+        """mix sound sources with noise"""
+        src_path = glob(os.path.join(dir_var["audio"] + "/*"))
+        src = AudioSignal(path=src_path[0], slice_duration=1)
+        binaural_sig = BinauralSignal(hrir=hrirSet, fs_hrir=fs_HRIR, fs_audio=src.fs_audio)
+        binaural_cues = BinauralCues(fs_audio=src.fs_audio, prep_method="minmax")
+        loc_region = LocRegion(loc_label=load_hrir.loc_label)
+        
+        loss_allSNR = 0.0
+        loss_allSNR_count = 0
+        fb, lr, ud, error = [], [], [], []
+        for val_SNR in valSNRList:
+            confusion = Confusion()
+            vis_pred = VisualisePrediction(Nsound=Nsound)
+            count = 0
+            for loc_idx in range(0,186,1):
+                print(f"Test set created for location: {loc_idx}, with SNR {val_SNR}")
+                createTestSet(loc_idx, val_SNR)
+
+                dataset = TensorDataset(test_cues, test_label)
+
+                test_loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+
+                test_correct = 0.0
+                test_total = 0.0
+                test_sum_loss = 0.0
+                test_loss = 0.0
+                test_acc = 0.0
+                model.eval()
+                with torch.no_grad():
+                    for batch_i, (inputs, labels) in enumerate(test_loader, 0):
+                        inputs, labels = Variable(inputs).to(device), Variable(labels).to(device)
+                        outputs = model(inputs)
+
+                        if flag_var["isDebug"]:
+                            print(
+                                "Input shape: ", inputs.shape, "\n",
+                                "label shape: ", labels.shape, "\n",
+                                "labels: ", labels[:5], "\n",
+                                "Output shape: ", outputs.shape, "\n",
+                                "Outputs: ", outputs[:5]
+                            )
+                        print(f"RMS angle error (over one batch): {torch.mean(radian2Degree(cost_func.calDoALoss(outputs, labels))).item():.2f}")
+                        
+                        test_loss = cost_func(outputs, labels)
+                        vis_pred(
+                            outputs, labels,
+                            [loc_idx],
+                            [torch.mean(radian2Degree(cost_func.calDoALoss(outputs[:, 0:2], labels[:, 0:2]))).item()]
+                        )
+                        test_sum_loss += test_loss.item()
+
+                        if flag_var["isLogging"]:
+                            if not csv_flag:
+                                csv_flag = True
+                                with open(csv_name, 'w') as csvFile:
+                                    for batch_idx in range(outputs.shape[0]):
+                                        csvFile.write(str(val_SNR))
+                                        csvFile.write(',')
+                                        csvFile.write(str(loc_idx))
+                                        csvFile.write(',')
+                                        for i in range(outputs.shape[1]):
+                                            csvFile.write(str(radian2Degree(outputs[batch_idx, i].item())))
+                                            csvFile.write(',')
+                                        for i in range(outputs.shape[1]):
+                                            csvFile.write(str(radian2Degree(labels[batch_idx, i].item())))
+                                            csvFile.write(',')
+                                        csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 0:2].unsqueeze(0), labels[batch_idx, 0:2].unsqueeze(0)).item())))
+                                        csvFile.write('\n')
+                            else:
+                                with open(csv_name, 'a') as csvFile:
+                                    for batch_idx in range(outputs.shape[0]):
+                                        csvFile.write(str(val_SNR))
+                                        csvFile.write(',')
+                                        csvFile.write(str(loc_idx))
+                                        csvFile.write(',')
+                                        for i in range(outputs.shape[1]):
+                                            csvFile.write(str(radian2Degree(outputs[batch_idx, i].item())))
+                                            csvFile.write(',')
+                                        for i in range(outputs.shape[1]):
+                                            csvFile.write(str(radian2Degree(labels[batch_idx, i].item())))
+                                            csvFile.write(',')
+                                        csvFile.write(str(radian2Degree(cost_func.calDoALoss(outputs[batch_idx, 0:2].unsqueeze(0), labels[batch_idx, 0:2].unsqueeze(0)).item())))
+                                        csvFile.write('\n')
+                        confusion(outputs, labels)
+                        count += outputs.shape[0]
+                    # print(f"UD: {confusion.se_UD}, LR: {confusion.se_LR}, FB: {confusion.se_FB}")
+                    test_loss = test_sum_loss / (batch_i + 1)
+                    loss_allSNR += test_loss
+                    loss_allSNR_count += 1
+                    test_acc = radian2Degree(test_loss)
+                    # print('Test Loss: %.04f | RMS angle error in degree: %.04f '
+                    #     % (test_loss, test_acc))
+
+            # error.append(radian2Degree())
+            fb.append(radian2Degree(np.sqrt(confusion.se_FB/count)))
+            ud.append(radian2Degree(np.sqrt(confusion.se_UD/count)))
+            lr.append(radian2Degree(np.sqrt(confusion.se_LR/count)))
+            print("UD: ", radian2Degree(np.sqrt(confusion.se_UD/count)))
+            print("FB: ", radian2Degree(np.sqrt(confusion.se_FB/count)))
+            print("LR: ", radian2Degree(np.sqrt(confusion.se_LR/count)))
+            
+            # vis_pred.report(
+            #     fixed_src = locLabel[loc_idx],
+            #     # path = args.plotDir
+            # )
+        """Plot UD FB LR confusion"""
+        plt.plot(valSNRList, fb)
+        plt.plot(valSNRList, lr)
+        plt.plot(valSNRList, ud)
+        plt.xlabel("SNR")
+        plt.ylabel("RMS angle error in degree")
+        plt.legend(["Front-Back", "Left-right", "High-low"])
+        plt.title("Confusion plots")
+        plt.grid()
+        plt.show()
+                        
+        loss_all_subject.append(loss_allSNR/loss_allSNR_count)
+        loss_all_subject_x.append(subject_idx)
